@@ -46,6 +46,19 @@ export function LibraryView({
   const isHome = path === "/";
   const isLibrary = path === "/library";
   const isHistory = path === "/history";
+  if (isCollection && !collection)
+    return (
+      <EmptyState
+        title="Coleção não encontrada"
+        action={
+          <Link className="button secondary" href="/collections">
+            Ver minhas coleções
+          </Link>
+        }
+      >
+        Esta coleção pode ter sido removida. Volte à lista para escolher outra.
+      </EmptyState>
+    );
   const heading = isCollection
     ? (collection?.name ?? "Coleção não encontrada")
     : ({
@@ -142,8 +155,11 @@ export function LibraryView({
               {isHome ? "Quero Ler" : "Todos os livros"}
             </h2>
             <span className="document-count">
-              {visible.length}{" "}
-              {visible.length === 1 ? "documento" : "documentos"}
+              {
+                visible.filter((book) => !isHome || book.status === "want")
+                  .length
+              }{" "}
+              documentos
             </span>
           </div>
           <div className="shelf-controls">

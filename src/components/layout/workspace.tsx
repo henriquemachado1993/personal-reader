@@ -61,6 +61,18 @@ export function Workspace() {
   ].includes(section);
   useEffect(() => {
     setSearch("");
+    const titles: Record<string, string> = {
+      library: "Biblioteca",
+      knowledge: "Conhecimento",
+      notes: "Anotações",
+      highlights: "Destaques",
+      clippings: "Capturas",
+      collections: "Coleções",
+      history: "Histórico",
+      statistics: "Estatísticas",
+      settings: "Configurações",
+    };
+    document.title = `${pathname === "/" ? "Início" : (titles[section] ?? "Biblioteca")} · Personal Reader`;
     headerRef.current
       ?.querySelectorAll("details[open]")
       .forEach((d) => d.removeAttribute("open"));

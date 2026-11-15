@@ -1339,7 +1339,7 @@ textarea::placeholder {
   border-radius: 4px;
 }
 .status-tag.muted {
-  color: var(--text-secondary);
+  color: var(--text);
   background: var(--surface-secondary);
 }
 .settings-about {
@@ -1388,13 +1388,13 @@ textarea::placeholder {
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--text);
   margin-top: 10px;
 }
 .reading-time p,
 .reading-time > span {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--text);
   margin-top: 14px;
 }
 .goal-progress {

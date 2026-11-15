@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
 import { X, BookOpen, MoreHorizontal } from "lucide-react";
 import type { ReaderDocument } from "@/shared/types";
 export function IconButton({
@@ -57,6 +57,7 @@ export function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const el = ref.current;
     el?.showModal();
@@ -64,6 +65,7 @@ export function Modal({
   }, []);
   return (
     <dialog
+      aria-labelledby={titleId}
       ref={ref}
       className={`dialog ${wide ? "wide" : ""}`}
       onCancel={onClose}
@@ -81,7 +83,7 @@ export function Modal({
       }}
     >
       <div className="dialog-heading">
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <IconButton label="Fechar" onClick={onClose}>
           <X size={20} />
         </IconButton>
