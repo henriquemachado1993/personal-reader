@@ -7,6 +7,10 @@ import JSZip from "jszip";
 import { mkdir } from "node:fs/promises";
 
 test.beforeEach(async ({ context }) => {
+  // Reader tests isolate local behavior; remote persistence has its own integration suite.
+  await context.route("**/api/library", (route) =>
+    route.fulfill({ status: 503, body: "{}" }),
+  );
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const name = "authjs.session-token";
   const token = await encode({
@@ -329,4 +333,68 @@ test("private routes and APIs require NextAuth", async ({ context, page }) => {
   await expect(page).toHaveURL(/\/login/);
   const response = await page.request.get("/api/status");
   expect(response.status()).toBe(401);
+});
+
+test("home count, named dialogs and missing collections expose correct state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page).toHaveTitle("Início · Personal Reader");
+  const shelf = page.locator(".books-home-shelf");
+  await expect(shelf.locator(".document-count")).toHaveText("4 documentos");
+  await page
+    .getByRole("button", { name: "Importar arquivos", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Novas leituras começam aqui" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.goto("/collections/missing");
+  await expect(
+    page.getByRole("link", { name: "Ver minhas coleções" }),
+  ).toBeVisible();
+});
+
+test("advanced annotation controls persist text and stroke properties", async ({
+  page,
+}) => {
+  await page.goto("/reader/metamorfose");
+  await page
+    .getByRole("button", { name: "Abrir ferramentas de anotação" })
+    .click();
+  await page.getByLabel("Espessura do traço").fill("7");
+  await page.getByLabel("Opacidade da marcação").fill("0.5");
+  await page
+    .getByRole("button", { name: "Inserir texto", exact: true })
+    .click();
+  await page.getByLabel("Texto", { exact: true }).fill("Nota na página");
+  const box = await page.locator(".annotation-overlay").boundingBox();
+  if (!box) throw new Error("Página indisponível");
+  await page.mouse.move(box.x + 50, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 150, box.y + 140);
+  await page.mouse.up();
+  await expect(page.locator(".annotation-overlay text")).toHaveText(
+    "Nota na página",
+  );
+  await page.reload();
+  await expect(page.locator(".annotation-overlay text")).toHaveText(
+    "Nota na página",
+  );
+});
+
+test("visited reader reloads offline from the application cache", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/reader/dom-casmurro");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload();
+  await expect(page.locator(".prose-page")).toContainText("Do livro");
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator(".prose-page")).toContainText("Do livro");
+  await context.setOffline(false);
 });
