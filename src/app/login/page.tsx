@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { database } from "@/infrastructure/database/client";
 import { LoginForm } from "@/modules/auth/login-form";
+import { AuthShell } from "@/modules/auth/auth-shell";
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/library");
@@ -14,5 +15,9 @@ export default async function LoginPage() {
   } catch {
     available = false;
   }
-  return <LoginForm firstRun={firstRun} available={available} />;
+  return (
+    <AuthShell>
+      <LoginForm firstRun={firstRun} available={available} />
+    </AuthShell>
+  );
 }

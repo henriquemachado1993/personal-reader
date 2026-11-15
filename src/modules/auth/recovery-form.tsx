@@ -19,110 +19,114 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
     }
   }, [reset]);
   return (
-    <main
-      className="login-page"
-      style={{ display: "grid", gridTemplateColumns: "1fr" }}
+    <form
+      className="auth-form"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setBusy(true);
+        setMessage("");
+        try {
+          const response = await fetch(
+            reset ? "/api/auth/reset-password" : "/api/auth/recovery",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(reset ? { token, password } : { email }),
+            },
+          );
+          const result = await response.json();
+          if (!response.ok) {
+            if (reset && response.status === 400) setInvalidLink(true);
+            throw new Error(result.error);
+          }
+          setFinished(true);
+          setPassword("");
+          setMessage(
+            reset
+              ? "Senha atualizada. Entre com sua nova senha."
+              : result.message,
+          );
+        } catch (error) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível concluir. Tente novamente.",
+          );
+        } finally {
+          setBusy(false);
+        }
+      }}
     >
-      <section className="login-form-section">
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            setBusy(true);
-            setMessage("");
-            try {
-              const response = await fetch(
-                reset ? "/api/auth/reset-password" : "/api/auth/recovery",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(reset ? { token, password } : { email }),
-                },
-              );
-              const result = await response.json();
-              if (!response.ok) {
-                if (reset && response.status === 400) setInvalidLink(true);
-                throw new Error(result.error);
-              }
-              setFinished(true);
-              setPassword("");
-              setMessage(
-                reset
-                  ? "Senha atualizada. Entre com sua nova senha."
-                  : result.message,
-              );
-            } catch (error) {
-              setMessage(
-                error instanceof Error
-                  ? error.message
-                  : "Não foi possível concluir. Tente novamente.",
-              );
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <h1>{reset ? "Escolha sua nova senha" : "Recupere seu acesso"}</h1>
-          <p>
-            {reset
-              ? "Use uma senha de pelo menos 10 caracteres."
-              : "Enviaremos um link para o e-mail da sua conta."}
-          </p>
-          {invalidLink && (
-            <div role="alert">
-              <p>Este link de recuperação está ausente, inválido ou expirou.</p>
-              <Link href="/forgot-password" className="button primary">
-                Solicitar outro link
-              </Link>
-            </div>
-          )}
-          {!finished &&
-            !invalidLink &&
-            (reset ? (
-              <label className="field-label">
-                Nova senha
-                <TextField
-                  className="input"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={10}
-                  maxLength={128}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            ) : (
-              <label className="field-label">
-                E-mail
-                <TextField
-                  className="input"
-                  type="email"
-                  autoComplete="email"
-                  maxLength={254}
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
-            ))}
-          {message && <p role={finished ? "status" : "alert"}>{message}</p>}
-          {!finished && !invalidLink && (
-            <Button
-              className="button primary login-submit"
-              disabled={busy || (reset && !token)}
-            >
-              {busy
-                ? "Aguarde…"
-                : reset
-                  ? "Salvar nova senha"
-                  : "Enviar link de recuperação"}
-            </Button>
-          )}
-          <Link className="text-link" href="/login">
-            Voltar para entrar
+      <h1>{reset ? "Escolha sua nova senha" : "Recupere seu acesso"}</h1>
+      <p className="auth-intro">
+        {reset
+          ? "Use uma senha de pelo menos 10 caracteres."
+          : "Enviaremos um link para o e-mail da sua conta."}
+      </p>
+      {invalidLink && (
+        <div className="auth-error" role="alert">
+          <p>Este link de recuperação está ausente, inválido ou expirou.</p>
+          <Link
+            href="/forgot-password"
+            className="button primary auth-retry-link"
+          >
+            Solicitar outro link
           </Link>
-        </form>
-      </section>
-    </main>
+        </div>
+      )}
+      {!finished &&
+        !invalidLink &&
+        (reset ? (
+          <label className="field-label">
+            Nova senha
+            <TextField
+              className="input"
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              maxLength={128}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+        ) : (
+          <label className="field-label">
+            E-mail
+            <TextField
+              className="input"
+              type="email"
+              autoComplete="email"
+              maxLength={254}
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+        ))}
+      {message && !invalidLink && (
+        <p
+          className={finished ? "auth-message" : "auth-error"}
+          role={finished ? "status" : "alert"}
+        >
+          {message}
+        </p>
+      )}
+      {!finished && !invalidLink && (
+        <Button
+          className="button primary login-submit"
+          disabled={busy || (reset && !token)}
+        >
+          {busy
+            ? "Aguarde…"
+            : reset
+              ? "Salvar nova senha"
+              : "Enviar link de recuperação"}
+        </Button>
+      )}
+      <Link className="text-link" href="/login">
+        Voltar para entrar
+      </Link>
+    </form>
   );
 }
