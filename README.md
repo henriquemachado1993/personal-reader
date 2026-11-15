@@ -39,11 +39,19 @@ Os oito livros iniciais são amostras de demonstração. Suas capas vetoriais s�
 
 **Autenticação:** Supabase PostgreSQL + Prisma. O schema e a migração incluem também as entidades dos demais módulos.
 
-**Acervo e leitura:** nesta entrega, arquivos, progresso, coleções, marcadores e anotações são salvos em IndexedDB no navegador, separados pelo ID da conta. Limpar os dados do site remove esse acervo local. Configurações permite exportar metadados e anotações; esse JSON não inclui os arquivos originais.
+**Acervo e leitura:** originais privados no R2 e biblioteca no Supabase via Prisma. IndexedDB funciona como cache por conta. Sincroniza ao abrir, voltar à aba, recuperar rede e a cada 15 segundos.
 
-**Ainda pendente:** integração da biblioteca e da fila de sincronização com as tabelas remotas, upload/download do acervo pelo R2, cache do shell para abrir o app sem rede, recuperação de senha e ferramentas avançadas do editor (texto livre, imagens, espessura e opacidade). O cliente R2 e as variáveis estão preparados; definir credenciais não ativa sincronização automaticamente.
+A tabela LibraryReplica guarda uma réplica JSONB com revisão atômica por conta. As tabelas normalizadas permanecem para evolução. Limites: 25 MB para metadados, capas e anotações; 100 MB por original. Operações têm UUID, reenvio idempotente e comparação de versão. Conflitos exigem escolha em Configurações, com backup JSON antes da escolha. Exclusões saem da réplica; originais imutáveis ficam retidos no bucket para recuperação.
 
-PDFs são renderizados sob demanda, uma página de cada vez. A exportação preserva o original, mas atualmente incorpora notas como texto e não inclui clippings como novas imagens no PDF. DOCX é convertido para texto legível; não reproduz layout Word. A busca EPUB usa a página exibida. O tempo mostrado é acumulado neste navegador, sem afirmar estatísticas diárias que ainda não são registradas.
+**Offline:** o service worker de produção guarda páginas visitadas e recursos. Documentos abertos ficam no IndexedDB. Visite a página online após a instalação do worker antes de depender da recarga offline. Primeiro login e download exigem rede. O cache de navegação é apagado ao voltar ao login online.
+
+**Editor:** texto, imagens PNG/JPEG, cor, espessura e opacidade; exportação de imagens e capturas com marcações. DOCX é convertido para texto. A busca EPUB atua no capítulo exibido; estatísticas mostram tempo acumulado.
+
+**Recuperação por e-mail:** configure `MAILTRAP_API_TOKEN`, `MAILTRAP_FROM_EMAIL` (remetente verificado) e `AUTH_URL` (endereço público confiável do app). Opcionalmente, use `MAILTRAP_SANDBOX_ID` para capturar mensagens no sandbox sem enviá-las aos destinatários. O link “Esqueci minha senha” solicita um token com validade de 30 minutos e uso único. A nova senha revoga sessões anteriores. O link usa fragmento e não é registrado nos logs de acesso.
+
+**Recuperação administrativa:** no servidor confiável, execute `node scripts/reset-password.mjs EMAIL ARQUIVO_PRIVADO_COM_NOVA_SENHA`. Apague o arquivo privado após usar. Esse comando também revoga sessões anteriores.
+
+Veja TASKS.md para evoluções e limites ainda abertos.
 
 ## Verificação
 
