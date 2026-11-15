@@ -1,0 +1,37 @@
+.annotation-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.annotation-toolbar input[type="range"] {
+  width: 70px;
+}
+.annotation-toolbar input[type="file"] {
+  max-width: 210px;
+}
+@media (max-width: 760px) {
+  .reader-shell .annotation-toolbar {
+    max-height: 42dvh;
+    overflow-y: auto;
+  }
+  .reader-shell .reader-header .icon-button {
+    min-width: 44px;
+    height: 44px;
+  }
+  .reader-shell .annotation-toolbar > .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (max-width: 380px) {
+  .reader-shell .reader-header { flex-wrap: wrap; }
+  .reader-shell { --reader-top: 140px; }
+  .reader-shell .reader-page-counter { top: 128px; }
+}
+@media (pointer: coarse) {
+  .icon-button, .view-toggle .icon-button, .floating-navigation .icon-button,
+  .floating-navigation a, .floating-circle, .format-filters button,
+  .button, .book-menu summary, .menu-popover button, .menu-popover a,
+  .annotation-colors button { min-width: 44px; min-height: 44px; }
+}

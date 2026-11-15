@@ -7,6 +7,8 @@ export function AnnotationOverlay({
   draft,
   tool,
   color,
+  thickness = 2,
+  opacity = 1,
   onDraft,
   onComplete,
   onErase,
@@ -15,6 +17,8 @@ export function AnnotationOverlay({
   draft: Point[];
   tool: string;
   color: string;
+  thickness?: number;
+  opacity?: number;
   onDraft: (points: Point[]) => void;
   onComplete: (points: Point[], kind: AnnotationKind) => void;
   onErase: (id: string) => void;
@@ -37,8 +41,16 @@ export function AnnotationOverlay({
     "arrow",
     "eraser",
     "clipping",
+    "text",
+    "image",
   ].includes(tool);
-  const draw = (kind: string, pts: Point[], tint: string, id?: string) => {
+  const draw = (
+    kind: string,
+    pts: Point[],
+    tint: string,
+    id?: string,
+    annotation?: Annotation,
+  ) => {
     if (pts.length < 2) return null;
     const first = pts[0],
       last = pts[pts.length - 1];
@@ -50,7 +62,7 @@ export function AnnotationOverlay({
     };
     const props = {
       stroke: tint,
-      strokeWidth: 2,
+      strokeWidth: annotation?.thickness ?? thickness,
       vectorEffect: "non-scaling-stroke" as const,
       fill: "none",
       onPointerDown: () => {
@@ -61,6 +73,28 @@ export function AnnotationOverlay({
           tool === "eraser" ? ("stroke" as const) : ("none" as const),
       },
     };
+    if (kind === "text")
+      return (
+        <text
+          x={first.x * 1000}
+          y={first.y * 1000 + 24}
+          fill={tint}
+          fontSize={24}
+          style={{ pointerEvents: tool === "eraser" ? "all" : "none" }}
+          onPointerDown={props.onPointerDown}
+        >
+          {annotation?.text}
+        </text>
+      );
+    if (kind === "image")
+      return (
+        <image
+          href={annotation?.image}
+          {...geometry}
+          style={{ pointerEvents: tool === "eraser" ? "all" : "none" }}
+          onPointerDown={props.onPointerDown}
+        />
+      );
     if (kind === "pen")
       return (
         <polyline
@@ -187,9 +221,11 @@ export function AnnotationOverlay({
         </marker>
       </defs>
       {annotations.map((a) => (
-        <g key={a.id}>{draw(a.kind, a.points ?? [], a.color, a.id)}</g>
+        <g key={a.id} opacity={a.opacity ?? 1}>
+          {draw(a.kind, a.points ?? [], a.color, a.id, a)}
+        </g>
       ))}
-      {draw(tool, draft, color)}
+      <g opacity={opacity}>{draw(tool, draft, color)}</g>
     </svg>
   );
 }

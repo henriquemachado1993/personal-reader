@@ -32,6 +32,47 @@ export async function exportPdf(
     const points = annotation.points ?? [];
     const p1 = points[0];
     const p2 = points.at(-1);
+    const opacity = annotation.opacity ?? 1;
+    const thickness = annotation.thickness ?? 1.5;
+    if (
+      (annotation.kind === "image" || annotation.kind === "clipping") &&
+      annotation.image &&
+      p1 &&
+      p2
+    ) {
+      let source = annotation.image;
+      if (
+        !source.startsWith("data:image/png") &&
+        !source.startsWith("data:image/jpeg")
+      ) {
+        const bitmap = await createImageBitmap(
+          await (await fetch(source)).blob(),
+        );
+        const surface = new OffscreenCanvas(bitmap.width, bitmap.height);
+        surface.getContext("2d")!.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const png = await surface.convertToBlob({ type: "image/png" });
+        const image = await pdf.embedPng(await png.arrayBuffer());
+        page.drawImage(image, {
+          x: Math.min(p1.x, p2.x) * width,
+          y: (1 - Math.max(p1.y, p2.y)) * height,
+          width: Math.abs(p2.x - p1.x) * width,
+          height: Math.abs(p2.y - p1.y) * height,
+          opacity,
+        });
+        continue;
+      }
+      const image = source.startsWith("data:image/png")
+        ? await pdf.embedPng(source)
+        : await pdf.embedJpg(source);
+      page.drawImage(image, {
+        x: Math.min(p1.x, p2.x) * width,
+        y: (1 - Math.max(p1.y, p2.y)) * height,
+        width: Math.abs(p2.x - p1.x) * width,
+        height: Math.abs(p2.y - p1.y) * height,
+        opacity,
+      });
+    }
     if (annotation.kind === "pen" || annotation.kind === "arrow") {
       for (let i = 1; i < points.length; i++)
         page.drawLine({
@@ -40,7 +81,8 @@ export async function exportPdf(
             y: (1 - points[i - 1].y) * height,
           },
           end: { x: points[i].x * width, y: (1 - points[i].y) * height },
-          thickness: 1.5,
+          thickness,
+          opacity,
           color,
         });
       if (annotation.kind === "arrow" && p1 && p2) {
@@ -70,8 +112,8 @@ export async function exportPdf(
           width: Math.abs(b.x - a.x) * width,
           height: Math.abs(b.y - a.y) * height,
           ...(annotation.kind === "highlight"
-            ? { color, opacity: 0.3 }
-            : { borderColor: color, borderWidth: 1.5 }),
+            ? { color, opacity: 0.3 * opacity }
+            : { borderColor: color, borderWidth: thickness, opacity }),
         });
       }
     } else if (annotation.kind === "circle" && p1 && p2) {
@@ -81,22 +123,24 @@ export async function exportPdf(
         xScale: Math.max(1, (Math.abs(p2.x - p1.x) / 2) * width),
         yScale: Math.max(1, (Math.abs(p2.y - p1.y) / 2) * height),
         borderColor: color,
-        borderWidth: 1.5,
+        borderWidth: thickness,
+        opacity,
       });
-    } else if (annotation.kind === "note") {
+    } else if (annotation.kind === "note" || annotation.kind === "text") {
       const text = annotation.text
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^\x20-\x7E\n]/g, "")
         .slice(0, 450);
       page.drawText(text, {
-        x: 24,
-        y: 30,
+        x: p1 ? p1.x * width : 24,
+        y: p1 ? (1 - p1.y) * height - 16 : 30,
         size: 9,
         maxWidth: width - 48,
         lineHeight: 12,
         font,
         color,
+        opacity,
       });
     }
   }

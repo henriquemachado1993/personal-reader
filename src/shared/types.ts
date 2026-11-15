@@ -37,7 +37,15 @@ export interface Collection {
   color: string;
 }
 export type AnnotationKind =
-  "highlight" | "note" | "pen" | "rectangle" | "circle" | "arrow" | "clipping";
+  | "highlight"
+  | "note"
+  | "pen"
+  | "rectangle"
+  | "circle"
+  | "arrow"
+  | "clipping"
+  | "text"
+  | "image";
 export interface Point {
   x: number;
   y: number;
@@ -54,6 +62,8 @@ export interface Annotation {
   color: string;
   points?: Point[];
   image?: string;
+  thickness?: number;
+  opacity?: number;
   createdAt: string;
   updatedAt: string;
 }

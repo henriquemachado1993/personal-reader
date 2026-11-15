@@ -1,5 +1,6 @@
 "use client";
 import "./reader-controls.css";
+import "./editor-controls.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -66,6 +67,9 @@ export function Reader({ documentId }: { documentId: string }) {
   useInitialize();
   const library = useLibrary();
   const book = library.documents.find((d) => d.id === documentId);
+  useEffect(() => {
+    document.title = `${book?.title ?? "Leitor"} · Personal Reader`;
+  }, [book?.title]);
   const [page, setPage] = useState<number | null>(null);
   const [left, setLeft] = useState(false);
   const [right, setRight] = useState(false);
@@ -74,6 +78,10 @@ export function Reader({ documentId }: { documentId: string }) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [tool, setTool] = useState("select");
   const [color, setColor] = useState(colors[0]);
+  const [thickness, setThickness] = useState(2);
+  const [opacity, setOpacity] = useState(1);
+  const [stampText, setStampText] = useState("");
+  const [stampImage, setStampImage] = useState<string>();
   const [draft, setDraft] = useState<Point[]>([]);
   const [selection, setSelection] = useState<{
     text: string;
@@ -296,6 +304,8 @@ export function Reader({ documentId }: { documentId: string }) {
       color,
       points,
       image,
+      thickness,
+      opacity,
       createdAt: now,
       updatedAt: now,
     });
@@ -303,6 +313,20 @@ export function Reader({ documentId }: { documentId: string }) {
     if (kind === "note" || kind === "highlight") setSelection(null);
   };
   const completeDrawing = (points: Point[], kind: AnnotationKind) => {
+    if (kind === "text" || kind === "image") {
+      if (
+        (kind === "text" && !stampText.trim()) ||
+        (kind === "image" && !stampImage)
+      ) {
+        library.notify(
+          "Preencha o texto ou escolha uma imagem antes de marcar a página.",
+        );
+        return;
+      }
+      addAnnotation(kind, points, stampText, stampImage);
+      setTool("select");
+      return;
+    }
     if (kind === "clipping" && canvas.current) {
       const source = canvas.current;
       const [a, b] = points;
@@ -807,6 +831,8 @@ export function Reader({ documentId }: { documentId: string }) {
                   draft={draft}
                   tool={tool}
                   color={color}
+                  thickness={thickness}
+                  opacity={opacity}
                   onDraft={setDraft}
                   onComplete={completeDrawing}
                   onErase={(id) => library.removeAnnotation(id)}
@@ -969,6 +995,8 @@ export function Reader({ documentId }: { documentId: string }) {
             { id: "circle", label: "Círculo", icon: Circle },
             { id: "arrow", label: "Seta", icon: MoveUpRight },
             { id: "clipping", label: "Capturar trecho", icon: ScanLine },
+            { id: "text", label: "Inserir texto", icon: StickyNote },
+            { id: "image", label: "Inserir imagem", icon: Plus },
           ].map(({ id, label, icon: Icon }) => (
             <IconButton
               key={id}
@@ -983,6 +1011,15 @@ export function Reader({ documentId }: { documentId: string }) {
           ))}
           <span className="toolbar-divider" />
           <div className="annotation-colors">
+            <label>
+              Cor{" "}
+              <input
+                aria-label="Cor personalizada"
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+              />
+            </label>
             {colors.map((c) => (
               <button
                 key={c}
@@ -993,6 +1030,55 @@ export function Reader({ documentId }: { documentId: string }) {
               />
             ))}
           </div>
+          <label>
+            Espessura{" "}
+            <input
+              aria-label="Espessura do traço"
+              type="range"
+              min="1"
+              max="12"
+              value={thickness}
+              onChange={(e) => setThickness(Number(e.target.value))}
+            />
+          </label>
+          <label>
+            Opacidade{" "}
+            <input
+              aria-label="Opacidade da marcação"
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.1"
+              value={opacity}
+              onChange={(e) => setOpacity(Number(e.target.value))}
+            />
+          </label>
+          {tool === "text" && (
+            <label>
+              Texto{" "}
+              <input
+                value={stampText}
+                maxLength={500}
+                onChange={(e) => setStampText(e.target.value)}
+              />
+            </label>
+          )}
+          {tool === "image" && (
+            <label>
+              Imagem{" "}
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || file.size > 5_000_000) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setStampImage(String(reader.result));
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+          )}
           <span className="toolbar-divider" />
           <IconButton
             label="Desfazer anotação"
