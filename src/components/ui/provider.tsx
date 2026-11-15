@@ -48,7 +48,11 @@ export function InterfaceProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.theme = scheme;
   }, [scheme]);
   return (
-    <MantineProvider theme={theme} forceColorScheme={scheme}>
+    <MantineProvider
+      theme={theme}
+      forceColorScheme={scheme}
+      deduplicateCssVariables={false}
+    >
       {children}
     </MantineProvider>
   );

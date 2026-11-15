@@ -1,5 +1,7 @@
 # Memória do projeto
 
+- MantineProvider usa deduplicateCssVariables=false para emitir variáveis CSS de forma determinística entre SSR e cliente. Não substituir por suppressHydrationWarning na tag style; manter a escala 16/14.
+
 - Mantine 9.8.1 integrado: controles em `src/components/ui/controls.tsx`, tema e esquema claro/escuro em `provider.tsx`, menus em `dropdown.tsx`, modal e ActionIcon em `src/components/ui.tsx`.
 - Manter a ordem CSS `theme, base, mantine, components, utilities`. Carregar estilos Mantine pelo globals.css após declarar as camadas; importar primeiro em layout.tsx deixa o reset Tailwind anular padding/bordas.
 - A fonte raiz existente é 14px; o tema Mantine usa scale=16/14 para preservar as dimensões declaradas. A preferência Zustand/IndexedDB é a fonte única do tema.
