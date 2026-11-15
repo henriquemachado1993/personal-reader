@@ -11,6 +11,7 @@ import type {
 import { initialState } from "./demo";
 import { sameLocation } from "@/modules/reader/location";
 import { synchronizeLibrary } from "./synchronize";
+import { addDailySeconds } from "./reading-calendar";
 import {
   readState,
   writeState,
@@ -49,6 +50,7 @@ export const useLibrary = create<Store>((set, get) => {
       bookmarks,
       preferences,
       readingSeconds,
+      readingDays,
     } = get();
     const snapshot = {
       documents,
@@ -57,6 +59,7 @@ export const useLibrary = create<Store>((set, get) => {
       bookmarks,
       preferences,
       readingSeconds,
+      readingDays,
     };
     persistence = persistence
       .catch(() => {})
@@ -210,7 +213,10 @@ export const useLibrary = create<Store>((set, get) => {
       persist();
     },
     addReadingTime: (seconds) => {
-      set((s) => ({ readingSeconds: s.readingSeconds + seconds }));
+      set((s) => ({
+        readingSeconds: s.readingSeconds + seconds,
+        readingDays: addDailySeconds(s.readingDays, seconds),
+      }));
       persist();
     },
   };

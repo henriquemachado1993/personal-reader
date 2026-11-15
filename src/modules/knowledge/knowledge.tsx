@@ -25,6 +25,8 @@ export function KnowledgeView({
   const [filter, setFilter] = useState("all");
   const [document, setDocument] = useState("all");
   const [color, setColor] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [untilDate, setUntilDate] = useState("");
   const [writing, setWriting] = useState(false);
   const [text, setText] = useState("");
   const [noteDoc, setNoteDoc] = useState(state.documents[0]?.id ?? "");
@@ -42,6 +44,8 @@ export function KnowledgeView({
         (filter === "all" || a.kind === filter) &&
         (document === "all" || a.documentId === document) &&
         (color === "all" || a.color === color) &&
+        (!fromDate || a.createdAt.slice(0, 10) >= fromDate) &&
+        (!untilDate || a.createdAt.slice(0, 10) <= untilDate) &&
         `${a.text} ${a.quote ?? ""} ${state.documents.find((d) => d.id === a.documentId)?.title ?? ""}`
           .toLowerCase()
           .includes(search.toLowerCase()),
@@ -89,6 +93,25 @@ export function KnowledgeView({
         </div>
       </div>
       <div className="knowledge-toolbar">
+        <label>
+          De{" "}
+          <input
+            type="date"
+            className="input"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+        </label>
+        <label>
+          Até{" "}
+          <input
+            type="date"
+            className="input"
+            value={untilDate}
+            min={fromDate || undefined}
+            onChange={(e) => setUntilDate(e.target.value)}
+          />
+        </label>
         {!forcedKind && (
           <div className="format-filters">
             <button

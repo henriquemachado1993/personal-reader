@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+@media (pointer: coarse) {
+  /* Compact variants must not override the touch accessibility floor. */
+  body .books-app :is(button, select, summary) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  body .books-app .books-main .page-heading > .button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body select,
+  body textarea {
+    min-height: 44px;
+  }
+  body .books-main a:not(.book-cover-link) {
+    min-height: 44px;
+  }
+  body input:not([type="hidden"]):not([type="range"]):not([type="checkbox"]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  body .icon-button,
+  body .view-toggle .icon-button,
+  body .floating-navigation .icon-button,
+  body .floating-navigation a,
+  body .floating-circle,
+  body .format-filters button,
+  body .button,
+  body .book-menu summary,
+  body .menu-popover button,
+  body .menu-popover a,
+  body .annotation-colors button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 :root {
   --background: #fcfbf9;
   --surface: #fff;

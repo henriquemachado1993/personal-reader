@@ -17,6 +17,7 @@ import { useLibrary } from "@/modules/library/store";
 import { downloadBlob } from "@/modules/reader/export";
 import { resolveLibraryConflict } from "@/modules/library/synchronize";
 import { writeState } from "@/infrastructure/storage/local";
+import { readingDate } from "@/modules/library/reading-calendar";
 export function SettingsView() {
   const state = useLibrary();
   const [usage, setUsage] = useState("");
@@ -41,6 +42,7 @@ export function SettingsView() {
       bookmarks,
       preferences,
       readingSeconds,
+      readingDays,
     } = state;
     downloadBlob(
       new Blob(
@@ -55,6 +57,7 @@ export function SettingsView() {
               bookmarks,
               preferences,
               readingSeconds,
+              readingDays,
             },
             null,
             2,
@@ -231,12 +234,15 @@ export function SettingsView() {
   );
 }
 export function StatisticsView() {
-  const { documents, annotations, readingSeconds, preferences } = useLibrary();
+  const { documents, annotations, readingSeconds, readingDays, preferences } =
+    useLibrary();
   const finished = documents.filter((d) => d.status === "finished" && !d.demo);
   const minutes = Math.floor(readingSeconds / 60);
   const percent = Math.min(
     100,
-    Math.round((minutes / preferences.dailyGoal) * 100),
+    Math.round(
+      ((readingDays?.[readingDate()] ?? 0) / 60 / preferences.dailyGoal) * 100,
+    ),
   );
   return (
     <>
@@ -259,8 +265,7 @@ export function StatisticsView() {
             <span style={{ width: `${percent}%` }} />
           </div>
           <span>
-            {percent}% da meta de {preferences.dailyGoal} minutos · tempo
-            acumulado
+            {percent}% da meta de hoje de {preferences.dailyGoal} minutos
           </span>
         </div>
         <div className="statistics-details">
@@ -282,6 +287,30 @@ export function StatisticsView() {
             <span>Ideias e marcações guardadas</span>
           </div>
         </div>
+      </section>
+      <section aria-label="Histórico diário">
+        <h2>Últimos sete dias</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Minutos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 7 }, (_, i) => {
+              const day = new Date();
+              day.setDate(day.getDate() - i);
+              const key = readingDate(day);
+              return (
+                <tr key={key}>
+                  <td>{day.toLocaleDateString("pt-BR")}</td>
+                  <td>{Math.floor((readingDays?.[key] ?? 0) / 60)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </section>
       <p className="stats-footnote">
         O tempo é contado enquanto o leitor está aberto e a aba está visível.

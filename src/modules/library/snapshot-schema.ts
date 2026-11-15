@@ -63,6 +63,8 @@ export const snapshotSchema = z.object({
         id,
         documentId: id,
         kind: z.enum([
+          "underline",
+          "pencil",
           "highlight",
           "note",
           "pen",
@@ -105,4 +107,7 @@ export const snapshotSchema = z.object({
     dailyGoal: z.number().positive(),
   }),
   readingSeconds: z.number().nonnegative(),
+  readingDays: z
+    .record(z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.number().nonnegative())
+    .optional(),
 });
