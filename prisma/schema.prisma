@@ -245,3 +245,22 @@ model PasswordReset {
   @@index([userId])
   @@schema("reader")
 }
+
+model LibraryEntity {
+  ownerId String @db.Uuid
+  kind String
+  entityId String
+  version Int @default(1)
+  payload Json?
+  deleted Boolean @default(false)
+  updatedAt DateTime @updatedAt
+  @@id([ownerId, kind, entityId])
+  @@schema("reader")
+}
+
+model StorageDeletion {
+  key String @id
+  ownerId String @db.Uuid
+  notBefore DateTime
+  @@schema("reader")
+}

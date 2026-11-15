@@ -70,16 +70,59 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
   await page.goto("/knowledge");
   await context.setOffline(true);
   await page.getByRole("button", { name: "Nova anotação" }).click();
-  await page.getByLabel("Sua anotação", { exact: true }).fill("Ideia criada sem rede");
+  await page
+    .getByLabel("Sua anotação", { exact: true })
+    .fill("Ideia criada sem rede");
   await page.getByRole("button", { name: "Salvar anotação" }).click();
-  await expect(page.locator(".knowledge-entry")).toContainText("Ideia criada sem rede");
+  await expect(page.locator(".knowledge-entry")).toContainText(
+    "Ideia criada sem rede",
+  );
   await context.setOffline(false);
   await page.goto("/settings");
   await page.getByRole("button", { name: "Sincronizar agora" }).click();
-  await expect.poll(async () => {
-    const saved = await request.get("/api/library", { headers });
-    const replica = await saved.json();
-    return replica.snapshot.annotations.some((note: { text: string }) => note.text === "Ideia criada sem rede");
-  }).toBe(true);
+  await expect
+    .poll(async () => {
+      const saved = await request.get("/api/library", { headers });
+      const replica = await saved.json();
+      return replica.snapshot.annotations.some(
+        (note: { text: string }) => note.text === "Ideia criada sem rede",
+      );
+    })
+    .toBe(true);
+  await expect(
+    page.getByText("Biblioteca sincronizada.", { exact: true }),
+  ).toBeVisible();
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Escuro", exact: true }).click();
+  const current = await (await request.get("/api/library", { headers })).json();
+  current.snapshot.preferences.theme = "system";
+  expect(
+    (
+      await request.put("/api/library", {
+        headers,
+        data: {
+          revision: current.revision,
+          operationId: crypto.randomUUID(),
+          snapshot: current.snapshot,
+        },
+      })
+    ).status(),
+  ).toBe(200);
+  await context.setOffline(false);
+  await page.getByRole("button", { name: "Sincronizar agora" }).click();
+  await expect(page.getByText(/Conflito de sincronização/)).toBeVisible();
+  const backup = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Manter esta versão" }).click();
+  expect((await backup).suggestedFilename()).toBe(
+    "personal-reader-backup.json",
+  );
+  await expect
+    .poll(async () => {
+      const saved = await (
+        await request.get("/api/library", { headers })
+      ).json();
+      return saved.snapshot.preferences.theme;
+    })
+    .toBe("dark");
   await context.close();
 });

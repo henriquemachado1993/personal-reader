@@ -45,7 +45,9 @@ export type AnnotationKind =
   | "arrow"
   | "clipping"
   | "text"
-  | "image";
+  | "image"
+  | "underline"
+  | "pencil";
 export interface Point {
   x: number;
   y: number;
@@ -87,4 +89,5 @@ export interface LibraryState {
   bookmarks: Bookmark[];
   preferences: Preferences;
   readingSeconds: number;
+  readingDays?: Record<string, number>;
 }

@@ -1,4 +1,5 @@
 import type { LibraryState } from "@/shared/types";
+import { canonicalJson } from "./canonical-json";
 
 /** Three-way merge preserves independent edits and propagates deletions. */
 export function mergeLibrary(
@@ -7,10 +8,37 @@ export function mergeLibrary(
   remote: LibraryState,
 ): LibraryState {
   const equal = (a: unknown, b: unknown) =>
-    JSON.stringify(a) === JSON.stringify(b);
+    canonicalJson(a) === canonicalJson(b);
   const mergeValue = <T>(before: T, ours: T, theirs: T): T => {
     if (equal(ours, before)) return theirs;
     if (equal(theirs, before) || equal(ours, theirs)) return ours;
+    if (
+      before &&
+      ours &&
+      theirs &&
+      typeof before === "object" &&
+      typeof ours === "object" &&
+      typeof theirs === "object" &&
+      !Array.isArray(before) &&
+      !Array.isArray(ours) &&
+      !Array.isArray(theirs)
+    ) {
+      const original = before as Record<string, unknown>,
+        local = ours as Record<string, unknown>,
+        remote = theirs as Record<string, unknown>;
+      return Object.fromEntries(
+        [
+          ...new Set([
+            ...Object.keys(original),
+            ...Object.keys(local),
+            ...Object.keys(remote),
+          ]),
+        ].map((key) => [
+          key,
+          mergeValue(original[key], local[key], remote[key]),
+        ]),
+      ) as T;
+    }
     throw new Error(
       "Conflito de sincronização. Exporte os dados locais antes de resolver as alterações de outro dispositivo.",
     );
@@ -34,6 +62,21 @@ export function mergeLibrary(
     return result;
   };
   return {
+    readingDays: Object.fromEntries(
+      [
+        ...new Set([
+          ...Object.keys(local.readingDays ?? {}),
+          ...Object.keys(remote.readingDays ?? {}),
+        ]),
+      ].map((day) => [
+        day,
+        (remote.readingDays?.[day] ?? 0) +
+          Math.max(
+            0,
+            (local.readingDays?.[day] ?? 0) - (base.readingDays?.[day] ?? 0),
+          ),
+      ]),
+    ),
     documents: mergeList(base.documents, local.documents, remote.documents),
     collections: mergeList(
       base.collections,

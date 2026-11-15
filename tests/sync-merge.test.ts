@@ -2,6 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { initialState } from "../src/modules/library/demo";
 import { mergeLibrary } from "../src/modules/library/sync-merge";
+test("independent fields of the same entity merge without losing either edit", () => {
+  const base = initialState(),
+    local = structuredClone(base),
+    remote = structuredClone(base);
+  local.documents[0].title = "Novo título";
+  remote.documents[0].page = 2;
+  const merged = mergeLibrary(base, local, remote);
+  assert.equal(merged.documents[0].title, "Novo título");
+  assert.equal(merged.documents[0].page, 2);
+});
 
 test("sync merges independent edits and propagates remote deletion", () => {
   const base = initialState(),

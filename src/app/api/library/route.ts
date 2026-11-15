@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { isSameOrigin } from "@/modules/auth/same-origin";
 import { snapshotSchema } from "@/modules/library/snapshot-schema";
+import { persistLibraryEntities } from "@/modules/library/entity-persistence";
+import type { LibraryState } from "@/shared/types";
 
 export async function GET() {
   const ownerId = (await auth())?.user?.id;
@@ -32,32 +34,53 @@ export async function PUT(request: Request) {
     return Response.json({}, { status: 400 });
   }
   try {
-    const result = await database().$transaction(async (tx) => {
-      const prior = await tx.libraryReplica.findUnique({ where: { ownerId } });
-      if (prior?.operationId === parsed.operationId) return prior;
-      if ((prior?.revision ?? 0) !== parsed.revision) return null;
-      const snapshot = parsed.snapshot as Prisma.InputJsonValue;
-      if (!prior)
-        return tx.libraryReplica.create({
-          data: {
+    const result = await database().$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ownerId}))`;
+        const prior = await tx.libraryReplica.findUnique({
+          where: { ownerId },
+        });
+        if (prior?.operationId === parsed.operationId) return prior;
+        if ((prior?.revision ?? 0) !== parsed.revision) return null;
+        const snapshot = parsed.snapshot as Prisma.InputJsonValue;
+        if (!prior) {
+          const created = await tx.libraryReplica.create({
+            data: {
+              ownerId,
+              revision: 1,
+              operationId: parsed.operationId,
+              snapshot,
+            },
+          });
+          await persistLibraryEntities(
+            tx,
             ownerId,
-            revision: 1,
-            operationId: parsed.operationId,
+            null,
+            parsed.snapshot as LibraryState,
+          );
+          return created;
+        }
+        const changed = await tx.libraryReplica.updateMany({
+          where: { ownerId, revision: parsed.revision },
+          data: {
+            revision: { increment: 1 },
             snapshot,
+            operationId: parsed.operationId,
           },
         });
-      const changed = await tx.libraryReplica.updateMany({
-        where: { ownerId, revision: parsed.revision },
-        data: {
-          revision: { increment: 1 },
-          snapshot,
-          operationId: parsed.operationId,
-        },
-      });
-      return changed.count
-        ? tx.libraryReplica.findUnique({ where: { ownerId } })
-        : null;
-    });
+        if (changed.count)
+          await persistLibraryEntities(
+            tx,
+            ownerId,
+            prior.snapshot as unknown as LibraryState,
+            parsed.snapshot as LibraryState,
+          );
+        return changed.count
+          ? tx.libraryReplica.findUnique({ where: { ownerId } })
+          : null;
+      },
+      { timeout: 60000 },
+    );
     return Response.json(result, { status: result ? 200 : 409 });
   } catch (error) {
     if (
