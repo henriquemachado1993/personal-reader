@@ -14,3 +14,8 @@
 - Arquivos órfãos permanecem retidos. Recuperação administrativa disponível em `scripts/reset-password.mjs`.
 - Provedor de e-mail escolhido: Mailtrap. Fluxos `/forgot-password` e `/reset-password`; link usa fragmento para evitar vazamento nos logs/referrers. Configurar MAILTRAP_API_TOKEN e MAILTRAP_FROM_EMAIL; sandbox opcional. Não há credenciais Mailtrap no ambiente atual.
 - Migração `202611150003_password_recovery` aplicada; tokens armazenados apenas como SHA-256, consumidos em transação; passwordChangedAt revoga JWTs anteriores.
+- Migração `202611150004_entities` aplicada: LibraryEntity registra versões e exclusões; projeções relacionais são atômicas com a réplica. `npm run db:project` executado para sete bibliotecas existentes (incluindo sessões de QA).
+- Comparações de entidades usam JSON canônico: JSONB pode reordenar chaves e não deve gerar falsas atualizações de versão.
+- `storage:collect` simula por padrão. `--apply` exclui candidatos com sete dias, sem referência, sob advisory lock compartilhado com sincronização. A revisão automática rejeitou a execução destrutiva sem confirmação; nenhuma exclusão foi feita. Simulação: zero candidatos.
+- Um único e-mail de recuperação foi autorizado pelo usuário e aceito pelo Mailtrap. AUTH_URL local configurado como http://localhost:3000. Não repetir sem nova autorização.
+- Busca EPUB percorre o spine; notas PDF usam rasterização Unicode e anexo UTF-8. Dias de leitura antigos não podem ser reconstruídos a partir do contador acumulado.

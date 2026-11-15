@@ -148,6 +148,7 @@ The user's supplied Apple Books references establish the visual authority: gener
 Floating controls frame the content without enclosing every item. Large library rows make titles and authors easy to scan; the reader puts a white page at the center and groups tools into rounded floating controls. The visual system supports the product's durable commitment to discreet reading and annotations linked to their source.
 
 **Key Characteristics:**
+
 - Neutral white and gray chrome with dark text.
 - Bold Georgia page and section headings paired with system sans-serif interface text.
 - Open shelves, generous list rows, and small physical book shadows.
@@ -262,6 +263,8 @@ Reader header tools form left/right rounded groups with only the document title 
 The brush button opens the annotation palette; it is closed by default. The palette floats (20px) above the desktop viewport bottom, or (14px) on mobile, and temporarily replaces the thumbnail strip. Closing it returns to text selection. All tools remain reachable on mobile by wrapping. A floating page counter uses (18px) desktop and (16px) mobile text. The bottom capsule contains clickable miniature pages: PDFs reuse the loaded PDF.js document and render visible previews lazily; text documents show their actual content at miniature scale. The tiny (2px) preview body and (2.8px) preview heading are non-reading artwork inside an aria-hidden miniature, never a scale for UI labels; each thumbnail button carries an accessible page label. EPUB uses previous/next controls and its true reading percentage. Application labels such as format, save status, sample notices, duplicate running titles, and extra page numbers stay outside the reading page; original PDF content is preserved. Selected tools use a quiet gray fill; the active brush uses black with a white nib; active bookmarks use red.
 
 ## Do's and Don'ts
+
+The machine-readable sidecar includes `extensions.implementationInventory`: an exact catalog of font sizes, radii and colors retained in the CSS, including legacy selectors. It is an inventory, not permission to reuse legacy styles for new UI. Existing named roles remain authoritative. Coarse-pointer controls have a minimum 44px target; reader annotation palettes can scroll vertically on small screens. The editor adds hand panning, object dragging, underline, a thinner pencil stroke and property updates for the selected object. Knowledge date filters wrap with the other controls. Statistics separate today's goal from accumulated time and list the last seven local calendar dates.
 
 ### Do:
 

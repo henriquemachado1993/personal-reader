@@ -41,15 +41,21 @@ Os oito livros iniciais são amostras de demonstração. Suas capas vetoriais s�
 
 **Acervo e leitura:** originais privados no R2 e biblioteca no Supabase via Prisma. IndexedDB funciona como cache por conta. Sincroniza ao abrir, voltar à aba, recuperar rede e a cada 15 segundos.
 
-A tabela LibraryReplica guarda uma réplica JSONB com revisão atômica por conta. As tabelas normalizadas permanecem para evolução. Limites: 25 MB para metadados, capas e anotações; 100 MB por original. Operações têm UUID, reenvio idempotente e comparação de versão. Conflitos exigem escolha em Configurações, com backup JSON antes da escolha. Exclusões saem da réplica; originais imutáveis ficam retidos no bucket para recuperação.
+A tabela LibraryReplica mantém o envelope atômico da sincronização. LibraryEntity registra versões por entidade e tombstones de exclusão; as tabelas de documentos, coleções, progresso, notas, destaques e marcações são atualizadas na mesma transação. IDs legados têm projeção UUID determinística por conta. Operações têm UUID e reenvio idempotente. Alterações em campos independentes são conciliadas; conflitos no mesmo campo exigem escolha em Configurações, com backup JSON. Limites atuais: 25 MB para metadados, capas e anotações; 100 MB por original.
+
+Para projetar bibliotecas anteriores, execute `npm run db:project` (já executado neste ambiente). Exclusões entram numa fila com sete dias de retenção. `npm run storage:collect` apenas simula a coleta; `npm run storage:collect -- --apply` remove candidatos vencidos após conferir novamente as referências com o mesmo lock usado na sincronização. Agende esse comando no servidor conforme sua política de retenção; nenhuma tarefa automática foi instalada na máquina. Bibliotecas ausentes ou malformadas protegem o original contra exclusão.
 
 **Offline:** o service worker de produção guarda páginas visitadas e recursos. Documentos abertos ficam no IndexedDB. Visite a página online após a instalação do worker antes de depender da recarga offline. Primeiro login e download exigem rede. O cache de navegação é apagado ao voltar ao login online.
 
-**Editor:** texto, imagens PNG/JPEG, cor, espessura e opacidade; exportação de imagens e capturas com marcações. DOCX é convertido para texto. A busca EPUB atua no capítulo exibido; estatísticas mostram tempo acumulado.
+**Editor:** texto, imagens PNG/JPEG, cor, espessura, opacidade, sublinhado, lápis fino, arraste de objetos e ferramenta para mover a página. Após selecionar um objeto, “Aplicar ao objeto selecionado” atualiza suas propriedades. DOCX é convertido para texto. A busca EPUB percorre todos os capítulos; o conhecimento filtra por intervalo de datas; estatísticas mostram o total acumulado, a meta de hoje e os últimos sete dias. Tempos anteriores à implementação do registro diário permanecem somente no total acumulado.
+
+**PDF Unicode:** notas são renderizadas com as fontes e o fallback do navegador, preservando a aparência de acentos, outros alfabetos e emoji disponíveis no sistema. O conteúdo integral também acompanha o PDF como anexo TXT UTF-8; a imagem da nota não é texto selecionável no PDF. Imagens e capturas permanecem incorporadas.
 
 **Recuperação por e-mail:** configure `MAILTRAP_API_TOKEN`, `MAILTRAP_FROM_EMAIL` (remetente verificado) e `AUTH_URL` (endereço público confiável do app). Opcionalmente, use `MAILTRAP_SANDBOX_ID` para capturar mensagens no sandbox sem enviá-las aos destinatários. O link “Esqueci minha senha” solicita um token com validade de 30 minutos e uso único. A nova senha revoga sessões anteriores. O link usa fragmento e não é registrado nos logs de acesso.
 
 **Recuperação administrativa:** no servidor confiável, execute `node scripts/reset-password.mjs EMAIL ARQUIVO_PRIVADO_COM_NOVA_SENHA`. Apague o arquivo privado após usar. Esse comando também revoga sessões anteriores.
+
+Um envio real de recuperação foi autorizado e aceito pelo Mailtrap em 15/11/2026. O link deste ambiente usa `http://localhost:3000`; em produção, altere `AUTH_URL` para o endereço público. A aceitação pela API não comprova a chegada à caixa de entrada.
 
 Veja TASKS.md para evoluções e limites ainda abertos.
 
