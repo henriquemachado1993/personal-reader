@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { createHmac } from "node:crypto";
 import { database } from "@/infrastructure/database/client";
 import { credentialsSchema } from "@/modules/auth/validation";
+import { sessionPredatesPasswordChange } from "@/modules/auth/recovery-token";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -47,8 +48,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user }) => {
       if (user) token.id = user.id;
+      if (!user && token.id) {
+        const account = await database().user.findUnique({
+          where: { id: String(token.id) },
+          select: { passwordChangedAt: true },
+        });
+        if (
+          account &&
+          sessionPredatesPasswordChange(token.iat, account.passwordChangedAt)
+        )
+          return null;
+      }
       return token;
     },
     session: ({ session, token }) => {

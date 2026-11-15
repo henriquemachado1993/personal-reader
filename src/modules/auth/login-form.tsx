@@ -3,6 +3,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { BookOpen, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import Link from "next/link";
 export function LoginForm({
   firstRun,
   available,
@@ -169,6 +170,12 @@ export function LoginForm({
             <ArrowRight size={17} />
           </button>
           <p className="login-privacy">
+            {!firstRun && (
+              <Link href="/forgot-password" className="text-link">
+                Esqueci minha senha
+              </Link>
+            )}
+            <br />
             Uma biblioteca pessoal, com acesso só seu.
           </p>
         </form>

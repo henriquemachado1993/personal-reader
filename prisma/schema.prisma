@@ -35,6 +35,7 @@ model User {
   email       String           @unique
   name        String?
   passwordHash String?
+  passwordChangedAt DateTime?
   documents   Document[]
   collections Collection[]
   preferences Json             @default("{}")
@@ -233,5 +234,14 @@ model LibraryReplica {
   snapshot Json @db.JsonB
   operationId String
   updatedAt DateTime @updatedAt
+  @@schema("reader")
+}
+
+model PasswordReset {
+  tokenHash String @id
+  userId String @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
   @@schema("reader")
 }
