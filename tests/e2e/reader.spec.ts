@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { encode } from "next-auth/jwt";
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { PDFDocument, StandardFonts, PDFName } from "pdf-lib";
 import JSZip from "jszip";
 import { mkdir } from "node:fs/promises";
 
@@ -198,8 +198,47 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
     )
     .toBe(80);
   const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Mostrar anotações" }).click();
+  await page
+    .getByLabel("Sua anotação", { exact: true })
+    .fill("Ação — Ελληνικά 中文 📚");
+  await page.getByRole("button", { name: "Salvar anotação" }).click();
+  await page.getByRole("button", { name: "Fechar anotações" }).click();
+  await page
+    .getByRole("button", { name: "Abrir ferramentas de anotação" })
+    .click();
+  await page
+    .getByRole("button", { name: "Inserir imagem", exact: true })
+    .click();
+  await page.locator('.annotation-toolbar input[type="file"]').setInputFiles({
+    name: "pixel.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aDlgAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
+  await expect(page.getByText("Imagem pronta para inserir")).toBeVisible();
+  const surface = await page.locator(".annotation-overlay").boundingBox();
+  if (!surface) throw new Error("Página indisponível");
+  await page.mouse.move(surface.x + 50, surface.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(surface.x + 150, surface.y + 180);
+  await page.mouse.up();
+  await expect(page.locator(".annotation-overlay image")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Fechar ferramentas de anotação" })
+    .click();
   await page.getByRole("button", { name: "Exportar PDF anotado" }).click();
-  expect((await download).suggestedFilename()).toBe("documento-anotado.pdf");
+  const exported = await download;
+  expect(exported.suggestedFilename()).toBe("documento-anotado.pdf");
+  const parsedExport = await PDFDocument.load(
+    await readFile((await exported.path())!),
+  );
+  expect(parsedExport.catalog.has(PDFName.of("Names"))).toBe(true);
+  expect(
+    parsedExport.getPage(0).node.Resources()?.has(PDFName.of("XObject")),
+  ).toBe(true);
   await page
     .getByRole("button", { name: "Ir para página 2", exact: true })
     .click();
@@ -377,6 +416,21 @@ test("advanced annotation controls persist text and stroke properties", async ({
   await expect(page.locator(".annotation-overlay text")).toHaveText(
     "Nota na página",
   );
+  const beforeMove = await page
+    .locator(".annotation-overlay text")
+    .getAttribute("x");
+  const objectBox = await page
+    .locator(".annotation-overlay text")
+    .boundingBox();
+  if (!objectBox) throw new Error("Objeto indisponível");
+  await page.mouse.move(objectBox.x + 4, objectBox.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(objectBox.x + 40, objectBox.y + 25, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator(".annotation-overlay text")).not.toHaveAttribute(
+    "x",
+    beforeMove!,
+  );
   await page.reload();
   await expect(page.locator(".annotation-overlay text")).toHaveText(
     "Nota na página",
@@ -397,4 +451,66 @@ test("visited reader reloads offline from the application cache", async ({
   await page.reload();
   await expect(page.locator(".prose-page")).toContainText("Do livro");
   await context.setOffline(false);
+});
+
+test("mobile workspace controls retain touch targets without horizontal overflow", async ({
+  browser,
+  context,
+}) => {
+  const mobile = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  await mobile.addCookies(await context.cookies());
+  await mobile.route("**/api/library", (route) =>
+    route.fulfill({ status: 503, body: "{}" }),
+  );
+  const page = await mobile.newPage();
+  try {
+    for (const route of [
+      "/library",
+      "/knowledge",
+      "/settings",
+      "/statistics",
+    ]) {
+      await page.goto(route);
+      await expect(page.locator(".books-main h1")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      const small = await page
+        .locator(".books-app button,.books-app summary,.books-app select")
+        .evaluateAll((elements) =>
+          elements
+            .filter((e) => e.checkVisibility() && !e.hasAttribute("disabled"))
+            .filter((e) => {
+              const r = e.getBoundingClientRect();
+              return r.width < 43.9 || r.height < 43.9;
+            })
+            .map((e) => e.getAttribute("aria-label") || e.textContent?.trim()),
+        );
+      expect(small).toEqual([]);
+    }
+  } finally {
+    await mobile.close();
+  }
+});
+
+test("knowledge date filters narrow saved notes and restore them when cleared", async ({
+  page,
+}) => {
+  await page.goto("/knowledge");
+  await page.getByRole("button", { name: "Nova anotação" }).click();
+  await page
+    .getByLabel("Sua anotação", { exact: true })
+    .fill("Ideia para filtrar por data");
+  await page.getByRole("button", { name: "Salvar anotação" }).click();
+  await expect(page.locator(".knowledge-entry")).toHaveCount(1);
+  await page.getByLabel("De", { exact: true }).fill("2099-01-01");
+  await expect(page.locator(".knowledge-entry")).toHaveCount(0);
+  await page.getByLabel("De", { exact: true }).fill("");
+  await expect(page.locator(".knowledge-entry")).toHaveCount(1);
 });
