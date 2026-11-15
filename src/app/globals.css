@@ -906,14 +906,16 @@ textarea::placeholder {
   margin-bottom: 22px;
 }
 .empty-state h2 {
-  font-weight: 400;
-  font-size: 27px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.65px;
   color: var(--text);
   margin-bottom: 12px;
 }
 .empty-state p {
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.65;
   max-width: 430px;
 }
 .empty-state .button {
@@ -1078,11 +1080,13 @@ textarea::placeholder {
   padding: 18px 0;
 }
 .collection-item h2 {
-  font-size: 22px;
-  font-weight: 400;
+  font-family: var(--sans);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 .collection-item span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   display: block;
   margin-top: 7px;
@@ -1119,6 +1123,10 @@ textarea::placeholder {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
+.knowledge-toolbar > label {
+  font-size: 12px;
+  font-weight: 500;
+}
 .knowledge-toolbar .format-filters {
   margin: 0;
 }
@@ -1129,7 +1137,7 @@ textarea::placeholder {
   max-width: 100%;
 }
 .knowledge-selects .input {
-  font-size: 10px;
+  font-size: 12px;
   max-width: 205px;
   min-width: 170px;
   flex-shrink: 0;
@@ -2586,9 +2594,6 @@ textarea::placeholder {
     padding-left: 0;
     padding-right: 0;
   }
-  .empty-state h2 {
-    font-size: 25px;
-  }
   .theme-selector {
     gap: 8px;
   }
@@ -3356,6 +3361,9 @@ textarea::placeholder {
     padding: 0;
   }
   .books-main .section-heading h2 {
+    font-size: 29px;
+  }
+  .empty-state h2 {
     font-size: 29px;
   }
   .books-main .continue-book {
