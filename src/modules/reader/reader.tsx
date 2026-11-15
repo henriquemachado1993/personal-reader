@@ -82,6 +82,7 @@ export function Reader({ documentId }: { documentId: string }) {
   const [opacity, setOpacity] = useState(1);
   const [stampText, setStampText] = useState("");
   const [stampImage, setStampImage] = useState<string>();
+  const [selectedObject, setSelectedObject] = useState<string>();
   const [draft, setDraft] = useState<Point[]>([]);
   const [selection, setSelection] = useState<{
     text: string;
@@ -151,6 +152,7 @@ export function Reader({ documentId }: { documentId: string }) {
     next: () => void;
     prev: () => void;
     go: (cfi: string) => void;
+    search: (query: string) => Promise<number>;
   } | null>(null);
   const currentPage = page ?? book?.page ?? 0;
   const realPdf = book?.format === "PDF" && !book.demo;
@@ -638,8 +640,18 @@ export function Reader({ documentId }: { documentId: string }) {
                 if (match !== undefined && match >= 0) go(match);
                 else library.notify("Não encontramos esse texto no PDF.");
               } else if (realEpub) {
-                if (!window.find?.(query))
-                  library.notify("Texto não encontrado nesta página do EPUB.");
+                try {
+                  const count = await epubNav.current?.search(query);
+                  library.notify(
+                    count
+                      ? `${count} ocorrências no livro. Exibindo a primeira.`
+                      : "Texto não encontrado no livro.",
+                  );
+                } catch {
+                  library.notify(
+                    "Não foi possível pesquisar o livro. Tente novamente.",
+                  );
+                }
               } else {
                 const match =
                   book.content?.findIndex((p) =>
@@ -836,6 +848,8 @@ export function Reader({ documentId }: { documentId: string }) {
                   onDraft={setDraft}
                   onComplete={completeDrawing}
                   onErase={(id) => library.removeAnnotation(id)}
+                  onObjectChange={library.addAnnotation}
+                  onObjectSelect={setSelectedObject}
                 />
               )}
               {bookmarked && (
@@ -990,6 +1004,9 @@ export function Reader({ documentId }: { documentId: string }) {
           {[
             { id: "highlight", label: "Marca-texto", icon: Highlighter },
             { id: "pen", label: "Caneta", icon: PenLine },
+            { id: "hand", label: "Mover página", icon: MousePointer2 },
+            { id: "underline", label: "Sublinhar", icon: Highlighter },
+            { id: "pencil", label: "Lápis", icon: PenLine },
             { id: "eraser", label: "Borracha", icon: Eraser },
             { id: "rectangle", label: "Retângulo", icon: Square },
             { id: "circle", label: "Círculo", icon: Circle },
@@ -1011,6 +1028,27 @@ export function Reader({ documentId }: { documentId: string }) {
           ))}
           <span className="toolbar-divider" />
           <div className="annotation-colors">
+            {selectedObject && (
+              <button
+                className="button secondary"
+                onClick={() => {
+                  const object = annotations.find(
+                    (a) => a.id === selectedObject,
+                  );
+                  if (object)
+                    library.addAnnotation({
+                      ...object,
+                      color,
+                      thickness,
+                      opacity,
+                      text: stampText || object.text,
+                      updatedAt: new Date().toISOString(),
+                    });
+                }}
+              >
+                Aplicar ao objeto selecionado
+              </button>
+            )}
             <label>
               Cor{" "}
               <input
@@ -1078,6 +1116,9 @@ export function Reader({ documentId }: { documentId: string }) {
                 }}
               />
             </label>
+          )}
+          {tool === "image" && stampImage && (
+            <span role="status">Imagem pronta para inserir</span>
           )}
           <span className="toolbar-divider" />
           <IconButton

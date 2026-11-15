@@ -1,5 +1,6 @@
 import { readFile } from "@/infrastructure/storage/local";
 import type { Annotation, ReaderDocument } from "@/shared/types";
+import { renderUnicodeNote } from "./unicode-note";
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -14,9 +15,8 @@ export async function exportPdf(
 ) {
   const file = await readFile(document.id);
   if (!file) throw new Error("O arquivo original não está disponível.");
-  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
+  const { PDFDocument, rgb } = await import("pdf-lib");
   const pdf = await PDFDocument.load(await file.arrayBuffer());
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
   for (const annotation of annotations.filter(
     (a) => a.documentId === document.id,
   )) {
@@ -29,11 +29,18 @@ export async function exportPdf(
       parseInt(hex.slice(2, 4), 16) / 255,
       parseInt(hex.slice(4, 6), 16) / 255,
     );
-    const points = annotation.points ?? [];
+    const points =
+      annotation.kind === "underline"
+        ? (annotation.points ?? []).map((point) => ({
+            ...point,
+            y: Math.max(...(annotation.points ?? []).map((p) => p.y)),
+          }))
+        : (annotation.points ?? []);
     const p1 = points[0];
     const p2 = points.at(-1);
     const opacity = annotation.opacity ?? 1;
-    const thickness = annotation.thickness ?? 1.5;
+    const thickness =
+      (annotation.thickness ?? 1.5) * (annotation.kind === "pencil" ? 0.5 : 1);
     if (
       (annotation.kind === "image" || annotation.kind === "clipping") &&
       annotation.image &&
@@ -73,7 +80,12 @@ export async function exportPdf(
         opacity,
       });
     }
-    if (annotation.kind === "pen" || annotation.kind === "arrow") {
+    if (
+      annotation.kind === "pen" ||
+      annotation.kind === "pencil" ||
+      annotation.kind === "underline" ||
+      annotation.kind === "arrow"
+    ) {
       for (let i = 1; i < points.length; i++)
         page.drawLine({
           start: {
@@ -127,21 +139,28 @@ export async function exportPdf(
         opacity,
       });
     } else if (annotation.kind === "note" || annotation.kind === "text") {
-      const text = annotation.text
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\x20-\x7E\n]/g, "")
-        .slice(0, 450);
-      page.drawText(text, {
-        x: p1 ? p1.x * width : 24,
-        y: p1 ? (1 - p1.y) * height - 16 : 30,
-        size: 9,
-        maxWidth: width - 48,
-        lineHeight: 12,
-        font,
-        color,
+      const rendered = await renderUnicodeNote(
+        annotation.text,
+        annotation.color,
+      );
+      const image = await pdf.embedPng(rendered.bytes);
+      const targetWidth = Math.min(width - 48, (height - 48) / rendered.aspect);
+      const targetHeight = targetWidth * rendered.aspect;
+      page.drawImage(image, {
+        x: Math.min(p1 ? p1.x * width : 24, width - targetWidth),
+        y: Math.max(0, (p1 ? (1 - p1.y) * height : height - 24) - targetHeight),
+        width: targetWidth,
+        height: targetHeight,
         opacity,
       });
+      await pdf.attach(
+        new TextEncoder().encode(annotation.text),
+        `nota-${annotation.id}.txt`,
+        {
+          mimeType: "text/plain",
+          description: "Texto original UTF-8 da anotação",
+        },
+      );
     }
   }
   const bytes = await pdf.save();

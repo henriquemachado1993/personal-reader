@@ -4,6 +4,7 @@ import type { Book, Rendition } from "epubjs";
 import { readFile } from "@/infrastructure/storage/local";
 import { useLibrary } from "@/modules/library/store";
 import type { DocumentLocation } from "@/shared/types";
+import { searchEpub } from "./epub-search";
 
 export function EpubPage({
   documentId,
@@ -24,6 +25,7 @@ export function EpubPage({
     next: () => void;
     prev: () => void;
     go: (cfi: string) => void;
+    search: (query: string) => Promise<number>;
   } | null>;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -101,6 +103,11 @@ export function EpubPage({
           if (text) onSelected(text, { type: "EPUB", cfi, href: "" });
         });
         navigationRef.current = {
+          search: async (query) => {
+            const matches = await searchEpub(book!, query);
+            if (matches[0]) await view.display(matches[0].cfi);
+            return matches.length;
+          },
           next: () => {
             void view.next();
           },

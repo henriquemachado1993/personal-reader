@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Annotation, AnnotationKind, Point } from "@/shared/types";
 
 export function AnnotationOverlay({
@@ -12,6 +12,8 @@ export function AnnotationOverlay({
   onDraft,
   onComplete,
   onErase,
+  onObjectChange,
+  onObjectSelect,
 }: {
   annotations: Annotation[];
   draft: Point[];
@@ -22,9 +24,16 @@ export function AnnotationOverlay({
   onDraft: (points: Point[]) => void;
   onComplete: (points: Point[], kind: AnnotationKind) => void;
   onErase: (id: string) => void;
+  onObjectChange: (annotation: Annotation) => void;
+  onObjectSelect: (id: string) => void;
 }) {
   const points = useRef<Point[]>([]);
   const drawing = useRef(false);
+  const objectDrag = useRef<{ annotation: Annotation; origin: Point } | null>(
+    null,
+  );
+  const [translation, setTranslation] = useState<Point>({ x: 0, y: 0 });
+  const hand = useRef<{ x: number; y: number; host: HTMLElement } | null>(null);
   const getPoint = (event: React.PointerEvent<SVGSVGElement>): Point => {
     const box = event.currentTarget.getBoundingClientRect();
     return {
@@ -43,6 +52,9 @@ export function AnnotationOverlay({
     "clipping",
     "text",
     "image",
+    "underline",
+    "pencil",
+    "hand",
   ].includes(tool);
   const draw = (
     kind: string,
@@ -62,7 +74,8 @@ export function AnnotationOverlay({
     };
     const props = {
       stroke: tint,
-      strokeWidth: annotation?.thickness ?? thickness,
+      strokeWidth:
+        (annotation?.thickness ?? thickness) * (kind === "pencil" ? 0.5 : 1),
       vectorEffect: "non-scaling-stroke" as const,
       fill: "none",
       onPointerDown: () => {
@@ -70,7 +83,9 @@ export function AnnotationOverlay({
       },
       style: {
         pointerEvents:
-          tool === "eraser" ? ("stroke" as const) : ("none" as const),
+          tool === "eraser" || tool === "select"
+            ? ("stroke" as const)
+            : ("none" as const),
       },
     };
     if (kind === "text")
@@ -80,7 +95,10 @@ export function AnnotationOverlay({
           y={first.y * 1000 + 24}
           fill={tint}
           fontSize={24}
-          style={{ pointerEvents: tool === "eraser" ? "all" : "none" }}
+          style={{
+            pointerEvents:
+              tool === "eraser" || tool === "select" ? "all" : "none",
+          }}
           onPointerDown={props.onPointerDown}
         >
           {annotation?.text}
@@ -91,15 +109,26 @@ export function AnnotationOverlay({
         <image
           href={annotation?.image}
           {...geometry}
-          style={{ pointerEvents: tool === "eraser" ? "all" : "none" }}
+          style={{
+            pointerEvents:
+              tool === "eraser" || tool === "select" ? "all" : "none",
+          }}
           onPointerDown={props.onPointerDown}
         />
       );
-    if (kind === "pen")
+    if (kind === "pen" || kind === "pencil" || kind === "underline")
       return (
         <polyline
           {...props}
-          points={pts.map((p) => `${p.x * 1000},${p.y * 1000}`).join(" ")}
+          points={(kind === "underline"
+            ? [pts[0], pts[pts.length - 1]].map((p) => ({
+                ...p,
+                y: Math.max(pts[0].y, pts[pts.length - 1].y),
+              }))
+            : pts
+          )
+            .map((p) => `${p.x * 1000},${p.y * 1000}`)
+            .join(" ")}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -141,7 +170,10 @@ export function AnnotationOverlay({
               fill={tint}
               fillOpacity={0.3}
               stroke="none"
-              style={{ pointerEvents: tool === "eraser" ? "all" : "none" }}
+              style={{
+                pointerEvents:
+                  tool === "eraser" || tool === "select" ? "all" : "none",
+              }}
             />
           ))}
         </g>
@@ -166,6 +198,16 @@ export function AnnotationOverlay({
       }}
       aria-label="Camada de anotações"
       onPointerDown={(e) => {
+        if (tool === "hand") {
+          const host = e.currentTarget.closest(
+            ".reader-scroll-area",
+          ) as HTMLElement;
+          if (host) {
+            hand.current = { x: e.clientX, y: e.clientY, host };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }
+          return;
+        }
         if (tool === "eraser" || !enabled) return;
         e.currentTarget.setPointerCapture(e.pointerId);
         drawing.current = true;
@@ -173,13 +215,47 @@ export function AnnotationOverlay({
         onDraft(points.current);
       }}
       onPointerMove={(e) => {
+        if (hand.current) {
+          const h = hand.current;
+          h.host.scrollBy(h.x - e.clientX, h.y - e.clientY);
+          h.x = e.clientX;
+          h.y = e.clientY;
+          return;
+        }
+        if (objectDrag.current) {
+          const p = getPoint(e);
+          setTranslation({
+            x: p.x - objectDrag.current.origin.x,
+            y: p.y - objectDrag.current.origin.y,
+          });
+          return;
+        }
         if (!drawing.current) return;
         const p = getPoint(e);
         points.current =
-          tool === "pen" ? [...points.current, p] : [points.current[0], p];
+          tool === "pen" || tool === "pencil"
+            ? [...points.current, p]
+            : [points.current[0], p];
         onDraft(points.current);
       }}
       onPointerUp={(e) => {
+        hand.current = null;
+        if (objectDrag.current) {
+          const { annotation, origin } = objectDrag.current;
+          const end = getPoint(e);
+          onObjectChange({
+            ...annotation,
+            points: annotation.points?.map((p) => ({
+              ...p,
+              x: Math.max(0, Math.min(1, p.x + end.x - origin.x)),
+              y: Math.max(0, Math.min(1, p.y + end.y - origin.y)),
+            })),
+            updatedAt: new Date().toISOString(),
+          });
+          objectDrag.current = null;
+          setTranslation({ x: 0, y: 0 });
+          return;
+        }
         if (!drawing.current) return;
         drawing.current = false;
         const pts = [...points.current, getPoint(e)];
@@ -191,13 +267,16 @@ export function AnnotationOverlay({
             pts.length > 5)
         )
           onComplete(
-            tool === "pen" ? pts : [pts[0], pts.at(-1)!],
+            tool === "pen" || tool === "pencil" ? pts : [pts[0], pts.at(-1)!],
             tool as AnnotationKind,
           );
         points.current = [];
         onDraft([]);
       }}
       onPointerCancel={() => {
+        hand.current = null;
+        objectDrag.current = null;
+        setTranslation({ x: 0, y: 0 });
         drawing.current = false;
         points.current = [];
         onDraft([]);
@@ -221,7 +300,31 @@ export function AnnotationOverlay({
         </marker>
       </defs>
       {annotations.map((a) => (
-        <g key={a.id} opacity={a.opacity ?? 1}>
+        <g
+          key={a.id}
+          opacity={a.opacity ?? 1}
+          transform={
+            objectDrag.current?.annotation.id === a.id
+              ? `translate(${translation.x * 1000} ${translation.y * 1000})`
+              : undefined
+          }
+          style={{ pointerEvents: tool === "select" ? "all" : undefined }}
+          onPointerDown={(e) => {
+            if (tool !== "select") return;
+            e.stopPropagation();
+            const svg = e.currentTarget.ownerSVGElement!;
+            const r = svg.getBoundingClientRect();
+            objectDrag.current = {
+              annotation: a,
+              origin: {
+                x: (e.clientX - r.left) / r.width,
+                y: (e.clientY - r.top) / r.height,
+              },
+            };
+            onObjectSelect(a.id);
+            svg.setPointerCapture(e.pointerId);
+          }}
+        >
           {draw(a.kind, a.points ?? [], a.color, a.id, a)}
         </g>
       ))}
