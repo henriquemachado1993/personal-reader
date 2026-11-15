@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useLibrary } from "@/modules/library/store";
 import { downloadBlob } from "@/modules/reader/export";
+import { resolveLibraryConflict } from "@/modules/library/synchronize";
+import { writeState } from "@/infrastructure/storage/local";
 export function SettingsView() {
   const state = useLibrary();
   const [usage, setUsage] = useState("");
@@ -72,6 +74,45 @@ export function SettingsView() {
         </div>
       </div>
       <div className="settings-content">
+        <section aria-label="Sincronização">
+          <h2>Seu acervo em todos os dispositivos</h2>
+          <p role="status">{state.syncMessage}</p>
+          <button
+            className="button secondary"
+            onClick={() => void state.synchronize()}
+          >
+            Sincronizar agora
+          </button>
+          {/Conflito/.test(state.syncMessage) && (
+            <div>
+              <p>Uma cópia JSON será baixada antes de aplicar sua escolha.</p>
+              {[true, false].map((preferLocal) => (
+                <button
+                  key={String(preferLocal)}
+                  className="button secondary"
+                  onClick={async () => {
+                    exportData();
+                    try {
+                      const replacement =
+                        await resolveLibraryConflict(preferLocal);
+                      if (replacement) {
+                        await writeState(replacement);
+                        useLibrary.setState(replacement);
+                      }
+                      await useLibrary.getState().synchronize();
+                    } catch {
+                      state.notify(
+                        "Não foi possível resolver agora. Sua cópia local foi preservada.",
+                      );
+                    }
+                  }}
+                >
+                  {preferLocal ? "Manter esta versão" : "Usar versão da conta"}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
         <section>
           <h2>Aparência</h2>
           <p>Escolha como quer ver a sua biblioteca.</p>
@@ -142,7 +183,7 @@ export function SettingsView() {
                 <strong>Supabase + Prisma</strong>
                 <p>
                   {config?.database
-                    ? "Credenciais presentes no servidor. A sincronização ainda não está ativa."
+                    ? "Biblioteca sincronizada com sua conta."
                     : "Conexão remota ainda não configurada."}
                 </p>
               </div>

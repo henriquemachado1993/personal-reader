@@ -102,8 +102,8 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       <div className="import-privacy">
         <FileText size={16} />
         <span>
-          Seus originais são preservados. Nesta versão, os arquivos ficam neste
-          navegador.
+          Seus originais são preservados. Uma cópia local permite ler offline; a
+          sincronização envia os arquivos para sua conta privada.
         </span>
       </div>
       <div className="dialog-actions">

@@ -226,3 +226,12 @@ model LoginAttempt {
   windowStart DateTime @default(now())
   @@schema("reader")
 }
+
+model LibraryReplica {
+  ownerId String @id @db.Uuid
+  revision Int @default(0)
+  snapshot Json @db.JsonB
+  operationId String
+  updatedAt DateTime @updatedAt
+  @@schema("reader")
+}

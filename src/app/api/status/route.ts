@@ -6,7 +6,7 @@ export async function GET() {
       { status: 401 },
     );
   return Response.json({
-    mode: "local",
+    mode: "remote",
     database: Boolean(process.env.DATABASE_URL && process.env.DIRECT_URL),
     storage: Boolean(
       process.env.R2_ACCOUNT_ID &&
@@ -14,6 +14,6 @@ export async function GET() {
       process.env.R2_SECRET_ACCESS_KEY &&
       process.env.R2_BUCKET_NAME,
     ),
-    synchronization: false,
+    synchronization: true,
   });
 }

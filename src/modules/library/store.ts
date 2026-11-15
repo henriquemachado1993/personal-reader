@@ -10,6 +10,7 @@ import type {
 } from "@/shared/types";
 import { initialState } from "./demo";
 import { sameLocation } from "@/modules/reader/location";
+import { synchronizeLibrary } from "./synchronize";
 import {
   readState,
   writeState,
@@ -23,6 +24,8 @@ interface Store extends LibraryState {
   notice: string;
   ownerId: string;
   ownerName: string;
+  syncMessage: string;
+  synchronize: () => Promise<void>;
   hydrate: (userId?: string, name?: string) => Promise<void>;
   dismissNotice: () => void;
   notify: (message: string) => void;
@@ -76,6 +79,45 @@ export const useLibrary = create<Store>((set, get) => {
     notice: "",
     ownerId: "",
     ownerName: "Leitor",
+    syncMessage: "Alterações salvas neste navegador.",
+    synchronize: async () => {
+      if (!navigator.onLine || !get().hydrated) return;
+      const perform = async () => {
+        try {
+          await persistence;
+          const result = await synchronizeLibrary();
+          // Do not replace edits made while a network request was in flight.
+          if (result) {
+            const keys = Object.keys(result.before) as (keyof LibraryState)[];
+            if (
+              keys.every(
+                (key) =>
+                  JSON.stringify(get()[key]) ===
+                  JSON.stringify(result.before[key]),
+              )
+            ) {
+              set(result.snapshot);
+              await writeState(result.snapshot);
+            }
+          }
+          set({ syncMessage: "Biblioteca sincronizada." });
+        } catch (error) {
+          set({
+            syncMessage:
+              error instanceof Error
+                ? error.message
+                : "Sincronização pendente.",
+          });
+        }
+      };
+      if (navigator.locks)
+        await navigator.locks.request(
+          `reader-sync-${get().ownerId}`,
+          { ifAvailable: true },
+          (lock) => (lock ? perform() : Promise.resolve()),
+        );
+      else await perform();
+    },
     hydrate: async (userId, name) => {
       if (!userId || (get().hydrated && get().ownerId === userId)) return;
       set({

@@ -45,3 +45,29 @@ export async function signedReadUrl(key: string) {
     { expiresIn: 300 },
   );
 }
+
+export async function writeOriginal(key: string, bytes: Uint8Array) {
+  try {
+    await storage().send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: key,
+        Body: bytes,
+        IfNoneMatch: "*",
+      }),
+    );
+  } catch (error) {
+    // Retrying an immutable original is safe after an interrupted response.
+    if (
+      (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode !== 412
+    )
+      throw error;
+  }
+}
+export async function readOriginal(key: string) {
+  const result = await storage().send(
+    new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
+  );
+  return (await result.Body!.transformToByteArray()) as Uint8Array<ArrayBuffer>;
+}
