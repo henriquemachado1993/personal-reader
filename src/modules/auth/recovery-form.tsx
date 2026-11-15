@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField } from "@/components/ui/controls";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -65,7 +66,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
             (reset ? (
               <label className="field-label">
                 Nova senha
-                <input
+                <TextField
                   className="input"
                   type="password"
                   autoComplete="new-password"
@@ -79,7 +80,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
             ) : (
               <label className="field-label">
                 E-mail
-                <input
+                <TextField
                   className="input"
                   type="email"
                   autoComplete="email"
@@ -92,7 +93,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
             ))}
           {message && <p role={finished ? "status" : "alert"}>{message}</p>}
           {!finished && (
-            <button
+            <Button
               className="button primary login-submit"
               disabled={busy || (reset && !token)}
             >
@@ -101,7 +102,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
                 : reset
                   ? "Salvar nova senha"
                   : "Enviar link de recuperação"}
-            </button>
+            </Button>
           )}
           <Link className="text-link" href="/login">
             Voltar para entrar

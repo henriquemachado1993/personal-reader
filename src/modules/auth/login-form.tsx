@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField } from "@/components/ui/controls";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { BookOpen, ArrowRight, Eye, EyeOff } from "lucide-react";
@@ -101,7 +102,7 @@ export function LoginForm({
           {firstRun && (
             <label className="field-label">
               Como podemos chamar você?
-              <input
+              <TextField
                 className="input"
                 name="name"
                 autoComplete="name"
@@ -115,7 +116,7 @@ export function LoginForm({
           )}
           <label className="field-label">
             E-mail
-            <input
+            <TextField
               className="input"
               name="email"
               type="email"
@@ -130,7 +131,7 @@ export function LoginForm({
           <label className="field-label">
             Senha
             <div className="password-input">
-              <input
+              <TextField
                 className="input"
                 name="password"
                 type={visible ? "text" : "password"}
@@ -157,7 +158,7 @@ export function LoginForm({
               {error}
             </div>
           )}
-          <button
+          <Button
             type="submit"
             className="button primary login-submit"
             disabled={busy || !available}
@@ -168,7 +169,7 @@ export function LoginForm({
                 ? "Criar minha biblioteca"
                 : "Entrar na minha biblioteca"}
             <ArrowRight size={17} />
-          </button>
+          </Button>
           <p className="login-privacy">
             {!firstRun && (
               <Link href="/forgot-password" className="text-link">

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/controls";
 import { useEffect, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -91,7 +92,7 @@ export function PageFilmstrip({
       </IconButton>
       <div className="page-filmstrip-track">
         {indices.map((index) => (
-          <button
+          <Button
             key={index}
             ref={index === currentPage ? selected : undefined}
             className={`page-thumbnail ${index === currentPage ? "current" : ""}`}
@@ -113,7 +114,7 @@ export function PageFilmstrip({
                 </span>
               </div>
             )}
-          </button>
+          </Button>
         ))}
       </div>
       <IconButton

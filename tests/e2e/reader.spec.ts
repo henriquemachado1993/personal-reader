@@ -50,8 +50,8 @@ test("search, list/grid and collection membership work", async ({ page }) => {
   await expect(page.locator(".book-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Fechar busca" }).click();
   const first = page.locator(".book-card").first();
-  await first.locator("summary").click();
-  await first.getByRole("button", { name: "Adicionar à coleção" }).click();
+  await first.getByRole("button", { name: "Opções do livro" }).click();
+  await page.getByRole("menuitem", { name: "Adicionar à coleção" }).click();
   await page.getByRole("checkbox").first().check();
   await page.getByRole("button", { name: "Concluir", exact: true }).click();
   await page.reload();

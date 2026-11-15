@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField, TextArea } from "@/components/ui/controls";
 import "./reader-controls.css";
 import "./editor-controls.css";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,7 +32,6 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useLibrary } from "@/modules/library/store";
-import { useInitialize } from "@/components/layout/workspace";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { PdfPage } from "./pdf-page";
@@ -64,7 +64,6 @@ function pageLocation(book: ReaderDocument, page: number): DocumentLocation {
 }
 const colors = ["#e8bb45", "#db7f88", "#6a997d", "#7f9fc4", "#3e3830"];
 export function Reader({ documentId }: { documentId: string }) {
-  useInitialize();
   const library = useLibrary();
   const book = library.documents.find((d) => d.id === documentId);
   useEffect(() => {
@@ -503,13 +502,13 @@ export function Reader({ documentId }: { documentId: string }) {
           >
             <Search size={18} />
           </IconButton>
-          <button
+          <Button
             className="icon-button type-control"
             aria-label="Ajustar aparência"
             onClick={() => setAppearance(!appearance)}
           >
             Aa
-          </button>
+          </Button>
           <IconButton
             label={bookmarked ? "Remover marcador" : "Marcar página"}
             className={bookmarked ? "bookmarked" : ""}
@@ -537,12 +536,12 @@ export function Reader({ documentId }: { documentId: string }) {
         </div>
       </header>
       {focus && (
-        <button
+        <Button
           className="show-reader-controls"
           onClick={() => setFocus(false)}
         >
           Mostrar controles de leitura
-        </button>
+        </Button>
       )}
       {appearance && (
         <div className="appearance-panel">
@@ -605,7 +604,7 @@ export function Reader({ documentId }: { documentId: string }) {
           </label>
           <div className="reader-theme-options">
             {(["white", "paper", "night"] as const).map((t) => (
-              <button
+              <Button
                 key={t}
                 aria-label={`Tema ${t === "white" ? "branco" : t === "paper" ? "papel" : "noturno"}`}
                 aria-pressed={library.preferences.readerTheme === t}
@@ -613,7 +612,7 @@ export function Reader({ documentId }: { documentId: string }) {
                 onClick={() => library.setPreferences({ readerTheme: t })}
               >
                 Aa{library.preferences.readerTheme === t && <Check size={12} />}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -621,14 +620,14 @@ export function Reader({ documentId }: { documentId: string }) {
       {searching && (
         <div className="reader-search">
           <Search size={16} />
-          <input
+          <TextField
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Buscar texto neste documento"
             placeholder="O que você quer encontrar?"
           />
-          <button
+          <Button
             className="button secondary"
             onClick={async () => {
               if (!query.trim()) return;
@@ -663,7 +662,7 @@ export function Reader({ documentId }: { documentId: string }) {
             }}
           >
             Buscar
-          </button>
+          </Button>
           <IconButton label="Fechar busca" onClick={() => setSearching(false)}>
             <X size={17} />
           </IconButton>
@@ -680,7 +679,7 @@ export function Reader({ documentId }: { documentId: string }) {
             </div>
             <div className="page-navigation-list">
               {Array.from({ length: Math.min(book.pages, 1000) }, (_, i) => (
-                <button
+                <Button
                   className={currentPage === i ? "current" : ""}
                   key={i}
                   onClick={() => go(i)}
@@ -692,11 +691,11 @@ export function Reader({ documentId }: { documentId: string }) {
                   {library.bookmarks.some(
                     (b) => b.documentId === documentId && b.page === i,
                   ) && <Bookmark size={13} fill="currentColor" />}
-                </button>
+                </Button>
               ))}
             </div>
             <h3 className="panel-subheading">Marcadores</h3>
-            <button
+            <Button
               className="bookmark-link"
               onClick={() => {
                 setLeft(false);
@@ -705,13 +704,13 @@ export function Reader({ documentId }: { documentId: string }) {
             >
               <StickyNote size={15} />
               Anotações deste livro
-            </button>
+            </Button>
             {library.bookmarks.filter((b) => b.documentId === documentId)
               .length ? (
               library.bookmarks
                 .filter((b) => b.documentId === documentId)
                 .map((b) => (
-                  <button
+                  <Button
                     key={b.id}
                     className="bookmark-link"
                     onClick={() => {
@@ -726,7 +725,7 @@ export function Reader({ documentId }: { documentId: string }) {
                   >
                     <Bookmark size={15} />
                     Página {b.page + 1}
-                  </button>
+                  </Button>
                 ))
             ) : (
               <p className="panel-empty">
@@ -864,7 +863,7 @@ export function Reader({ documentId }: { documentId: string }) {
                   ? `${selection.text.slice(0, 35)}…`
                   : selection.text}
               </span>
-              <button
+              <Button
                 onClick={() => {
                   addAnnotation("highlight", selection.points, selection.text);
                   window.getSelection()?.removeAllRanges();
@@ -872,8 +871,8 @@ export function Reader({ documentId }: { documentId: string }) {
               >
                 <Highlighter size={16} />
                 Destacar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   setRight(true);
                   setNote("");
@@ -881,7 +880,7 @@ export function Reader({ documentId }: { documentId: string }) {
               >
                 <StickyNote size={16} />
                 Anotar
-              </button>
+              </Button>
               <IconButton
                 label="Cancelar seleção"
                 onClick={() => setSelection(null)}
@@ -924,17 +923,17 @@ export function Reader({ documentId }: { documentId: string }) {
               <label className="sr-only" htmlFor="new-note">
                 Sua anotação
               </label>
-              <textarea
+              <TextArea
                 id="new-note"
                 placeholder="O que esta página fez você pensar?"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={10000}
               />
-              <button className="button primary" disabled={!note.trim()}>
+              <Button className="button primary" disabled={!note.trim()}>
                 <Plus size={15} />
                 Salvar anotação
-              </button>
+              </Button>
             </form>
             <div className="panel-annotations">
               {annotations
@@ -963,7 +962,7 @@ export function Reader({ documentId }: { documentId: string }) {
                       <blockquote>{a.quote}</blockquote>
                     )}
                     <p>{a.text}</p>
-                    <button
+                    <Button
                       className="text-link"
                       onClick={() => {
                         if (realEpub && a.location.type === "EPUB")
@@ -973,7 +972,7 @@ export function Reader({ documentId }: { documentId: string }) {
                     >
                       Página {a.page + 1}
                       <MoveUpRight size={12} />
-                    </button>
+                    </Button>
                   </article>
                 ))}
               {!annotations.length && (
@@ -1029,7 +1028,7 @@ export function Reader({ documentId }: { documentId: string }) {
           <span className="toolbar-divider" />
           <div className="annotation-colors">
             {selectedObject && (
-              <button
+              <Button
                 className="button secondary"
                 onClick={() => {
                   const object = annotations.find(
@@ -1047,11 +1046,11 @@ export function Reader({ documentId }: { documentId: string }) {
                 }}
               >
                 Aplicar ao objeto selecionado
-              </button>
+              </Button>
             )}
             <label>
               Cor{" "}
-              <input
+              <TextField
                 aria-label="Cor personalizada"
                 type="color"
                 value={color}
@@ -1059,7 +1058,7 @@ export function Reader({ documentId }: { documentId: string }) {
               />
             </label>
             {colors.map((c) => (
-              <button
+              <Button
                 key={c}
                 aria-label={`Cor ${c}`}
                 className={color === c ? "active" : ""}
@@ -1070,7 +1069,7 @@ export function Reader({ documentId }: { documentId: string }) {
           </div>
           <label>
             Espessura{" "}
-            <input
+            <TextField
               aria-label="Espessura do traço"
               type="range"
               min="1"
@@ -1081,7 +1080,7 @@ export function Reader({ documentId }: { documentId: string }) {
           </label>
           <label>
             Opacidade{" "}
-            <input
+            <TextField
               aria-label="Opacidade da marcação"
               type="range"
               min="0.1"
@@ -1094,7 +1093,7 @@ export function Reader({ documentId }: { documentId: string }) {
           {tool === "text" && (
             <label>
               Texto{" "}
-              <input
+              <TextField
                 value={stampText}
                 maxLength={500}
                 onChange={(e) => setStampText(e.target.value)}
@@ -1104,7 +1103,7 @@ export function Reader({ documentId }: { documentId: string }) {
           {tool === "image" && (
             <label>
               Imagem{" "}
-              <input
+              <TextField
                 type="file"
                 accept="image/png,image/jpeg"
                 onChange={async (e) => {
@@ -1143,7 +1142,7 @@ export function Reader({ documentId }: { documentId: string }) {
             <span>{book.progress}% lido</span>
           ) : (
             <label>
-              <input
+              <TextField
                 aria-label="Número da página"
                 type="number"
                 min={1}

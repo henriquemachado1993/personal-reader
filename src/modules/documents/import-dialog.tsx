@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField } from "@/components/ui/controls";
 import { useRef, useState } from "react";
 import { Upload, FileText, Check, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/ui";
@@ -49,7 +50,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       <p className="dialog-description">
         Traga seus livros e documentos para a sua biblioteca.
       </p>
-      <input
+      <TextField
         ref={input}
         type="file"
         accept=".pdf,.epub,.docx,.txt"
@@ -60,7 +61,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           e.target.value = "";
         }}
       />
-      <button
+      <Button
         className={`upload-zone ${dragging ? "dragging" : ""}`}
         disabled={busy}
         onDragOver={(e) => {
@@ -85,7 +86,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
         </strong>
         <span>ou clique para escolher no computador</span>
         <small>PDF, EPUB, DOCX e TXT · até 100 MB por arquivo</small>
-      </button>
+      </Button>
       {results.length > 0 && (
         <ul className="import-results" aria-live="polite">
           {results.map((r, i) => (
@@ -107,17 +108,17 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
         </span>
       </div>
       <div className="dialog-actions">
-        <button className="button secondary" disabled={busy} onClick={onClose}>
+        <Button className="button secondary" disabled={busy} onClick={onClose}>
           Concluir
-        </button>
-        <button
+        </Button>
+        <Button
           className="button primary"
           disabled={busy}
           onClick={() => input.current?.click()}
         >
           <PlusIcon />
           {busy ? "Importando…" : "Selecionar arquivos"}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

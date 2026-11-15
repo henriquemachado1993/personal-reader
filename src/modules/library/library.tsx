@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField, SelectField } from "@/components/ui/controls";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -107,10 +108,10 @@ export function LibraryView({
           <h1>{heading}</h1>
           {isCollection && <p>{visible.length} documentos</p>}
         </div>
-        <button className="button primary" onClick={onImport}>
+        <Button className="button primary" onClick={onImport}>
           <Plus size={17} />
           Importar arquivos
-        </button>
+        </Button>
       </div>
       {isHome && !search && reading.length > 0 && (
         <section
@@ -165,12 +166,12 @@ export function LibraryView({
           <div className="shelf-controls">
             <label className="sort-control">
               <span className="sr-only">Ordenar documentos</span>
-              <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <SelectField value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="recent">Mais recentes</option>
                 <option value="title">Título</option>
                 <option value="author">Autor</option>
                 <option value="progress">Progresso</option>
-              </select>
+              </SelectField>
               <ChevronDown size={14} />
             </label>
             <div className="view-toggle" aria-label="Visualização">
@@ -206,7 +207,7 @@ export function LibraryView({
             ["DOCX", "Documentos"],
             ["TXT", "Textos"],
           ].map(([value, label]) => (
-            <button
+            <Button
               key={value}
               onClick={() => setFormat(value)}
               className={format === value ? "active" : ""}
@@ -214,7 +215,7 @@ export function LibraryView({
             >
               {label}
               {value === "all" && <span>{documents.length}</span>}
-            </button>
+            </Button>
           ))}
         </div>
         {visible.length ? (
@@ -235,10 +236,10 @@ export function LibraryView({
             }
             action={
               !search && (
-                <button className="button primary" onClick={onImport}>
+                <Button className="button primary" onClick={onImport}>
                   <Plus size={16} />
                   Importar um documento
-                </button>
+                </Button>
               )
             }
           >
@@ -314,19 +315,19 @@ function BookCard({ book }: { book: ReaderDocument }) {
               <BookOpen size={15} />
               Abrir livro
             </Link>
-            <button onClick={() => changeStatus("want")}>
+            <Button onClick={() => changeStatus("want")}>
               <Bookmark size={15} />
               Quero ler
-            </button>
-            <button onClick={() => changeStatus("finished")}>
+            </Button>
+            <Button onClick={() => changeStatus("finished")}>
               <CheckCheck size={15} />
               Marcar como concluído
-            </button>
-            <button onClick={() => setAssign(true)}>
+            </Button>
+            <Button onClick={() => setAssign(true)}>
               <FolderPlus size={15} />
               Adicionar à coleção
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setTitle(book.title);
                 setRename(true);
@@ -334,11 +335,11 @@ function BookCard({ book }: { book: ReaderDocument }) {
             >
               <Pencil size={15} />
               Renomear
-            </button>
-            <button className="danger" onClick={() => setConfirm(true)}>
+            </Button>
+            <Button className="danger" onClick={() => setConfirm(true)}>
               <Trash2 size={15} />
               Remover
-            </button>
+            </Button>
           </BookMenu>
         </div>
       </div>
@@ -349,13 +350,13 @@ function BookCard({ book }: { book: ReaderDocument }) {
             deste navegador.
           </p>
           <div className="dialog-actions">
-            <button
+            <Button
               className="button secondary"
               onClick={() => setConfirm(false)}
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               className="button danger-button"
               onClick={() => {
                 deleteDocument(book.id);
@@ -364,7 +365,7 @@ function BookCard({ book }: { book: ReaderDocument }) {
               }}
             >
               Remover documento
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -381,7 +382,7 @@ function BookCard({ book }: { book: ReaderDocument }) {
           >
             <label className="field-label">
               Título
-              <input
+              <TextField
                 className="input"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -391,16 +392,16 @@ function BookCard({ book }: { book: ReaderDocument }) {
               />
             </label>
             <div className="dialog-actions">
-              <button
+              <Button
                 type="button"
                 className="button secondary"
                 onClick={() => setRename(false)}
               >
                 Cancelar
-              </button>
-              <button className="button primary" disabled={!title.trim()}>
+              </Button>
+              <Button className="button primary" disabled={!title.trim()}>
                 Salvar título
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -415,7 +416,7 @@ function BookCard({ book }: { book: ReaderDocument }) {
               <label key={c.id}>
                 <FolderClosed size={18} style={{ color: c.color }} />
                 <span>{c.name}</span>
-                <input
+                <TextField
                   type="checkbox"
                   checked={book.collections.includes(c.id)}
                   onChange={(e) =>
@@ -430,9 +431,9 @@ function BookCard({ book }: { book: ReaderDocument }) {
             ))}
           </div>
           <div className="dialog-actions">
-            <button className="button primary" onClick={() => setAssign(false)}>
+            <Button className="button primary" onClick={() => setAssign(false)}>
               Concluir
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -450,10 +451,10 @@ export function CollectionsView({ search }: { search: string }) {
           <h1>Coleções</h1>
           <p>Um lugar para cada interesse. Uma nova conexão entre livros.</p>
         </div>
-        <button className="button primary" onClick={() => setAdding(true)}>
+        <Button className="button primary" onClick={() => setAdding(true)}>
           <Plus size={17} />
           Nova coleção
-        </button>
+        </Button>
       </div>
       {adding && (
         <form
@@ -472,7 +473,7 @@ export function CollectionsView({ search }: { search: string }) {
           }}
         >
           <label htmlFor="collection-name">Nome da coleção</label>
-          <input
+          <TextField
             id="collection-name"
             className="input"
             placeholder="Ex.: Leituras de fim de semana"
@@ -482,16 +483,16 @@ export function CollectionsView({ search }: { search: string }) {
             maxLength={70}
             required
           />
-          <button className="button primary" disabled={!name.trim()}>
+          <Button className="button primary" disabled={!name.trim()}>
             Criar coleção
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className="button secondary"
             onClick={() => setAdding(false)}
           >
             Cancelar
-          </button>
+          </Button>
         </form>
       )}
       <div className="collections-grid">

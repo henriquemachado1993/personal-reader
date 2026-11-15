@@ -1,4 +1,5 @@
 "use client";
+import { Button, SelectField } from "@/components/ui/controls";
 import { useEffect, useState } from "react";
 import {
   Sun,
@@ -80,17 +81,17 @@ export function SettingsView() {
         <section aria-label="Sincronização">
           <h2>Seu acervo em todos os dispositivos</h2>
           <p role="status">{state.syncMessage}</p>
-          <button
+          <Button
             className="button secondary"
             onClick={() => void state.synchronize()}
           >
             Sincronizar agora
-          </button>
+          </Button>
           {/Conflito/.test(state.syncMessage) && (
             <div>
               <p>Uma cópia JSON será baixada antes de aplicar sua escolha.</p>
               {[true, false].map((preferLocal) => (
-                <button
+                <Button
                   key={String(preferLocal)}
                   className="button secondary"
                   onClick={async () => {
@@ -111,7 +112,7 @@ export function SettingsView() {
                   }}
                 >
                   {preferLocal ? "Manter esta versão" : "Usar versão da conta"}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -127,7 +128,7 @@ export function SettingsView() {
                 { id: "system", label: "Sistema", icon: Monitor },
               ] as const
             ).map(({ id, label, icon: Icon }) => (
-              <button
+              <Button
                 key={id}
                 className={state.preferences.theme === id ? "active" : ""}
                 aria-pressed={state.preferences.theme === id}
@@ -135,7 +136,7 @@ export function SettingsView() {
               >
                 <Icon size={21} strokeWidth={1.5} />
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
         </section>
@@ -147,7 +148,7 @@ export function SettingsView() {
               <p>Um convite para reservar alguns minutos para você.</p>
             </div>
             <label>
-              <select
+              <SelectField
                 className="input"
                 aria-label="Meta diária em minutos"
                 value={state.preferences.dailyGoal}
@@ -160,7 +161,7 @@ export function SettingsView() {
                     {n} minutos
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </label>
           </div>
         </section>
@@ -218,10 +219,10 @@ export function SettingsView() {
                 incluídos neste backup.
               </p>
             </div>
-            <button className="button secondary" onClick={exportData}>
+            <Button className="button secondary" onClick={exportData}>
               <Download size={16} />
               Exportar dados
-            </button>
+            </Button>
           </div>
         </section>
         <div className="settings-about">

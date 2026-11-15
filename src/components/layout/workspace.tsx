@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField } from "@/components/ui/controls";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,29 +29,15 @@ import { LibraryView, CollectionsView } from "@/modules/library/library";
 import { KnowledgeView } from "@/modules/knowledge/knowledge";
 import { SettingsView, StatisticsView } from "@/modules/settings/settings";
 import { ImportDialog } from "@/modules/documents/import-dialog";
+import { Dropdown } from "@/components/ui/dropdown";
 import { IconButton } from "@/components/ui";
 
-export function useInitialize() {
-  const theme = useLibrary((s) => s.preferences.theme);
-  useEffect(() => {
-    const media = matchMedia("(prefers-color-scheme: dark)");
-    const update = () => {
-      document.documentElement.dataset.theme =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
-    };
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, [theme]);
-}
 export function Workspace() {
-  useInitialize();
   const pathname = usePathname();
   const state = useLibrary();
   const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const headerRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const section = pathname.split("/")[1] || "library";
   const knowledgeActive = [
@@ -73,9 +60,6 @@ export function Workspace() {
       settings: "Configurações",
     };
     document.title = `${pathname === "/" ? "Início" : (titles[section] ?? "Biblioteca")} · Personal Reader`;
-    headerRef.current
-      ?.querySelectorAll("details[open]")
-      .forEach((d) => d.removeAttribute("open"));
   }, [pathname]);
   useEffect(() => {
     if (!state.notice) return;
@@ -92,21 +76,11 @@ export function Workspace() {
       if (e.key === "Escape") {
         setSearchOpen(false);
         setSearch("");
-        headerRef.current
-          ?.querySelectorAll("details[open]")
-          .forEach((d) => d.removeAttribute("open"));
       }
     };
-    const outside = (event: MouseEvent) => {
-      headerRef.current?.querySelectorAll("details[open]").forEach((d) => {
-        if (!d.contains(event.target as Node)) d.removeAttribute("open");
-      });
-    };
     document.addEventListener("keydown", listener);
-    document.addEventListener("click", outside);
     return () => {
       document.removeEventListener("keydown", listener);
-      document.removeEventListener("click", outside);
     };
   }, []);
   return (
@@ -114,7 +88,7 @@ export function Workspace() {
       <a href="#main" className="skip-link">
         Pular para o conteúdo
       </a>
-      <header className="books-header" ref={headerRef}>
+      <header className="books-header">
         <Link
           href="/"
           className="books-wordmark"
@@ -161,14 +135,11 @@ export function Workspace() {
           </IconButton>
         </nav>
         <div className="books-header-actions">
-          <details className="header-dropdown">
-            <summary
-              className="floating-circle"
-              aria-label="Coleções e filtros"
-              title="Coleções e filtros"
-            >
-              <List size={25} strokeWidth={1.6} />
-            </summary>
+          <Dropdown
+            label="Coleções e filtros"
+            icon={<List size={25} strokeWidth={1.6} />}
+            className="header-dropdown"
+          >
             <div className="header-dropdown-content">
               <h2>Coleções</h2>
               <Link href="/library/want">
@@ -214,27 +185,21 @@ export function Workspace() {
                 Gerenciar coleções
               </Link>
             </div>
-          </details>
-          <details className="header-dropdown">
-            <summary
-              className="floating-circle"
-              aria-label="Mais opções"
-              title="Mais opções"
-            >
-              <MoreHorizontal size={26} />
-            </summary>
+          </Dropdown>
+          <Dropdown
+            label="Mais opções"
+            icon={<MoreHorizontal size={26} />}
+            className="header-dropdown"
+          >
             <div className="header-dropdown-content">
-              <button
+              <Button
                 onClick={() => {
                   setImporting(true);
-                  headerRef.current
-                    ?.querySelectorAll("details[open]")
-                    .forEach((d) => d.removeAttribute("open"));
                 }}
               >
                 <Plus size={20} />
                 Importar arquivos
-              </button>
+              </Button>
               <div className="dropdown-rule" />
               <Link href="/collections">
                 <FolderClosed size={20} />
@@ -278,7 +243,7 @@ export function Workspace() {
                 <Settings size={20} />
                 Configurações
               </Link>
-              <button
+              <Button
                 onClick={() =>
                   state.setPreferences({
                     theme:
@@ -292,19 +257,19 @@ export function Workspace() {
                   <Moon size={20} />
                 )}
                 Tema {state.preferences.theme === "dark" ? "claro" : "escuro"}
-              </button>
-              <button onClick={() => void signOut({ callbackUrl: "/login" })}>
+              </Button>
+              <Button onClick={() => void signOut({ callbackUrl: "/login" })}>
                 <LogOut size={20} />
                 Sair da biblioteca
-              </button>
+              </Button>
             </div>
-          </details>
+          </Dropdown>
         </div>
       </header>
       {searchOpen && (
         <div className="books-search">
           <Search size={21} />
-          <input
+          <TextField
             ref={searchRef}
             autoFocus
             value={search}

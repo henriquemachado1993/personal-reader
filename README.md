@@ -82,6 +82,8 @@ Para reutilizar um navegador instalado, defina `PLAYWRIGHT_CHROMIUM_EXECUTABLE_P
 
 ## Estrutura
 
+A interface usa Mantine para campos, selects nativos, checkboxes, botões, menus e modais. O tema está em `src/components/ui/provider.tsx` e as adaptações visuais em `controls.css`. Os componentes de formulário compartilhados ficam em `controls.tsx`; preservam os contratos de eventos e referências dos fluxos existentes. O claro/escuro acompanha a preferência da biblioteca.
+
 `src/modules/` agrupa biblioteca, documentos, leitor, conhecimento, autenticação e preferências. `src/infrastructure/` contém IndexedDB, Prisma e R2. A camada de anotação usa coordenadas normalizadas e permanece separada do arquivo original. O modelo de localização diferencia PDF, CFI de EPUB e blocos de texto.
 
 ## Referências técnicas

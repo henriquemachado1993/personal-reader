@@ -1,4 +1,5 @@
 "use client";
+import { Button, TextField, SelectField, TextArea } from "@/components/ui/controls";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -74,28 +75,28 @@ export function KnowledgeView({
           <p>O que fica com você depois da última página.</p>
         </div>
         <div className="heading-actions">
-          <button
+          <Button
             className="button secondary"
             disabled={!visible.length}
             onClick={exportNotes}
           >
             <Download size={16} />
             Exportar
-          </button>
-          <button
+          </Button>
+          <Button
             className="button primary"
             disabled={!state.documents.length}
             onClick={() => setWriting(true)}
           >
             <Plus size={16} />
             Nova anotação
-          </button>
+          </Button>
         </div>
       </div>
       <div className="knowledge-toolbar">
         <label>
           De{" "}
-          <input
+          <TextField
             type="date"
             className="input"
             value={fromDate}
@@ -104,7 +105,7 @@ export function KnowledgeView({
         </label>
         <label>
           Até{" "}
-          <input
+          <TextField
             type="date"
             className="input"
             value={untilDate}
@@ -114,7 +115,7 @@ export function KnowledgeView({
         </label>
         {!forcedKind && (
           <div className="format-filters">
-            <button
+            <Button
               className={filter === "all" ? "active" : ""}
               onClick={() => setFilter("all")}
             >
@@ -126,20 +127,20 @@ export function KnowledgeView({
                   ).length
                 }
               </span>
-            </button>
+            </Button>
             {[
               { id: "highlight", name: "Destaques", icon: Highlighter },
               { id: "note", name: "Anotações", icon: StickyNote },
               { id: "clipping", name: "Capturas", icon: ScanLine },
             ].map(({ id, name, icon: Icon }) => (
-              <button
+              <Button
                 key={id}
                 className={filter === id ? "active" : ""}
                 onClick={() => setFilter(id)}
               >
                 <Icon size={15} />
                 {name}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -147,7 +148,7 @@ export function KnowledgeView({
           <label className="sr-only" htmlFor="document-filter">
             Filtrar por documento
           </label>
-          <select
+          <SelectField
             id="document-filter"
             className="input"
             value={document}
@@ -159,11 +160,11 @@ export function KnowledgeView({
                 {d.title}
               </option>
             ))}
-          </select>
+          </SelectField>
           <label className="sr-only" htmlFor="color-filter">
             Filtrar por cor
           </label>
-          <select
+          <SelectField
             id="color-filter"
             className="input"
             value={color}
@@ -175,7 +176,7 @@ export function KnowledgeView({
             <option value="#6a997d">Verde</option>
             <option value="#7f9fc4">Azul</option>
             <option value="#3e3830">Grafite</option>
-          </select>
+          </SelectField>
         </div>
       </div>
       {visible.length ? (
@@ -306,7 +307,7 @@ export function KnowledgeView({
           >
             <label className="field-label">
               Relacionada a
-              <select
+              <SelectField
                 className="input"
                 value={noteDoc}
                 onChange={(e) => setNoteDoc(e.target.value)}
@@ -316,11 +317,11 @@ export function KnowledgeView({
                     {d.title}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </label>
             <label className="field-label">
               Sua anotação
-              <textarea
+              <TextArea
                 className="input note-textarea"
                 autoFocus
                 value={text}
@@ -331,16 +332,16 @@ export function KnowledgeView({
               />
             </label>
             <div className="dialog-actions">
-              <button
+              <Button
                 type="button"
                 className="button secondary"
                 onClick={() => setWriting(false)}
               >
                 Cancelar
-              </button>
-              <button className="button primary" disabled={!text.trim()}>
+              </Button>
+              <Button className="button primary" disabled={!text.trim()}>
                 Salvar anotação
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>

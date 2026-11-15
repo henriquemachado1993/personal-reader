@@ -264,6 +264,14 @@ The brush button opens the annotation palette; it is closed by default. The pale
 
 ## Do's and Don'ts
 
+### Shared interface components
+
+Header menus retain the incumbent 330px width, 28px corners, 20px/15px padding, borderless offset shadow, 15px labels with 14px/15px row padding, and centered 25px bold serif collection heading. These values are a dedicated header variant; book menus stay compact. Preserve this distinction when changing Mantine defaults.
+
+Mantine 9 supplies the shared controls in `src/components/ui/controls.tsx`, plus `ActionIcon`, `Modal` and `Menu`. The theme lives in `src/components/ui/provider.tsx`; color scheme comes from the existing account preference, including system mode. CSS layers are ordered `theme, base, mantine, components, utilities` so Tailwind's reset cannot erase Mantine padding or borders. `controls.css` maps the components to the existing neutral palette and serif modal headings. The 14px application root is compensated with Mantine's theme scale.
+
+Use the shared controls for forms and actions. NativeSelect retains platform keyboard and mobile picker behavior. Specialized file, color and range inputs use Mantine's Input primitive while retaining browser gestures. Menus and modals render in portals, support Escape and manage keyboard focus. Keep reader geometry, document content and shelf layout independent of this component library.
+
 The machine-readable sidecar includes `extensions.implementationInventory`: an exact catalog of font sizes, radii and colors retained in the CSS, including legacy selectors. It is an inventory, not permission to reuse legacy styles for new UI. Existing named roles remain authoritative. Coarse-pointer controls have a minimum 44px target; reader annotation palettes can scroll vertically on small screens. The editor adds hand panning, object dragging, underline, a thinner pencil stroke and property updates for the selected object. Knowledge date filters wrap with the other controls. Statistics separate today's goal from accumulated time and list the last seven local calendar dates.
 
 ### Do:

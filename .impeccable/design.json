@@ -531,6 +531,21 @@
         "#ffffff",
         "#ffffff12"
       ]
+    },
+    "componentLibrary": {
+      "name": "Mantine",
+      "version": "9.8.1",
+      "theme": "src/components/ui/provider.tsx",
+      "controls": "src/components/ui/controls.tsx",
+      "styles": "src/components/ui/controls.css",
+      "colorScheme": "Existing library preference",
+      "layers": [
+        "theme",
+        "base",
+        "mantine",
+        "components",
+        "utilities"
+      ]
     }
   },
   "components": [

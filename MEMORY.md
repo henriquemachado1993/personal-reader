@@ -1,5 +1,9 @@
 # Memória do projeto
 
+- Mantine 9.8.1 integrado: controles em `src/components/ui/controls.tsx`, tema e esquema claro/escuro em `provider.tsx`, menus em `dropdown.tsx`, modal e ActionIcon em `src/components/ui.tsx`.
+- Manter a ordem CSS `theme, base, mantine, components, utilities`. Carregar estilos Mantine pelo globals.css após declarar as camadas; importar primeiro em layout.tsx deixa o reset Tailwind anular padding/bordas.
+- A fonte raiz existente é 14px; o tema Mantine usa scale=16/14 para preservar as dimensões declaradas. A preferência Zustand/IndexedDB é a fonte única do tema.
+
 - Build de deploy deve executar `npm run build`: regenera Prisma Client e copia o worker PDF antes do Next.js. Isso evita modelos ausentes com node_modules em cache na Vercel. Não substituir por `next build` no painel.
 
 - Especificação: `docs/PRODUCT.md`; referências visuais em `docs/design/images-reference/`.

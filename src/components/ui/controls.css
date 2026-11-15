@@ -1,0 +1,164 @@
+.mantine-Input-input,
+.mantine-Textarea-input {
+  --input-bg: var(--surface);
+  --input-color: var(--text);
+  --input-bd: var(--border);
+  --input-placeholder-color: var(--text-secondary);
+  --input-bd-focus: var(--accent);
+  font-size: 14px;
+}
+html body .reader-field .mantine-Input-input,
+html body .reader-select .mantine-Input-input,
+html body .reader-textarea .mantine-Textarea-input {
+  min-height: 44px;
+}
+.reader-field,
+.reader-textarea {
+  min-width: 0;
+  width: 100%;
+}
+.reader-select {
+  min-width: 0;
+}
+.password-input .reader-field {
+  flex: 1;
+}
+.reader-checkbox {
+  display: inline-flex;
+}
+.reader-checkbox input {
+  cursor: pointer;
+}
+.button .mantine-Button-label {
+  gap: 8px;
+  font-weight: inherit;
+}
+.reader-modal {
+  background: var(--surface);
+  color: var(--text);
+}
+.reader-modal .mantine-Modal-header {
+  background: var(--surface);
+  color: var(--text);
+}
+.reader-modal-title {
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: -0.5px;
+}
+.reader-modal-body {
+  overflow-wrap: anywhere;
+}
+.reader-modal .mantine-Modal-close {
+  color: var(--text-secondary);
+  width: 44px;
+  height: 44px;
+}
+.reader-menu {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  padding: 8px;
+}
+.reader-menu .reader-menu-item {
+  min-height: 44px;
+  border-radius: 7px;
+  color: inherit;
+  font-size: 14px;
+}
+.reader-menu-item .mantine-Menu-itemLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.reader-menu-item .mantine-Menu-itemLabel > span:last-child {
+  margin-left: auto;
+}
+.reader-menu .reader-menu-item[data-hovered] {
+  background: var(--surface-secondary);
+}
+.book-menu > .icon-button {
+  width: 44px;
+  height: 44px;
+}
+.reader-menu.reader-header-menu {
+  width: min(330px, calc(100vw - 28px));
+  max-height: calc(100dvh - 145px);
+  padding: 20px 15px;
+  border: 0;
+  border-radius: 28px;
+  box-shadow: 0 16px 50px #0002;
+}
+.reader-header-menu .reader-menu-item {
+  min-height: 50.5px;
+  padding: 14px 15px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.reader-header-menu .mantine-Menu-itemLabel {
+  gap: 15px;
+}
+.reader-header-menu .mantine-Menu-itemLabel > span:last-child {
+  color: var(--text-secondary);
+}
+.reader-header-menu .mantine-Menu-label {
+  padding: 0;
+  margin: 1px 0 18px;
+  text-align: center;
+  color: var(--text);
+}
+.reader-header-menu .mantine-Menu-label h2 {
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 700;
+}
+.reader-header-menu .mantine-Menu-divider {
+  margin: 10px 15px;
+  border-color: var(--border);
+}
+.reader-header-menu .reader-menu-item[data-hovered] {
+  background: var(--selection);
+}
+.sort-control .reader-select {
+  width: 150px;
+}
+.sort-control > svg {
+  display: none;
+}
+.reader-pagination .reader-field {
+  width: 4.5ch;
+}
+.reader-pagination .reader-field input {
+  min-height: 32px;
+  padding: 0;
+}
+.annotation-toolbar .specialized-field {
+  width: auto;
+}
+.annotation-toolbar .specialized-field input[type="range"] {
+  padding: 0;
+}
+.annotation-toolbar .specialized-field input[type="color"] {
+  width: 44px;
+  padding: 3px;
+}
+.annotation-toolbar .specialized-field input[type="file"] {
+  max-width: 220px;
+}
+@media (max-width: 540px) {
+  .reader-menu.reader-header-menu {
+    max-height: calc(100dvh - 95px);
+  }
+  .reader-menu {
+    width: min(300px, calc(100vw - 24px));
+  }
+  .sort-control .reader-select {
+    width: 125px;
+  }
+}
