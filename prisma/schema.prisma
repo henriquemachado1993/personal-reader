@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["reader"]
+}
+
+enum DocumentFormat {
+  PDF
+  EPUB
+  DOCX
+  TXT
+  @@schema("reader")
+}
+
+enum AnnotationType {
+  HIGHLIGHT
+  UNDERLINE
+  STRIKETHROUGH
+  FREEHAND
+  TEXT
+  ARROW
+  RECTANGLE
+  CIRCLE
+  IMAGE
+  @@schema("reader")
+}
+
+model User {
+  id          String           @id @default(uuid()) @db.Uuid
+  email       String           @unique
+  name        String?
+  passwordHash String?
+  documents   Document[]
+  collections Collection[]
+  preferences Json             @default("{}")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@schema("reader")
+}
+
+model Document {
+  id          String            @id @default(uuid()) @db.Uuid
+  ownerId     String            @db.Uuid
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  author      String?
+  format      DocumentFormat
+  description String?
+  status      String            @default("want")
+  version     Int               @default(1)
+  metadata    DocumentMetadata?
+  files       DocumentFile[]
+  progress    ReadingProgress?
+  sessions    ReadingSession[]
+  bookmarks   Bookmark[]
+  highlights  Highlight[]
+  annotations Annotation[]
+  notes       Note[]
+  clippings   Clipping[]
+  collections Collection[]
+  tags        Tag[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  @@index([ownerId, updatedAt])
+  @@schema("reader")
+}
+
+model DocumentFile {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  storageKey String   @unique
+  filename   String
+  mimeType   String
+  size       BigInt
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  @@schema("reader")
+}
+
+model DocumentMetadata {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @unique @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  isbn       String?
+  publisher  String?
+  language   String?
+  coverKey   String?
+  pageCount  Int?
+  @@schema("reader")
+}
+
+model ReadingProgress {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @unique @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  location   Json     @db.JsonB
+  percentage Float    @default(0)
+  version    Int      @default(1)
+  updatedAt  DateTime @updatedAt
+  @@schema("reader")
+}
+
+model ReadingSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  documentId String    @db.Uuid
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  seconds    Int       @default(0)
+  @@index([documentId, startedAt])
+  @@schema("reader")
+}
+
+model Bookmark {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  location   Json     @db.JsonB
+  label      String?
+  createdAt  DateTime @default(now())
+  @@index([documentId])
+  @@schema("reader")
+}
+
+model Highlight {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  location   Json     @db.JsonB
+  text       String
+  color      String   @default("#e8bb45")
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([documentId, createdAt])
+  @@schema("reader")
+}
+
+model Annotation {
+  id         String         @id @default(uuid()) @db.Uuid
+  documentId String         @db.Uuid
+  document   Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  type       AnnotationType
+  location   Json           @db.JsonB
+  color      String?
+  content    String?
+  geometry   Json?          @db.JsonB
+  version    Int            @default(1)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  @@index([documentId, createdAt])
+  @@schema("reader")
+}
+
+model Note {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  location   Json     @db.JsonB
+  content    String
+  quote      String?
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([documentId, createdAt])
+  @@schema("reader")
+}
+
+model Clipping {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  location   Json     @db.JsonB
+  storageKey String
+  caption    String?
+  createdAt  DateTime @default(now())
+  @@index([documentId])
+  @@schema("reader")
+}
+
+model Collection {
+  id        String     @id @default(uuid()) @db.Uuid
+  ownerId   String     @db.Uuid
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  color     String?
+  documents Document[]
+  createdAt DateTime   @default(now())
+  @@index([ownerId])
+  @@schema("reader")
+}
+
+model Tag {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @unique
+  documents Document[]
+  @@schema("reader")
+}
+
+model SyncOperation {
+  id        String   @id @db.Uuid
+  ownerId   String   @db.Uuid
+  entityId  String   @db.Uuid
+  version   Int
+  appliedAt DateTime @default(now())
+  @@index([ownerId, appliedAt])
+  @@schema("reader")
+}
+
+model Installation {
+  id        String   @id @default("owner")
+  ownerId   String   @unique @db.Uuid
+  createdAt DateTime @default(now())
+  @@schema("reader")
+}
+
+model LoginAttempt {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+  @@schema("reader")
+}

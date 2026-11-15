@@ -1,0 +1,273 @@
+.reader-shell .reader-header {
+  z-index: 20;
+}
+.reader-shell .reader-header .icon-button {
+  width: 42px;
+  height: 42px;
+  color: var(--text);
+}
+.reader-shell .reader-header-right .icon-button {
+  display: inline-flex;
+}
+.reader-shell .reader-header-right .reader-brush {
+  order: -2;
+}
+.reader-shell .reader-header-right .type-control {
+  order: -1;
+  font-size: 22px;
+}
+.reader-shell .reader-header-right .reader-brush.selected {
+  background: var(--text);
+  color: var(--background);
+  border-radius: 50%;
+}
+.reader-shell .reader-title strong {
+  max-width: min(440px, 36vw);
+  font-size: 18px;
+}
+.reader-shell .reader-page-counter {
+  position: absolute;
+  top: 110px;
+  right: 24px;
+  z-index: 11;
+  padding: 8px 15px;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  color: var(--text);
+}
+.reader-page-counter .reader-pagination {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.reader-page-counter .reader-pagination input {
+  width: 3.5ch;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.reader-page-counter .reader-pagination label span {
+  color: inherit;
+  font: inherit;
+}
+.page-filmstrip,
+.epub-navigation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 7px;
+  border-radius: 42px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  pointer-events: auto;
+}
+.page-filmstrip > .icon-button,
+.epub-navigation > .icon-button {
+  width: 40px;
+  height: 44px;
+  border-radius: 50%;
+}
+.page-filmstrip-track {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.page-thumbnail {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 58px;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 3px;
+}
+.page-thumbnail.current {
+  background: var(--selection);
+  outline: 1px solid var(--text-secondary);
+  outline-offset: -1px;
+}
+.page-thumbnail canvas,
+.text-thumbnail {
+  display: block;
+  width: 34px;
+  height: 48px;
+  background: white;
+  object-fit: contain;
+  box-shadow: 0 1px 2px #0002;
+}
+.text-thumbnail {
+  overflow: hidden;
+  padding: 4px 3px;
+  color: #111;
+  font:
+    2px/1.5 Georgia,
+    serif;
+  pointer-events: none;
+}
+.text-thumbnail strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 2.8px;
+}
+.text-thumbnail span {
+  white-space: pre-wrap;
+}
+.reader-shell .annotation-toolbar {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: min(760px, calc(100vw - 24px));
+  padding: 12px;
+  overflow: visible;
+}
+.reader-shell .annotation-toolbar > .icon-button {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+}
+.reader-shell .annotation-colors {
+  gap: 8px;
+}
+.reader-shell .annotation-colors button {
+  width: 23px;
+  height: 23px;
+}
+.annotation-open .reader-footer {
+  visibility: hidden;
+  pointer-events: none;
+}
+.reader-shell .reader-left-panel,
+.reader-shell .reader-notes-panel {
+  position: absolute;
+  top: 100px;
+  bottom: 100px;
+  z-index: 16;
+}
+.reader-left-panel {
+  left: 0;
+}
+.reader-notes-panel {
+  right: 0;
+}
+.show-reader-controls {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.show-reader-controls:focus-visible {
+  top: 15px;
+  right: 15px;
+  z-index: 30;
+  width: auto;
+  height: auto;
+  padding: 12px 18px;
+  clip-path: none;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 24px;
+}
+.reader-shell .selection-actions {
+  bottom: 112px;
+}
+.reader-shell > .reader-search {
+  position: absolute;
+  top: 84px;
+  left: 24px;
+  right: 24px;
+  z-index: 24;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+@media (max-width: 760px) {
+  .reader-shell {
+    --reader-top: 96px;
+    --reader-bottom: 100px;
+  }
+  .reader-shell .reader-header {
+    min-height: 76px;
+    padding: 10px;
+    gap: 10px;
+  }
+  .reader-shell .reader-header-left,
+  .reader-shell .reader-header-right {
+    gap: 0;
+    padding: 3px;
+  }
+  .reader-shell .reader-header .icon-button {
+    width: 33px;
+    height: 38px;
+  }
+  .reader-shell .reader-header .icon-button svg {
+    width: 20px;
+  }
+  .reader-shell .reader-header-right .reader-notes-toggle {
+    display: none;
+  }
+  .reader-shell .reader-header-right .type-control {
+    font-size: 20px;
+  }
+  .reader-shell .reader-title strong {
+    max-width: 32vw;
+    font-size: 13px;
+  }
+  .reader-shell .reader-page-counter {
+    top: 82px;
+    right: 16px;
+    padding: 6px 12px;
+  }
+  .reader-shell > .reader-search {
+    top: 76px;
+    left: 12px;
+    right: 12px;
+  }
+  .reader-page-counter .reader-pagination {
+    font-size: 16px;
+  }
+  .reader-shell .reader-footer {
+    padding: 10px 12px 14px;
+    background: transparent;
+  }
+  .page-thumbnail {
+    height: 50px;
+  }
+  .page-thumbnail canvas,
+  .text-thumbnail {
+    width: 29px;
+    height: 42px;
+  }
+  .reader-shell .annotation-toolbar {
+    gap: 2px;
+    padding: 10px;
+    bottom: 14px;
+  }
+  .reader-shell .annotation-toolbar > .icon-button {
+    width: 36px;
+    height: 38px;
+  }
+  .reader-shell .reader-left-panel,
+  .reader-shell .reader-notes-panel {
+    top: 78px;
+    bottom: 86px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reader-header,
+  .reader-footer,
+  .reader-page-counter {
+    transition:
+      opacity 160ms ease-out,
+      visibility 160ms;
+  }
+}

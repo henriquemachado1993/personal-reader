@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T18:06:06.232Z",
+  "title": "Design System: Personal Reader",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Primary Hover",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "surface-secondary": {
+        "role": "neutral",
+        "displayName": "Surface Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Text Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "selection": {
+        "role": "neutral",
+        "displayName": "Selection",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "reader-background": {
+        "role": "neutral",
+        "displayName": "Reader Background",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "reader-ink": {
+        "role": "neutral",
+        "displayName": "Reader Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "continue-earth": {
+        "role": "neutral",
+        "displayName": "Continue Earth",
+        "tonalRamp": [
+          "oklch(15% 0.0388 81.64)",
+          "oklch(27% 0.0388 81.64)",
+          "oklch(38% 0.0388 81.64)",
+          "oklch(50% 0.0388 81.64)",
+          "oklch(61% 0.0388 81.64)",
+          "oklch(73% 0.0388 81.64)",
+          "oklch(84% 0.0388 81.64)",
+          "oklch(95% 0.0388 81.64)"
+        ]
+      },
+      "continue-gray": {
+        "role": "neutral",
+        "displayName": "Continue Gray",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(50% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(73% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "continue-olive": {
+        "role": "neutral",
+        "displayName": "Continue Olive",
+        "tonalRamp": [
+          "oklch(15% 0.0350 83.44)",
+          "oklch(27% 0.0350 83.44)",
+          "oklch(38% 0.0350 83.44)",
+          "oklch(50% 0.0350 83.44)",
+          "oklch(61% 0.0350 83.44)",
+          "oklch(73% 0.0350 83.44)",
+          "oklch(84% 0.0350 83.44)",
+          "oklch(95% 0.0350 83.44)"
+        ]
+      },
+      "continue-progress": {
+        "role": "neutral",
+        "displayName": "Continue Progress",
+        "tonalRamp": [
+          "oklch(15% 0.0075 80.72)",
+          "oklch(27% 0.0075 80.72)",
+          "oklch(38% 0.0075 80.72)",
+          "oklch(50% 0.0075 80.72)",
+          "oklch(61% 0.0075 80.72)",
+          "oklch(73% 0.0075 80.72)",
+          "oklch(84% 0.0075 80.72)",
+          "oklch(95% 0.0075 80.72)"
+        ]
+      },
+      "bookmark": {
+        "role": "primary",
+        "displayName": "Bookmark",
+        "tonalRamp": [
+          "oklch(15% 0.2201 24.71)",
+          "oklch(27% 0.2201 24.71)",
+          "oklch(38% 0.2201 24.71)",
+          "oklch(50% 0.2201 24.71)",
+          "oklch(61% 0.2201 24.71)",
+          "oklch(73% 0.2201 24.71)",
+          "oklch(84% 0.2201 24.71)",
+          "oklch(95% 0.2201 24.71)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page heading",
+        "purpose": "Bold Georgia workspace page titles."
+      },
+      "headline": {
+        "displayName": "Shelf heading",
+        "purpose": "Bold Georgia section headings."
+      },
+      "title": {
+        "displayName": "Library row title",
+        "purpose": "Sans-serif titles in the large library list."
+      },
+      "body": {
+        "displayName": "Interface body",
+        "purpose": "System sans-serif interface text."
+      },
+      "label": {
+        "displayName": "Metadata and controls",
+        "purpose": "Compact actions and document metadata."
+      },
+      "navigation": {
+        "displayName": "Capsule navigation",
+        "purpose": "Primary destination labels."
+      },
+      "reader-heading": {
+        "displayName": "Chapter heading",
+        "purpose": "Regular Georgia inside the reading page."
+      }
+    },
+    "shadows": [
+      {
+        "name": "navigation",
+        "value": "0 11px 25px #0000000b",
+        "purpose": "Floating top navigation."
+      },
+      {
+        "name": "circular-action",
+        "value": "0 8px 20px #00000008",
+        "purpose": "Secondary header controls."
+      },
+      {
+        "name": "book-cover",
+        "value": "2px 5px 10px #0002, 0 1px 2px #0002",
+        "purpose": "Physical book depth."
+      },
+      {
+        "name": "continue-cover",
+        "value": "0 2px 5px #0003",
+        "purpose": "Small continuation cover."
+      },
+      {
+        "name": "dropdown",
+        "value": "0 16px 50px #0002",
+        "purpose": "Temporary menu."
+      },
+      {
+        "name": "reader-controls",
+        "value": "0 9px 24px #00000008",
+        "purpose": "Reader header groups."
+      },
+      {
+        "name": "annotation-toolbar",
+        "value": "0 10px 30px #0000000d",
+        "purpose": "Floating annotation tools."
+      },
+      {
+        "name": "cover-hover",
+        "value": "3px 10px 18px #1f211c33",
+        "purpose": "Cover hover/focus lift."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "background 0.15s",
+        "purpose": "Common button and icon-button state transitions."
+      },
+      {
+        "name": "continue-state",
+        "value": "background 0.18s",
+        "purpose": "Continuation card background transition."
+      },
+      {
+        "name": "cover-lift",
+        "value": "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s",
+        "purpose": "Raise cover 5px and rotate -1deg on hover/focus."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce)",
+        "purpose": "Disable animation/transitions, restore automatic scrolling, and suppress cover hover movement."
+      },
+      {
+        "name": "reader-chrome",
+        "value": "opacity 160ms ease-out, visibility 160ms",
+        "purpose": "Fade reading controls without moving the document; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "tablet",
+        "value": "760px"
+      },
+      {
+        "name": "phone",
+        "value": "540px"
+      }
+    ],
+    "focus": {
+      "value": "2px solid var(--accent); outline-offset: 4px",
+      "purpose": "Inherited global keyboard focus; search currently overrides the outline."
+    },
+    "backdrop": {
+      "value": "blur(18px)",
+      "purpose": "Sticky workspace header."
+    },
+    "readerInteraction": {
+      "toggle": "Single click/tap on the document hides or restores chrome without changing scroll position.",
+      "annotationPalette": "Closed by default; brush opens it and replaces the bottom filmstrip. Closing resets to selection.",
+      "pagination": "Clickable lazy PDF thumbnails or actual miniature text pages; EPUB uses true percentage and previous/next.",
+      "pageCounter": "18px desktop, 16px mobile in a floating top capsule.",
+      "readingLabels": "Only document content is rendered inside the page; original PDF headers and page numbers are preserved."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact charcoal workspace action.",
+      "html": "<button class=\"ds-primary\" type=\"button\">Importar arquivos</button>",
+      "css": ".ds-primary{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:11px 19px;border:0;border-radius:24px;background:var(--accent,#252525);color:#fff;font-size:12px;font-weight:550;cursor:pointer;transition:background .15s}.ds-primary:hover{background:var(--accent-hover,#454545)}.ds-primary:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}.ds-primary:disabled{opacity:.4;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet outlined secondary action.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">Cancelar</button>",
+      "css": ".ds-secondary{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 16px;border:0;border-radius:7px;background:var(--surface,#fafafa);color:var(--text,#101010);font-size:12px;font-weight:550;box-shadow:inset 0 0 0 1px var(--border,#e7e7e7);cursor:pointer;transition:background .15s}.ds-secondary:hover{background:var(--surface-secondary,#f2f2f2)}.ds-secondary:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}.ds-secondary:disabled{opacity:.4;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Standard field",
+      "kind": "input",
+      "description": "Bordered field for forms and filters.",
+      "html": "<label class=\"ds-label\" for=\"ds-name\">Nome da cole??o<input class=\"ds-input\" id=\"ds-name\" placeholder=\"Nova cole??o\"></label>",
+      "css": ".ds-label{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:block;font-size:12px;font-weight:550;color:var(--text,#101010)}.ds-input{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:block;width:100%;min-height:40px;margin-top:8px;padding:10px 12px;border:1px solid var(--border,#e7e7e7);border-radius:7px;background:var(--surface,#fafafa);color:var(--text,#101010);font-size:14px;font-weight:400;caret-color:var(--accent,#252525)}.ds-input::placeholder{color:var(--text-secondary,#737373)}.ds-input:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}"
+    },
+    {
+      "name": "Floating navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Primary workspace destinations inside a floating capsule.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Navega??o principal\"><a class=\"ds-nav-active\" href=\"#inicio\" aria-current=\"page\">In?cio</a><a href=\"#biblioteca\">Biblioteca</a><a href=\"#conhecimento\">Conhecimento</a><button aria-label=\"Buscar\" type=\"button\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></button></nav>",
+      "css": ".ds-nav{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:inline-flex;align-items:center;gap:3px;padding:6px;border:1px solid color-mix(in srgb,var(--surface,#fafafa) 90%,var(--border,#e7e7e7));border-radius:40px;background:color-mix(in srgb,var(--surface,#fafafa) 85%,transparent);box-shadow:0 11px 25px #0000000b;color:var(--text,#101010);white-space:nowrap}.ds-nav a{color:inherit;text-decoration:none;padding:12px 22px;border-radius:30px;font-size:18px;line-height:1.3;letter-spacing:-.3px}.ds-nav a:hover,.ds-nav button:hover{background:var(--surface-secondary,#f2f2f2)}.ds-nav .ds-nav-active{background:var(--selection,#eaeaea);font-weight:600}.ds-nav button{display:grid;place-items:center;width:48px;height:45px;margin:0 2px;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer}.ds-nav a:focus-visible,.ds-nav button:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}@media(max-width:540px){.ds-nav{gap:1px;padding:5px}.ds-nav a{font-size:13px;padding:10px 11px}.ds-nav button{width:29px;height:31px;margin:0}.ds-nav svg{width:18px}}"
+    },
+    {
+      "name": "Format filter",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Quiet selected and unselected document filters.",
+      "html": "<div class=\"ds-filters\"><button class=\"ds-chip ds-chip-active\" type=\"button\" aria-pressed=\"true\">Todos <span>8</span></button><button class=\"ds-chip\" type=\"button\" aria-pressed=\"false\">PDFs</button><button class=\"ds-chip\" type=\"button\" aria-pressed=\"false\">EPUBs</button></div>",
+      "css": ".ds-filters{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.ds-chip{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border:0;border-radius:18px;background:none;color:var(--text-secondary,#737373);font-size:12px;cursor:pointer}.ds-chip:hover{background:var(--surface-secondary,#f2f2f2)}.ds-chip.ds-chip-active{background:var(--selection,#eaeaea);color:var(--text,#101010);font-weight:550}.ds-chip span{font-size:8px;opacity:.8;background:var(--surface,#fafafa);padding:2px 4px;min-width:15px;border-radius:3px}.ds-chip:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}"
+    },
+    {
+      "name": "Continue reading",
+      "kind": "card",
+      "refersTo": "continue-card",
+      "description": "Dark subdued shortcut with cover, author, and progress.",
+      "html": "<a class=\"ds-continue\" href=\"#reader\"><svg class=\"ds-cover\" width=\"61\" height=\"92\" viewBox=\"0 0 240 360\" role=\"img\" aria-label=\"Capa tipogr?fica de Dom Casmurro\"><rect width=\"240\" height=\"360\" fill=\"#244c46\"/><path d=\"M11 0v360\" stroke=\"#000\" opacity=\".14\"/><text x=\"28\" y=\"34\" fill=\"#e9dbac\" font-family=\"sans-serif\" font-size=\"8\" letter-spacing=\"1.1\">MACHADO DE ASSIS</text><text x=\"26\" y=\"86\" fill=\"#e9dbac\" font-family=\"Georgia,serif\" font-size=\"47\" letter-spacing=\"-1\">Dom</text><text x=\"26\" y=\"139\" fill=\"#e9dbac\" font-family=\"Georgia,serif\" font-size=\"47\" letter-spacing=\"-1\">Casmurro</text><g fill=\"none\" stroke=\"#e9dbac\" opacity=\".65\"><path d=\"M35 283V211a85 85 0 0 1 170 0v72\"/><path d=\"M47 283V211a73 73 0 0 1 146 0v72\"/><path d=\"M59 283V211a61 61 0 0 1 122 0v72\"/><path d=\"M71 283V211a49 49 0 0 1 98 0v72\"/></g></svg><div class=\"ds-continue-info\"><h3>Dom Casmurro</h3><p>Machado de Assis</p><span>EPUB ? 38% ? Amostra</span></div></a>",
+      "css": ".ds-continue{font-family:var(--sans,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif);display:flex;align-items:center;gap:19px;min-height:127px;padding:17px 20px;border-radius:15px;background:#665942;color:#fff;text-decoration:none;transition:background .18s}.ds-continue:hover{filter:brightness(1.06)}.ds-continue:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}.ds-continue .ds-cover{flex-shrink:0;border-radius:2px;box-shadow:0 2px 5px #0003}.ds-continue-info h3{margin:0;font-size:18px;font-weight:600;line-height:1.3;letter-spacing:-.15px}.ds-continue-info p{margin:5px 0 0;font-size:15px;line-height:1.4;color:#fff}.ds-continue-info span{display:block;margin-top:4px;font-size:14px;color:#e5e2dd}@media(prefers-reduced-motion:reduce){.ds-continue{transition:none}}"
+    },
+    {
+      "name": "Open shelf cover",
+      "kind": "custom",
+      "description": "Original typographic sample cover shown directly on the shelf.",
+      "html": "<a class=\"ds-cover-link\" href=\"#reader\" aria-label=\"Ler Dom Casmurro\"><svg class=\"ds-cover\" width=\"61\" height=\"92\" viewBox=\"0 0 240 360\" role=\"img\" aria-label=\"Capa tipogr?fica de Dom Casmurro\"><rect width=\"240\" height=\"360\" fill=\"#244c46\"/><path d=\"M11 0v360\" stroke=\"#000\" opacity=\".14\"/><text x=\"28\" y=\"34\" fill=\"#e9dbac\" font-family=\"sans-serif\" font-size=\"8\" letter-spacing=\"1.1\">MACHADO DE ASSIS</text><text x=\"26\" y=\"86\" fill=\"#e9dbac\" font-family=\"Georgia,serif\" font-size=\"47\" letter-spacing=\"-1\">Dom</text><text x=\"26\" y=\"139\" fill=\"#e9dbac\" font-family=\"Georgia,serif\" font-size=\"47\" letter-spacing=\"-1\">Casmurro</text><g fill=\"none\" stroke=\"#e9dbac\" opacity=\".65\"><path d=\"M35 283V211a85 85 0 0 1 170 0v72\"/><path d=\"M47 283V211a73 73 0 0 1 146 0v72\"/><path d=\"M59 283V211a61 61 0 0 1 122 0v72\"/><path d=\"M71 283V211a49 49 0 0 1 98 0v72\"/></g></svg></a>",
+      "css": ".ds-cover-link{display:block;max-width:180px}.ds-cover-link .ds-cover{display:block;width:100%;height:auto;border-radius:2px 3px 3px 2px;box-shadow:2px 5px 10px #0002,0 1px 2px #0002;transition:transform .22s cubic-bezier(.16,1,.3,1),box-shadow .22s}.ds-cover-link:hover .ds-cover,.ds-cover-link:focus-visible .ds-cover{transform:translateY(-5px) rotate(-1deg);box-shadow:3px 10px 18px #1f211c33}.ds-cover-link:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-cover-link .ds-cover{transition:none}.ds-cover-link:hover .ds-cover,.ds-cover-link:focus-visible .ds-cover{transform:none}}"
+    },
+    {
+      "name": "Circular menu action",
+      "kind": "button",
+      "refersTo": "floating-circle",
+      "description": "Quiet secondary header control.",
+      "html": "<button class=\"ds-circle\" type=\"button\" aria-label=\"Mais op??es\"><svg width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><circle cx=\"5\" cy=\"12\" r=\"1.8\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\"/></svg></button>",
+      "css": ".ds-circle{display:grid;place-items:center;width:58px;height:58px;border:1px solid var(--border,#e7e7e7);border-radius:50%;background:var(--surface,#fafafa);color:var(--text,#101010);box-shadow:0 8px 20px #00000008;cursor:pointer}.ds-circle:hover{background:var(--selection,#eaeaea)}.ds-circle:focus-visible{outline:2px solid var(--accent,#252525);outline-offset:4px;}@media(max-width:540px){.ds-circle{width:37px;height:37px}.ds-circle svg{width:21px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Apple Books, a personal open shelf",
+    "overview": "The user's supplied Apple Books references establish the visual authority: generous neutral white, strong Georgia headings, open book shelves, and a floating capsule navigation. The library should feel quiet, editorial, and spacious, with color carried mainly by document covers. This records the implemented code and rendered screens after the user rejected the first beige, dominant-sidebar interpretation.\n\nFloating controls frame the content without enclosing every item. Large library rows make titles and authors easy to scan; the reader puts a white page at the center and groups tools into rounded floating controls. The visual system supports the product's durable commitment to discreet reading and annotations linked to their source.",
+    "keyCharacteristics": [
+      "Neutral white and gray chrome with dark text.",
+      "Bold Georgia page and section headings paired with system sans-serif interface text.",
+      "Open shelves, generous list rows, and small physical book shadows.",
+      "Floating capsule navigation, circular menu controls, and rounded reader tools.",
+      "Functional motion with a reduced-motion override."
+    ],
+    "rules": [
+      {
+        "name": "The Cover Color Rule",
+        "body": "Keep general workspace chrome neutral; let the documents supply the shelf's varied color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Editorial Hierarchy Rule",
+        "body": "Use bold Georgia for workspace page and section headings; use sans-serif for navigation, controls, book titles, and metadata.",
+        "section": "typography"
+      },
+      {
+        "name": "The Open Shelf Rule",
+        "body": "Place books on the open canvas; reserve raised containers for controls, menus, and continuation cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep broad white space around shelves and preserve the large editorial heading hierarchy.",
+      "**Do** use the top floating capsule for primary workspace navigation on desktop and phone.",
+      "**Do** let document covers carry color and keep surrounding workspace chrome neutral.",
+      "**Do** retain visible white titles and light progress labels on dark continuation cards.",
+      "**Do** keep library rows spacious and the reader page rectangular, white, and free of shadow by default.",
+      "**Do** preserve keyboard labels, focus visibility, wrapping filters, and reduced-motion behavior.",
+      "**Do** record original cover provenance and use extracted source covers when available."
+    ],
+    "donts": [
+      "**Don't** restore the rejected beige canvas or dominant workspace sidebar.",
+      "**Don't** place every shelf book in a bordered or raised container.",
+      "**Don't** convert workspace page and shelf headings into generic sans-serif dashboard headings.",
+      "**Don't** treat the palette of one book cover as a new interface accent.",
+      "**Don't** shrink the mobile open shelf below its two-column structure or clip filter labels to force a single row.",
+      "**Don't** invent decorative kicker labels or copy the reader's tiny running-title treatment into new interface hierarchy."
+    ]
+  }
+}

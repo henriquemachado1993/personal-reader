@@ -1,0 +1,9 @@
+node_modules/
+.npm-cache/
+.next/
+.env
+.env.local
+*.tsbuildinfo
+test-results/
+public/pdf.worker.min.mjs
+.impeccable/review/
