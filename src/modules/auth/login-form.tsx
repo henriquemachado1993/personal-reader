@@ -67,7 +67,7 @@ export function LoginForm({
           <p>
             Seus livros, suas ideias e o prazer de voltar
             <br />
-            àquela página. Tudo no mesmo lugar.
+            àquela página.
           </p>
           <div className="login-books">
             <img src="/covers/dom-casmurro.svg" alt="Capa de Dom Casmurro" />
@@ -78,13 +78,9 @@ export function LoginForm({
             />
           </div>
         </div>
-        <span className="login-story-footer">
-          Um espaço para ler. Um tempo para você.
-        </span>
       </section>
       <section className="login-form-section">
         <form onSubmit={submit}>
-          <BookOpen className="login-form-mark" size={31} strokeWidth={1.3} />
           <h2>
             {firstRun ? "Sua biblioteca começa aqui" : "Bom ter você por aqui"}
           </h2>
@@ -176,8 +172,6 @@ export function LoginForm({
                 Esqueci minha senha
               </Link>
             )}
-            <br />
-            Uma biblioteca pessoal, com acesso só seu.
           </p>
         </form>
       </section>
