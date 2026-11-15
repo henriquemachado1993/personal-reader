@@ -1,5 +1,7 @@
 # Memória do projeto
 
+- Build de deploy deve executar `npm run build`: regenera Prisma Client e copia o worker PDF antes do Next.js. Isso evita modelos ausentes com node_modules em cache na Vercel. Não substituir por `next build` no painel.
+
 - Especificação: `docs/PRODUCT.md`; referências visuais em `docs/design/images-reference/`.
 - Next.js App Router, NextAuth com e-mail/senha, Prisma e PostgreSQL do Supabase; arquivos privados no R2.
 - IndexedDB é o cache local por conta. Alterações offline precisam sobreviver a recarregamento e sincronizar com controle de versão.

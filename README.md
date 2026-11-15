@@ -61,6 +61,10 @@ Veja TASKS.md para evoluções e limites ainda abertos.
 
 ## Verificação
 
+### Build na Vercel
+
+Use `npm run build` como Build Command. O script regenera o Prisma Client antes do Next.js, mesmo quando a Vercel reutiliza o cache de dependências, e copia o worker PDF para `public`. O `postinstall` também prepara ambos em instalações novas. Não configure `next build` diretamente, pois isso pula a geração. Aplicar migrações (`npx prisma migrate deploy`) é uma etapa separada da geração do cliente.
+
 ```sh
 npm run typecheck
 npm test

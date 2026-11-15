@@ -6,7 +6,7 @@
     "storage:collect": "node scripts/collect-orphaned-files.mjs",
     "db:project": "tsx scripts/project-library-entities.ts",
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build",
+    "build": "prisma generate && node scripts/copy-pdf-worker.mjs && next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
@@ -14,7 +14,7 @@
     "format": "prettier --write src scripts tests *.ts *.mjs *.json",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "postinstall": "node scripts/copy-pdf-worker.mjs"
+    "postinstall": "prisma generate && node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
