@@ -1,5 +1,10 @@
 # Trabalho restante
 
+- [x] Adapt/harden/polish: navegação em 320px, contraste independente do leitor, paginação horizontal, controles de toque, filtros acessíveis e recuperação de link inválido.
+- [x] Histórico de criação, movimentação, propriedades e exclusão de anotações com proteção contra alterações remotas.
+- [x] Estado de sincronização distingue conexão configurada, alterações pendentes e conclusão; capas e capturas carregam sob demanda.
+- [ ] Repetir a auditoria após os refinamentos, incluindo desempenho com acervo grande (ainda não medido).
+
 - [x] Mantine integrado aos controles, checkboxes, menus e modais, com tema central, foco acessível, claro/escuro unificado e verificação visual em desktop e celular.
 
 - [x] Persistência remota autenticada e isolada por conta (réplica JSONB versionada via Prisma).

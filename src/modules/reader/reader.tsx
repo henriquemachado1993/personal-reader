@@ -39,6 +39,7 @@ import { EpubPage } from "./epub-page";
 import { downloadBlob, exportPdf } from "./export";
 import { readFile } from "@/infrastructure/storage/local";
 import { sameLocation } from "./location";
+import { useAnnotationHistory } from "./use-annotation-history";
 import { PageFilmstrip } from "./page-filmstrip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type {
@@ -63,6 +64,13 @@ function pageLocation(book: ReaderDocument, page: number): DocumentLocation {
   return { type: book.format, blockIndex: page, offset: 0 };
 }
 const colors = ["#e8bb45", "#db7f88", "#6a997d", "#7f9fc4", "#3e3830"];
+const colorNames: Record<string, string> = {
+  "#e8bb45": "Amarelo",
+  "#db7f88": "Rosa",
+  "#6a997d": "Verde",
+  "#7f9fc4": "Azul",
+  "#3e3830": "Grafite",
+};
 export function Reader({ documentId }: { documentId: string }) {
   const library = useLibrary();
   const book = library.documents.find((d) => d.id === documentId);
@@ -95,7 +103,14 @@ export function Reader({ documentId }: { documentId: string }) {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [appearance, setAppearance] = useState(false);
-  const [redo, setRedo] = useState<Annotation[]>([]);
+  const {
+    editAnnotation,
+    eraseAnnotation,
+    undo,
+    redoAction,
+    canUndo,
+    canRedo,
+  } = useAnnotationHistory(documentId);
   const pageHost = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const pdfSearch = useRef<
@@ -238,23 +253,6 @@ export function Reader({ documentId }: { documentId: string }) {
     },
     [documentId, currentPage],
   );
-  const undo = useCallback(() => {
-    const all = useLibrary
-      .getState()
-      .annotations.filter((a) => a.documentId === documentId);
-    const last = all.at(-1);
-    if (last) {
-      useLibrary.getState().removeAnnotation(last.id);
-      setRedo((r) => [...r, last]);
-    }
-  }, [documentId]);
-  const redoAction = useCallback(() => {
-    const last = redo.at(-1);
-    if (last) {
-      library.addAnnotation(last);
-      setRedo((r) => r.slice(0, -1));
-    }
-  }, [redo, library.addAnnotation]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (
@@ -294,7 +292,7 @@ export function Reader({ documentId }: { documentId: string }) {
   ) => {
     if (!book) return;
     const now = new Date().toISOString();
-    library.addAnnotation({
+    editAnnotation({
       id: crypto.randomUUID(),
       documentId,
       kind,
@@ -310,7 +308,6 @@ export function Reader({ documentId }: { documentId: string }) {
       createdAt: now,
       updatedAt: now,
     });
-    setRedo([]);
     if (kind === "note" || kind === "highlight") setSelection(null);
   };
   const completeDrawing = (points: Point[], kind: AnnotationKind) => {
@@ -846,9 +843,13 @@ export function Reader({ documentId }: { documentId: string }) {
                   opacity={opacity}
                   onDraft={setDraft}
                   onComplete={completeDrawing}
-                  onErase={(id) => library.removeAnnotation(id)}
-                  onObjectChange={library.addAnnotation}
-                  onObjectSelect={setSelectedObject}
+                  onErase={(id) => eraseAnnotation(id)}
+                  onObjectChange={editAnnotation}
+                  onObjectSelect={(id) => {
+                    setSelectedObject(id);
+                    const object = annotations.find(note => note.id === id);
+                    if (object) { setColor(object.color); setThickness(object.thickness ?? 2); setOpacity(object.opacity ?? 1); setStampText(object.text); }
+                  }}
                 />
               )}
               {bookmarked && (
@@ -952,12 +953,19 @@ export function Reader({ documentId }: { documentId: string }) {
                       </span>
                       <IconButton
                         label="Remover anotação"
-                        onClick={() => library.removeAnnotation(a.id)}
+                        onClick={() => eraseAnnotation(a.id)}
                       >
                         <X size={13} />
                       </IconButton>
                     </div>
-                    {a.image && <img src={a.image} alt={a.text} />}
+                    {a.image && (
+                      <img
+                        src={a.image}
+                        alt={a.text}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    )}
                     {a.quote && a.quote !== a.text && (
                       <blockquote>{a.quote}</blockquote>
                     )}
@@ -1027,7 +1035,7 @@ export function Reader({ documentId }: { documentId: string }) {
           ))}
           <span className="toolbar-divider" />
           <div className="annotation-colors">
-            {selectedObject && (
+            {annotations.some(note => note.id === selectedObject) && (
               <Button
                 className="button secondary"
                 onClick={() => {
@@ -1035,7 +1043,7 @@ export function Reader({ documentId }: { documentId: string }) {
                     (a) => a.id === selectedObject,
                   );
                   if (object)
-                    library.addAnnotation({
+                    editAnnotation({
                       ...object,
                       color,
                       thickness,
@@ -1060,7 +1068,8 @@ export function Reader({ documentId }: { documentId: string }) {
             {colors.map((c) => (
               <Button
                 key={c}
-                aria-label={`Cor ${c}`}
+                aria-label={`Cor ${colorNames[c]}`}
+                aria-pressed={color === c}
                 className={color === c ? "active" : ""}
                 style={{ backgroundColor: c }}
                 onClick={() => setColor(c)}
@@ -1122,14 +1131,14 @@ export function Reader({ documentId }: { documentId: string }) {
           <span className="toolbar-divider" />
           <IconButton
             label="Desfazer anotação"
-            disabled={!annotations.length}
+            disabled={!canUndo}
             onClick={undo}
           >
             <Undo2 size={18} />
           </IconButton>
           <IconButton
             label="Refazer anotação"
-            disabled={!redo.length}
+            disabled={!canRedo}
             onClick={redoAction}
           >
             <Redo2 size={18} />

@@ -1,5 +1,9 @@
 # Memória do projeto
 
+- Refinamento de 15/11/2026: navegação em duas linhas até 380px; título do leitor usa a tinta da página e fica oculto no celular. Preservar o visual das referências.
+- Desfazer/refazer anotações mantém até 100 operações por documento durante a sessão, incluindo mover, editar e apagar. Recusar operações sobre objetos alterados remotamente.
+- Configuração de banco não comprova sincronização. Exibir sucesso e horário somente após conclusão; novas alterações locais voltam ao estado pendente.
+
 - MantineProvider usa deduplicateCssVariables=false para emitir variáveis CSS de forma determinística entre SSR e cliente. Não substituir por suppressHydrationWarning na tag style; manter a escala 16/14.
 
 - Mantine 9.8.1 integrado: controles em `src/components/ui/controls.tsx`, tema e esquema claro/escuro em `provider.tsx`, menus em `dropdown.tsx`, modal e ActionIcon em `src/components/ui.tsx`.

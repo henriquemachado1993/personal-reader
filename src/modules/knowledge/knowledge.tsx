@@ -1,5 +1,10 @@
 "use client";
-import { Button, TextField, SelectField, TextArea } from "@/components/ui/controls";
+import {
+  Button,
+  TextField,
+  SelectField,
+  TextArea,
+} from "@/components/ui/controls";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -114,9 +119,14 @@ export function KnowledgeView({
           />
         </label>
         {!forcedKind && (
-          <div className="format-filters">
+          <div
+            className="format-filters"
+            role="group"
+            aria-label="Tipo de anotação"
+          >
             <Button
               className={filter === "all" ? "active" : ""}
+              aria-pressed={filter === "all"}
               onClick={() => setFilter("all")}
             >
               Tudo
@@ -136,6 +146,7 @@ export function KnowledgeView({
               <Button
                 key={id}
                 className={filter === id ? "active" : ""}
+                aria-pressed={filter === id}
                 onClick={() => setFilter(id)}
               >
                 <Icon size={15} />
@@ -223,6 +234,8 @@ export function KnowledgeView({
                   {a.image && (
                     <img
                       className="clipping-image"
+                      loading="lazy"
+                      decoding="async"
                       src={a.image}
                       alt={a.text}
                     />

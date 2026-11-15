@@ -81,6 +81,14 @@ export function SettingsView() {
         <section aria-label="Sincronização">
           <h2>Seu acervo em todos os dispositivos</h2>
           <p role="status">{state.syncMessage}</p>
+          {state.lastSyncedAt && (
+            <p>
+              Última sincronização concluída:{" "}
+              <time dateTime={state.lastSyncedAt}>
+                {new Date(state.lastSyncedAt).toLocaleString("pt-BR")}
+              </time>
+            </p>
+          )}
           <Button
             className="button secondary"
             onClick={() => void state.synchronize()}
@@ -187,7 +195,7 @@ export function SettingsView() {
                 <strong>Supabase + Prisma</strong>
                 <p>
                   {config?.database
-                    ? "Biblioteca sincronizada com sua conta."
+                    ? "Conexão configurada. Consulte o estado da sincronização acima."
                     : "Conexão remota ainda não configurada."}
                 </p>
               </div>

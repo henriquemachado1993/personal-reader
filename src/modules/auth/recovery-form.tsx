@@ -10,9 +10,11 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [invalidLink, setInvalidLink] = useState(false);
   useEffect(() => {
     if (reset) {
       setToken(location.hash.slice(1));
+      setInvalidLink(!/^[a-f0-9]{64}$/.test(location.hash.slice(1)));
       history.replaceState(null, "", location.pathname);
     }
   }, [reset]);
@@ -37,7 +39,10 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
                 },
               );
               const result = await response.json();
-              if (!response.ok) throw new Error(result.error);
+              if (!response.ok) {
+                if (reset && response.status === 400) setInvalidLink(true);
+                throw new Error(result.error);
+              }
               setFinished(true);
               setPassword("");
               setMessage(
@@ -62,7 +67,16 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
               ? "Use uma senha de pelo menos 10 caracteres."
               : "Enviaremos um link para o e-mail da sua conta."}
           </p>
+          {invalidLink && (
+            <div role="alert">
+              <p>Este link de recuperação está ausente, inválido ou expirou.</p>
+              <Link href="/forgot-password" className="button primary">
+                Solicitar outro link
+              </Link>
+            </div>
+          )}
           {!finished &&
+            !invalidLink &&
             (reset ? (
               <label className="field-label">
                 Nova senha
@@ -92,7 +106,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
               </label>
             ))}
           {message && <p role={finished ? "status" : "alert"}>{message}</p>}
-          {!finished && (
+          {!finished && !invalidLink && (
             <Button
               className="button primary login-submit"
               disabled={busy || (reset && !token)}

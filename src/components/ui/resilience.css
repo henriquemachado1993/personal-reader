@@ -1,0 +1,75 @@
+/* Keep the title readable independently of the library chrome theme. */
+.reader-shell .reader-title {
+  color: var(--ink);
+}
+.reader-page-counter .reader-pagination label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.reader-page-counter .reader-field {
+  width: 44px;
+  flex: 0 0 44px;
+}
+.reader-page-counter .reader-field input {
+  width: 100%;
+  min-height: 44px;
+}
+.reader-modal .mantine-Modal-close {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+}
+.annotation-toolbar .specialized-field input[type="range"] {
+  min-height: 44px;
+  height: 44px;
+  touch-action: pan-y;
+}
+@media (max-width: 760px) {
+  .reader-shell .reader-title {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .books-app .books-header {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-rows: 44px auto;
+    height: auto;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .books-header .books-wordmark {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 9px;
+  }
+  .books-header .books-header-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .books-header .floating-navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    justify-content: space-between;
+    min-width: 0;
+    gap: 0;
+  }
+  .books-header .floating-navigation > a {
+    font-size: 13px;
+    padding: 10px;
+  }
+  .books-main .shelf-heading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .books-main .shelf-heading > div:first-child {
+    flex-basis: 100%;
+  }
+  .books-main .shelf-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

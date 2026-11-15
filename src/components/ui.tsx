@@ -34,7 +34,13 @@ export function Cover({
       style={{ backgroundColor: book.color }}
     >
       {book.cover ? (
-        <img src={book.cover} alt={`Capa de ${book.title}`} draggable={false} />
+        <img
+          src={book.cover}
+          alt={`Capa de ${book.title}`}
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+        />
       ) : (
         <div className="generated-cover">
           <span>{book.author}</span>

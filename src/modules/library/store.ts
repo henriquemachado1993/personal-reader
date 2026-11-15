@@ -26,6 +26,7 @@ interface Store extends LibraryState {
   ownerId: string;
   ownerName: string;
   syncMessage: string;
+  lastSyncedAt: string | null;
   synchronize: () => Promise<void>;
   hydrate: (userId?: string, name?: string) => Promise<void>;
   dismissNotice: () => void;
@@ -43,6 +44,9 @@ interface Store extends LibraryState {
 let persistence = Promise.resolve();
 export const useLibrary = create<Store>((set, get) => {
   const persist = () => {
+    set({
+      syncMessage: "Alterações salvas neste navegador. Sincronização pendente.",
+    });
     const {
       documents,
       collections,
@@ -83,12 +87,14 @@ export const useLibrary = create<Store>((set, get) => {
     ownerId: "",
     ownerName: "Leitor",
     syncMessage: "Alterações salvas neste navegador.",
+    lastSyncedAt: null,
     synchronize: async () => {
       if (!navigator.onLine || !get().hydrated) return;
       const perform = async () => {
         try {
           await persistence;
           const result = await synchronizeLibrary();
+          let synchronized = false;
           // Do not replace edits made while a network request was in flight.
           if (result) {
             const keys = Object.keys(result.before) as (keyof LibraryState)[];
@@ -101,9 +107,20 @@ export const useLibrary = create<Store>((set, get) => {
             ) {
               set(result.snapshot);
               await writeState(result.snapshot);
+              synchronized = true;
             }
           }
-          set({ syncMessage: "Biblioteca sincronizada." });
+          set(
+            synchronized
+              ? {
+                  syncMessage: "Biblioteca sincronizada.",
+                  lastSyncedAt: new Date().toISOString(),
+                }
+              : {
+                  syncMessage:
+                    "Novas alterações locais aguardam sincronização.",
+                },
+          );
         } catch (error) {
           set({
             syncMessage:
