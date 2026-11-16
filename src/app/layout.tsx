@@ -7,12 +7,12 @@ import "@/components/ui/workspace-refinements.css";
 import "@/components/ui/app-viewport.css";
 import { InterfaceProvider } from "@/components/ui/provider";
 export const metadata: Metadata = {
-  title: "Personal Reader · Sua biblioteca, seu ritmo",
+  title: "Le-Books · Sua biblioteca, seu ritmo",
   description: "Um lugar para ler, anotar e guardar suas ideias.",
-  applicationName: "Personal Reader",
+  applicationName: "Le-Books",
   appleWebApp: {
     capable: true,
-    title: "Personal Reader",
+    title: "Le-Books",
     statusBarStyle: "default",
   },
   icons: { apple: "/icons/apple-touch-icon.png" },

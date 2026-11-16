@@ -5,10 +5,10 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
     <main className="auth-page">
       <div className="auth-shell">
         <Link href="/login" className="auth-brand">
-          Personal Reader
+          Le-Books
         </Link>
         <div className="auth-layout">
-          <section className="auth-story" aria-label="Personal Reader">
+          <section className="auth-story" aria-label="Le-Books">
             <div className="auth-story-content">
               <h2>O próximo capítulo é seu.</h2>
               <p>

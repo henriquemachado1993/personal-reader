@@ -1,5 +1,5 @@
 ---
-name: Personal Reader
+name: Le-Books
 description: A quiet personal library with open shelves and floating reading controls.
 colors:
   primary: "#252525"
@@ -152,7 +152,7 @@ components:
     height: "58px"
 ---
 
-# Design System: Personal Reader
+# Design System: Le-Books
 
 ## Overview
 

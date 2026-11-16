@@ -22,7 +22,7 @@ export async function generateMetadata({
   const title = section?.[0]
     ? (sectionTitles[section[0]] ?? "Biblioteca")
     : "Início";
-  return { title: `${title} · Personal Reader` };
+  return { title: `${title} · Le-Books` };
 }
 
 export default function Page() {

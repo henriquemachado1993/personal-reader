@@ -16,9 +16,9 @@ export async function sendPasswordRecovery(email: string, resetUrl: string) {
     },
     signal: AbortSignal.timeout(10000),
     body: JSON.stringify({
-      from: { email: sender, name: "Personal Reader" },
+      from: { email: sender, name: "Le-Books" },
       to: [{ email }],
-      subject: "Redefina sua senha do Personal Reader",
+      subject: "Redefina sua senha do Le-Books",
       text: `Você pediu para redefinir sua senha. Abra este link em até 30 minutos:\n\n${resetUrl}\n\nSe não foi você, ignore esta mensagem. Sua senha permanece a mesma.`,
       category: "Password recovery",
     }),

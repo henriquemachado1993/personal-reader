@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Personal Reader",
+    name: "Le-Books",
     short_name: "Reader",
     description: "Sua biblioteca pessoal para ler, anotar e guardar ideias.",
     lang: "pt-BR",

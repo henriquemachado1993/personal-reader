@@ -1,4 +1,4 @@
-# Personal Reader
+# Le-Books
 
 Biblioteca pessoal em Next.js, com direção visual baseada nas referências do Apple Books fornecidas em `docs/design/images-reference/`. A especificação está em [docs/PRODUCT.md](docs/PRODUCT.md).
 

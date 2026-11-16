@@ -2,7 +2,7 @@
 
 ## Veredito de integridade
 
-**Aprovado com pendências.** O sistema visual continua específico do Personal Reader: estantes abertas, títulos serifados, navegação em cápsula e leitor discreto. Menus Mantine mantêm a variante de cabeçalho de 330px e cantos de 28px. Há falhas verificadas de interação, acessibilidade e comunicação de estado; nenhuma alteração de interface foi feita nesta auditoria.
+**Aprovado com pendências.** O sistema visual continua específico do Le-Books: estantes abertas, títulos serifados, navegação em cápsula e leitor discreto. Menus Mantine mantêm a variante de cabeçalho de 330px e cantos de 28px. Há falhas verificadas de interação, acessibilidade e comunicação de estado; nenhuma alteração de interface foi feita nesta auditoria.
 
 ## Resumo
 

@@ -172,7 +172,7 @@ export function SettingsView() {
           </details>
         </section>
         <p className="settings-version">
-          Personal Reader <span>Versão 0.1</span>
+          Le-Books <span>Versão 0.1</span>
         </p>
       </div>
     </div>

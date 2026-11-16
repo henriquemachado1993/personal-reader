@@ -1,8 +1,8 @@
-# Personal Reader --- Especificação Técnica
+# Le-Books --- Especificação Técnica
 
 https://www.apple.com/br/apple-books/
 
-**Nome provisório:** Personal Reader\
+**Nome provisório:** Le-Books\
 **Tipo:** Aplicação web pessoal\
 **Proposta:** biblioteca digital para leitura, estudo, anotações e
 organização de conhecimento, com experiência visual inspirada no Apple
@@ -12,7 +12,7 @@ Books.
 
 ## 1. Visão do produto
 
-O Personal Reader reúne livros e documentos em uma biblioteca pessoal. O
+O Le-Books reúne livros e documentos em uma biblioteca pessoal. O
 usuário pode ler, marcar páginas, destacar trechos, escrever anotações,
 desenhar sobre PDFs, capturar partes importantes e consultar todo esse
 conhecimento em uma central unificada.
@@ -73,7 +73,7 @@ adicionariam custo operacional sem benefício proporcional nesta fase.
 
 ``` mermaid
 flowchart TB
-    UI[Personal Reader — Next.js Web App]
+    UI[Le-Books — Next.js Web App]
 
     subgraph Modules[Domínios da aplicação]
       Library[Biblioteca]

@@ -415,7 +415,7 @@ test("home count, named dialogs and missing collections expose correct state", a
   page,
 }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle("Início · Personal Reader");
+  await expect(page).toHaveTitle("Início · Le-Books");
   const shelf = page.locator(".books-home-shelf");
   await expect(shelf.locator(".document-count")).toHaveText("4 documentos");
   await page
@@ -426,7 +426,7 @@ test("home count, named dialogs and missing collections expose correct state", a
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/collections/missing");
-  await expect(page).toHaveTitle("Coleções · Personal Reader");
+  await expect(page).toHaveTitle("Coleções · Le-Books");
   await expect(
     page.getByRole("link", { name: "Ver minhas coleções" }),
   ).toBeVisible();

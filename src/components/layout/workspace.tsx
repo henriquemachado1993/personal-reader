@@ -91,10 +91,10 @@ export function Workspace() {
         <Link
           href="/"
           className="books-wordmark"
-          aria-label="Personal Reader — Início"
+          aria-label="Le-Books — Início"
         >
           <BookOpen size={23} strokeWidth={1.5} />
-          <span>Personal Reader</span>
+          <span>Le-Books</span>
         </Link>
         <nav className="floating-navigation" aria-label="Navegação principal">
           <Link

@@ -1,7 +1,7 @@
 import { RecoveryForm } from "@/modules/auth/recovery-form";
 import { AuthShell } from "@/modules/auth/auth-shell";
 export const metadata = {
-  title: "Nova senha · Personal Reader",
+  title: "Nova senha · Le-Books",
   robots: { index: false, follow: false },
   referrer: "no-referrer" as const,
 };

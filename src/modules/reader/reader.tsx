@@ -124,7 +124,7 @@ export function Reader({ documentId }: { documentId: string }) {
   );
   const book = library.documents.find((d) => d.id === documentId);
   useEffect(() => {
-    document.title = `${book?.title ?? "Leitor"} · Personal Reader`;
+    document.title = `${book?.title ?? "Leitor"} · Le-Books`;
   }, [book?.title]);
   const [page, setPage] = useState<number | null>(null);
   const [left, setLeft] = useState(false);
