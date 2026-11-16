@@ -244,6 +244,7 @@ test("PDF scroll, arrows and Mantine annotation controls work together", async (
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
+  await page.getByRole("button", { name: "Caneta", exact: true }).click();
   await expect(
     page.getByRole("slider", { name: "Espessura do traço" }),
   ).toBeVisible();

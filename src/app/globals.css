@@ -175,7 +175,7 @@ textarea::placeholder {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border-radius: 7px;
+  border-radius: 50%;
   transition: background 0.15s;
   color: var(--text-secondary);
 }
@@ -673,12 +673,12 @@ textarea::placeholder {
   gap: 3px;
   border: 1px solid var(--border);
   padding: 3px;
-  border-radius: 7px;
+  border-radius: 28px;
 }
 .view-toggle .icon-button {
   width: 27px;
   height: 25px;
-  border-radius: 4px;
+  border-radius: 50%;
 }
 .view-toggle .selected {
   background: var(--selection);

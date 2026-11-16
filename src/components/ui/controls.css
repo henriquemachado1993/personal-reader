@@ -4,8 +4,31 @@
   --input-color: var(--text);
   --input-bd: var(--border);
   --input-placeholder-color: var(--text-secondary);
-  --input-bd-focus: var(--accent);
+  --input-bd-focus: var(--input-bd);
   font-size: 14px;
+}
+
+/* Fields keep their resting border; keyboard focus uses the neutral surface. */
+:is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select
+):focus-visible {
+  outline: none;
+  background-color: var(--selection);
+}
+
+.global-search:focus-within {
+  box-shadow: none;
+}
+
+html
+  body
+  :is(.books-search, .global-search, .reader-search)
+  input:not([type="checkbox"]):not([type="radio"]):not(
+    [type="range"]
+  ):focus-visible {
+  background-color: transparent;
 }
 html body .reader-field .mantine-Input-input,
 html body .reader-select .mantine-Input-input,
@@ -51,6 +74,7 @@ html body .reader-textarea .mantine-Textarea-input {
   overflow-wrap: anywhere;
 }
 .reader-modal .mantine-Modal-close {
+  border-radius: 50%;
   color: var(--text-secondary);
   width: 44px;
   height: 44px;

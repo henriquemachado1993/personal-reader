@@ -1,3 +1,40 @@
+/* Motion is opt-in so reduced-motion users retain immediate state feedback. */
+@media (prefers-reduced-motion: no-preference) {
+  .books-search {
+    animation: search-reveal 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :is(.books-search, .global-search, .reader-search) {
+    transition: background-color 150ms;
+  }
+
+  :is(.mantine-Input-input, .mantine-Textarea-input) {
+    transition:
+      border-color 150ms,
+      background-color 150ms;
+  }
+
+  :is(
+    .books-nav a,
+    .format-filters button,
+    .view-toggle .icon-button,
+    .statistics-period-switch .button
+  ) {
+    transition:
+      background-color 150ms,
+      color 150ms;
+  }
+}
+
+@keyframes search-reveal {
+  from {
+    clip-path: inset(0 0 100% 0 round 15px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 15px);
+  }
+}
+
 /* Controls share the library's neutral surfaces and rounded geometry. */
 .import-flow .upload-zone {
   margin-top: 8px;

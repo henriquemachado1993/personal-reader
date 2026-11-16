@@ -15,7 +15,7 @@ const theme = createTheme({
   radius: { xs: "7px", sm: "12px", md: "15px", lg: "24px", xl: "32px" },
   components: {
     Button: { defaultProps: { size: "md", radius: "lg" } },
-    ActionIcon: { defaultProps: { size: 44, variant: "subtle", radius: "sm" } },
+    ActionIcon: { defaultProps: { size: 44, variant: "subtle", radius: "xl" } },
     Input: { defaultProps: { size: "md", radius: "xs" } },
     NativeSelect: { defaultProps: { size: "md", radius: "xs" } },
     Textarea: { defaultProps: { size: "md", radius: "xs" } },
