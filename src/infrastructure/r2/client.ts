@@ -2,6 +2,8 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 function storage() {
@@ -46,6 +48,22 @@ export async function signedReadUrl(key: string) {
   );
 }
 
+export async function originalExists(key: string) {
+  try {
+    await storage().send(
+      new HeadObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
+    );
+    return true;
+  } catch (error) {
+    if (
+      (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode === 404
+    )
+      return false;
+    throw error;
+  }
+}
+
 export async function writeOriginal(key: string, bytes: Uint8Array) {
   try {
     await storage().send(
@@ -65,9 +83,22 @@ export async function writeOriginal(key: string, bytes: Uint8Array) {
       throw error;
   }
 }
-export async function readOriginal(key: string) {
+export async function readOriginal(key: string, maxBytes?: number) {
   const result = await storage().send(
     new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
   );
-  return (await result.Body!.transformToByteArray()) as Uint8Array<ArrayBuffer>;
+  if (maxBytes && (result.ContentLength ?? 0) > maxBytes)
+    throw new Error("Arquivo excede o limite permitido.");
+  const bytes = await result.Body!.transformToByteArray();
+  if (maxBytes && bytes.length > maxBytes)
+    throw new Error("Arquivo excede o limite permitido.");
+  return bytes as Uint8Array<ArrayBuffer>;
+}
+
+export async function removeSnapshotTransfer(key: string) {
+  if (!key.startsWith("sync-snapshots/"))
+    throw new Error("Chave de transferência inválida.");
+  await storage().send(
+    new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
+  );
 }

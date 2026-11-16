@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Book, Rendition } from "epubjs";
+import type { Book, Rendition, Contents } from "epubjs";
 import { readFile } from "@/infrastructure/storage/local";
 import { useLibrary } from "@/modules/library/store";
 import type { DocumentLocation } from "@/shared/types";
@@ -31,6 +31,11 @@ export function EpubPage({
   const host = useRef<HTMLDivElement>(null);
   const rendition = useRef<Rendition | null>(null);
   const [ready, setReady] = useState(false);
+  const suppressLocation = useRef(true);
+  const userNavigating = useRef(false);
+  const remotePositionVersion = useLibrary(
+    (s) => s.remotePositionVersion[documentId] ?? 0,
+  );
   const savedLocation = useRef(
     useLibrary.getState().documents.find((d) => d.id === documentId)?.location,
   );
@@ -52,6 +57,15 @@ export function EpubPage({
     let disposed = false;
     let book: Book | undefined;
     let tapTimer: ReturnType<typeof setTimeout> | undefined;
+    const markNavigation = () => {
+      userNavigating.current = true;
+    };
+    const contentListeners: Document[] = [];
+    host.current?.addEventListener("wheel", markNavigation, { passive: true });
+    host.current?.addEventListener("touchstart", markNavigation, {
+      passive: true,
+    });
+    host.current?.addEventListener("pointerdown", markNavigation);
     (async () => {
       try {
         const blob = await readFile(documentId);
@@ -70,6 +84,15 @@ export function EpubPage({
           allowScriptedContent: false,
         });
         rendition.current = view;
+        view.on("touchstart", markNavigation);
+        view.on("mousedown", markNavigation);
+        view.on("keydown", markNavigation);
+        view.hooks.content.register((contents: Contents) => {
+          contents.document.addEventListener("wheel", markNavigation, {
+            passive: true,
+          });
+          contentListeners.push(contents.document);
+        });
         view.on("click", (event: MouseEvent, contents: { window: Window }) => {
           if (tapTimer) clearTimeout(tapTimer);
           if (
@@ -87,10 +110,12 @@ export function EpubPage({
           start: { cfi: string; href: string; percentage: number };
           atEnd?: boolean;
         }) => {
+          if (disposed || suppressLocation.current || !userNavigating.current)
+            return;
           const indexed = book!.locations.percentageFromCfi(loc.start.cfi);
           const progression = loc.atEnd
             ? 1
-            : Number.isFinite(indexed)
+            : Number.isFinite(indexed) && indexed >= 0 && indexed <= 1
               ? indexed
               : (loc.start.percentage ?? 0);
           onLocation(
@@ -111,16 +136,22 @@ export function EpubPage({
         navigationRef.current = {
           search: async (query) => {
             const matches = await searchEpub(book!, query);
-            if (matches[0]) await view.display(matches[0].cfi);
+            if (matches[0]) {
+              markNavigation();
+              await view.display(matches[0].cfi);
+            }
             return matches.length;
           },
           next: () => {
+            markNavigation();
             void view.next();
           },
           prev: () => {
+            markNavigation();
             void view.prev();
           },
           go: (cfi) => {
+            markNavigation();
             void view.display(cfi);
           },
         };
@@ -129,7 +160,19 @@ export function EpubPage({
             ? savedLocation.current.cfi
             : undefined,
         );
-        if (!disposed) setReady(true);
+        const latest = useLibrary
+          .getState()
+          .documents.find((d) => d.id === documentId)?.location;
+        if (
+          latest?.type === "EPUB" &&
+          latest.cfi &&
+          latest.cfi !== view.location?.start?.cfi
+        )
+          await view.display(latest.cfi);
+        if (!disposed) {
+          suppressLocation.current = false;
+          setReady(true);
+        }
         // Index in the background so long books can open before all chapters are parsed.
         void book.locations
           .generate(1500)
@@ -157,6 +200,12 @@ export function EpubPage({
     })();
     return () => {
       disposed = true;
+      host.current?.removeEventListener("wheel", markNavigation);
+      host.current?.removeEventListener("touchstart", markNavigation);
+      host.current?.removeEventListener("pointerdown", markNavigation);
+      contentListeners.forEach((document) =>
+        document.removeEventListener("wheel", markNavigation),
+      );
       if (tapTimer) clearTimeout(tapTimer);
       navigationRef.current = null;
       rendition.current = null;
@@ -165,6 +214,29 @@ export function EpubPage({
       } catch {}
     };
   }, [documentId, onLocation, onSelected, onError, navigationRef, onTap]);
+  useEffect(() => {
+    const location = useLibrary
+      .getState()
+      .documents.find((d) => d.id === documentId)?.location;
+    savedLocation.current = location;
+    const view = rendition.current;
+    if (
+      !ready ||
+      !view ||
+      location?.type !== "EPUB" ||
+      !location.cfi ||
+      view.location?.start?.cfi === location.cfi
+    )
+      return;
+    suppressLocation.current = true;
+    userNavigating.current = false;
+    void view
+      .display(location.cfi)
+      .catch(() => onError("Não foi possível restaurar a posição deste EPUB."))
+      .finally(() => {
+        if (rendition.current === view) suppressLocation.current = false;
+      });
+  }, [documentId, remotePositionVersion, ready, onError]);
   useEffect(() => {
     const view = rendition.current;
     if (!view || !ready) return;

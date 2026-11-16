@@ -3,6 +3,38 @@ import { encode } from "next-auth/jwt";
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
 import { initialState } from "../library-fixture";
+import { PrismaClient } from "@prisma/client";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+const temporaryOwners = new Set<string>();
+const temporaryOriginals = new Set<string>();
+test.afterEach(async () => {
+  const env = dotenv.parse(await readFile(".env", "utf8"));
+  const db = new PrismaClient({ datasourceUrl: env.DATABASE_URL });
+  const storage = new S3Client({
+    region: "auto",
+    endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+  try {
+    for (const key of temporaryOriginals)
+      await storage.send(
+        new DeleteObjectCommand({ Bucket: env.R2_BUCKET_NAME, Key: key }),
+      );
+    for (const ownerId of temporaryOwners) {
+      await db.libraryEntity.deleteMany({ where: { ownerId } });
+      await db.libraryReplica.deleteMany({ where: { ownerId } });
+    }
+  } finally {
+    temporaryOwners.clear();
+    temporaryOriginals.clear();
+    storage.destroy();
+    await db.$disconnect();
+  }
+});
 
 test("remote snapshots enforce revisions, idempotency, ownership and restore across browsers", async ({
   browser,
@@ -10,6 +42,7 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
 }) => {
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const ownerId = crypto.randomUUID();
+  temporaryOwners.add(ownerId);
   const name = "authjs.session-token";
   const token = await encode({
     secret: env.AUTH_SECRET,
@@ -37,6 +70,7 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
   expect(stale.status()).toBe(409);
   expect((await request.get("/api/library")).status()).toBe(401);
   const fileId = crypto.randomUUID();
+  temporaryOriginals.add(`${ownerId}/originals/${fileId}`);
   const bytes = Buffer.from("Original privado de teste");
   const uploaded = await request.put(`/api/library/files/${fileId}`, {
     headers,
@@ -125,4 +159,78 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
     })
     .toBe("dark");
   await context.close();
+});
+
+test("originals larger than the Vercel limit transfer directly with authorization and retries", async ({
+  request,
+}) => {
+  const env = dotenv.parse(await readFile(".env", "utf8"));
+  const ownerId = crypto.randomUUID();
+  temporaryOwners.add(ownerId);
+  const name = "authjs.session-token";
+  const token = await encode({
+    secret: env.AUTH_SECRET,
+    salt: name,
+    token: { id: ownerId, sub: ownerId },
+  });
+  const headers = {
+    Cookie: `${name}=${token}`,
+    Origin: "http://127.0.0.1:3000",
+  };
+  const largeFileId = crypto.randomUUID();
+  temporaryOriginals.add(`${ownerId}/originals/${largeFileId}`);
+  const largeBytes = Buffer.alloc(6 * 1024 * 1024, 42);
+  const authorized = await request.post(`/api/library/files/${largeFileId}`, {
+    headers,
+    data: { size: largeBytes.length },
+  });
+  expect(authorized.status()).toBe(200);
+  const { url } = await authorized.json();
+  const direct = await request.put(url, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "If-None-Match": "*",
+    },
+    data: largeBytes,
+  });
+  expect(direct.ok()).toBe(true);
+  const redirected = await request.get(`/api/library/files/${largeFileId}`, {
+    headers,
+    maxRedirects: 0,
+  });
+  expect(redirected.status()).toBe(307);
+  expect(redirected.headers()["cache-control"]).toBe("private, no-store");
+  const largeDownload = await request.get(redirected.headers().location);
+  expect(await largeDownload.body()).toEqual(largeBytes);
+  const alreadyStored = await request.post(
+    `/api/library/files/${largeFileId}`,
+    {
+      headers,
+      data: { size: largeBytes.length },
+    },
+  );
+  expect(await alreadyStored.json()).toEqual({ exists: true });
+  expect(
+    (
+      await request.post(`/api/library/files/${largeFileId}`, {
+        data: { size: largeBytes.length },
+      })
+    ).status(),
+  ).toBe(401);
+  expect(
+    (
+      await request.post(`/api/library/files/${largeFileId}`, {
+        headers: { ...headers, Origin: "https://evil.test" },
+        data: { size: largeBytes.length },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.post(`/api/library/files/${largeFileId}`, {
+        headers,
+        data: { size: 101 * 1024 * 1024 },
+      })
+    ).status(),
+  ).toBe(413);
 });

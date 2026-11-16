@@ -119,6 +119,7 @@ export function Reader({ documentId }: { documentId: string }) {
       storageError: store.storageError,
       toggleBookmark: store.toggleBookmark,
       updateDocument: store.updateDocument,
+      remotePositionVersion: store.remotePositionVersion[documentId] ?? 0,
     })),
   );
   const book = library.documents.find((d) => d.id === documentId);
@@ -172,6 +173,7 @@ export function Reader({ documentId }: { documentId: string }) {
     ((query: string, start: number) => Promise<number>) | null
   >(null);
   const scrollHost = useRef<HTMLDivElement>(null);
+  const restoredDocument = useRef<string | null>(null);
   const tap = useRef<{
     x: number;
     y: number;
@@ -400,11 +402,15 @@ export function Reader({ documentId }: { documentId: string }) {
       new URLSearchParams(window.location.search).get("page"),
     );
     const saved =
-      Number.isInteger(requested) && requested > 0
+      restoredDocument.current !== documentId &&
+      Number.isInteger(requested) &&
+      requested > 0
         ? Math.min(requested - 1, book.pages - 1)
         : book.page;
+    restoredDocument.current = documentId;
     const restore = requestAnimationFrame(() => {
       initialized = true;
+      setPage(saved);
       if (pages[saved]) scrollToReaderPage(host, pages[saved]);
       track();
     });
@@ -415,7 +421,13 @@ export function Reader({ documentId }: { documentId: string }) {
       cancelAnimationFrame(restore);
       cancelAnimationFrame(scheduled);
     };
-  }, [documentId, book?.pages, realEpub, library.hydrated]);
+  }, [
+    documentId,
+    book?.pages,
+    realEpub,
+    library.hydrated,
+    library.remotePositionVersion,
+  ]);
   const onPages = useCallback(
     (pages: number) => {
       const current = useLibrary
@@ -457,7 +469,7 @@ export function Reader({ documentId }: { documentId: string }) {
       lastReadAt: new Date().toISOString(),
       status: book.status === "finished" ? "finished" : "reading",
     });
-  }, [library.hydrated, documentId]); // Opening is a single reading event.
+  }, [library.hydrated, documentId, !!book]); // A remotely loaded book can arrive after hydration.
   useEffect(() => {
     if (!library.hydrated || !book) return;
     const interval = setInterval(() => {

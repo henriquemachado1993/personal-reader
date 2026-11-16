@@ -44,6 +44,7 @@ export const snapshotSchema = z.object({
         page: z.number().int().nonnegative(),
         pages: z.number().int().positive(),
         location: location.optional(),
+        readingPositionUpdatedAt: z.iso.datetime().optional(),
         collections: z.array(id),
         addedAt: z.iso.datetime(),
         lastReadAt: z.iso.datetime().optional(),

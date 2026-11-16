@@ -3,8 +3,6 @@ import { useState } from "react";
 import { Check, Cloud, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/controls";
 import { useLibrary } from "@/modules/library/store";
-import { resolveLibraryConflict } from "@/modules/library/synchronize";
-import { writeState } from "@/infrastructure/storage/local";
 import { exportLibraryBackup } from "./library-backup";
 
 export function SyncSettings() {
@@ -19,12 +17,7 @@ export function SyncSettings() {
     setError("");
     try {
       exportLibraryBackup();
-      const replacement = await resolveLibraryConflict(preferLocal);
-      if (replacement) {
-        await writeState(replacement);
-        useLibrary.setState(replacement);
-      }
-      await synchronize();
+      await useLibrary.getState().resolveConflict(preferLocal);
     } catch {
       setError(
         "Não foi possível concluir. Seus dados neste dispositivo foram preservados. Reconecte-se e tente novamente.",

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useLibrary } from "@/modules/library/store";
+import { flushReadingProgress } from "@/modules/library/progress-upload";
 export function LibraryIdentity({
   userId,
   name,
@@ -23,14 +24,35 @@ export function LibraryIdentity({
   useEffect(() => {
     if (!hydrated) return;
     const synchronize = () => void useLibrary.getState().synchronize();
+    let scheduled: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = useLibrary.subscribe((state, before) => {
+      if (state.changeVersion === before.changeVersion || scheduled) return;
+      // A bounded delay also sends changes during continuous reading or annotation.
+      scheduled = setTimeout(() => {
+        scheduled = undefined;
+        synchronize();
+      }, 750);
+    });
+    const leaving = () => {
+      flushReadingProgress(useLibrary.getState().documents);
+      synchronize();
+    };
+    const visibilityChanged = () =>
+      document.visibilityState === "hidden" ? leaving() : synchronize();
     synchronize();
     const timer = setInterval(synchronize, 15000);
     window.addEventListener("online", synchronize);
     window.addEventListener("focus", synchronize);
+    window.addEventListener("pagehide", leaving);
+    document.addEventListener("visibilitychange", visibilityChanged);
     return () => {
       clearInterval(timer);
+      clearTimeout(scheduled);
+      unsubscribe();
       window.removeEventListener("online", synchronize);
       window.removeEventListener("focus", synchronize);
+      window.removeEventListener("pagehide", leaving);
+      document.removeEventListener("visibilitychange", visibilityChanged);
     };
   }, [hydrated]);
   return hydrated && ownerId === userId ? (

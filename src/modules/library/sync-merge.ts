@@ -1,6 +1,8 @@
-import type { LibraryState } from "@/shared/types";
+import type { LibraryState, ReaderDocument } from "@/shared/types";
 import { removeDeletedCollections } from "./collection-deletions";
 import { canonicalJson } from "./canonical-json";
+import { readingPosition, newerReadingPosition } from "./reading-position";
+import { removeDeletedDocuments } from "./document-deletions";
 
 /** Three-way merge preserves independent edits and propagates deletions. */
 export function mergeLibrary(
@@ -8,7 +10,11 @@ export function mergeLibrary(
   local: LibraryState,
   remote: LibraryState,
   deletedCollectionIds: readonly string[] = [],
+  deletedDocumentIds: readonly string[] = [],
 ): LibraryState {
+  base = removeDeletedDocuments(base, deletedDocumentIds);
+  local = removeDeletedDocuments(local, deletedDocumentIds);
+  remote = removeDeletedDocuments(remote, deletedDocumentIds);
   base = removeDeletedCollections(base, deletedCollectionIds);
   local = removeDeletedCollections(local, deletedCollectionIds);
   remote = removeDeletedCollections(remote, deletedCollectionIds);
@@ -52,12 +58,13 @@ export function mergeLibrary(
     before: T[],
     ours: T[],
     theirs: T[],
+    mergeItem = mergeValue<T | undefined>,
   ): T[] => {
     const result: T[] = [];
     for (const id of new Set(
       [...before, ...ours, ...theirs].map((item) => item.id),
     )) {
-      const value = mergeValue(
+      const value = mergeItem(
         before.find((x) => x.id === id),
         ours.find((x) => x.id === id),
         theirs.find((x) => x.id === id),
@@ -65,6 +72,44 @@ export function mergeLibrary(
       if (value) result.push(value);
     }
     return result;
+  };
+  const mergeDocument = (
+    before: ReaderDocument | undefined,
+    ours: ReaderDocument | undefined,
+    theirs: ReaderDocument | undefined,
+  ): ReaderDocument | undefined => {
+    if (!ours || !theirs) return mergeValue(before, ours, theirs);
+    const metadata = (book: ReaderDocument | undefined) => {
+      if (!book) return undefined;
+      const {
+        page,
+        progress,
+        location,
+        readingPositionUpdatedAt,
+        lastReadAt,
+        ...rest
+      } = book;
+      return rest;
+    };
+    const originalPosition = before && readingPosition(before);
+    const localPosition = readingPosition(ours),
+      remotePosition = readingPosition(theirs);
+    const position = equal(localPosition, originalPosition)
+      ? remotePosition
+      : equal(remotePosition, originalPosition) ||
+          equal(localPosition, remotePosition)
+        ? localPosition
+        : ours.readingPositionUpdatedAt || theirs.readingPositionUpdatedAt
+          ? readingPosition(newerReadingPosition(ours, theirs))
+          : mergeValue(originalPosition, localPosition, remotePosition)!;
+    return {
+      ...mergeValue(metadata(before), metadata(ours), metadata(theirs))!,
+      ...position,
+      lastReadAt: [ours.lastReadAt, theirs.lastReadAt]
+        .filter((value): value is string => !!value)
+        .sort()
+        .at(-1),
+    };
   };
   return {
     readingDays: Object.fromEntries(
@@ -82,7 +127,12 @@ export function mergeLibrary(
           ),
       ]),
     ),
-    documents: mergeList(base.documents, local.documents, remote.documents),
+    documents: mergeList(
+      base.documents,
+      local.documents,
+      remote.documents,
+      mergeDocument,
+    ),
     collections: mergeList(
       base.collections,
       local.collections,

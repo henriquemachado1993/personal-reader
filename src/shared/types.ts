@@ -23,6 +23,7 @@ export interface ReaderDocument {
   page: number;
   pages: number;
   location?: DocumentLocation;
+  readingPositionUpdatedAt?: string;
   collections: string[];
   addedAt: string;
   lastReadAt?: string;

@@ -1,7 +1,14 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { isUnreferencedOriginal } from "../src/infrastructure/r2/retention.mjs";
+import {
+  S3Client,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
+import {
+  isUnreferencedOriginal,
+  isExpiredSnapshotTransfer,
+} from "../src/infrastructure/r2/retention.mjs";
 const apply = process.argv.includes("--apply");
 const db = new PrismaClient();
 const client = new S3Client({
@@ -51,6 +58,33 @@ try {
   console.log(
     `${apply ? "Coleta" : "Simulação"} concluída: ${pending.length} entradas verificadas.`,
   );
+  let continuation;
+  do {
+    const batch = await client.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Prefix: "sync-snapshots/",
+        ContinuationToken: continuation,
+      }),
+    );
+    for (const file of batch.Contents ?? []) {
+      if (!isExpiredSnapshotTransfer(file.Key, file.LastModified)) continue;
+      if (apply)
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: file.Key,
+          }),
+        );
+      console.log(
+        apply
+          ? "Transferência temporária vencida removida."
+          : "Transferência temporária vencida; nenhuma exclusão executada.",
+      );
+    }
+    continuation = batch.IsTruncated ? batch.NextContinuationToken : undefined;
+  } while (continuation);
 } finally {
+  client.destroy();
   await db.$disconnect();
 }

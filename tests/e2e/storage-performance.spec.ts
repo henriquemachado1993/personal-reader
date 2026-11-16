@@ -48,6 +48,31 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     await api.writeSyncRecord({ revision: 2 });
     api.setStorageScope("first");
     const restored = await api.readState();
+    await api.writeSynchronizedState(
+      { documents: [{ title: "atomic" }] },
+      { revision: 3 },
+      "first",
+    );
+    const atomicState = await api.readState("first");
+    const atomicRecord = await api.readSyncRecord("first");
+    let cloneFailed = false;
+    try {
+      await api.writeSynchronizedState(
+        { documents: [{ title: "must not commit" }] },
+        { invalid: () => {} },
+        "first",
+      );
+    } catch {
+      cloneFailed = true;
+    }
+    const afterFailure = await api.readState("first");
+    const scopedWrite = api.writeState(
+      { documents: [{ title: "scoped" }] },
+      "first",
+    );
+    api.setStorageScope("second");
+    await scopedWrite;
+    const firstScoped = await api.readState("first");
     return {
       firstOpens,
       opens,
@@ -55,6 +80,11 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
       restored: restored.documents[0].title,
       empty: second === undefined,
       file: await file.text(),
+      atomicTitle: atomicState.documents[0].title,
+      atomicRevision: atomicRecord.revision,
+      cloneFailed,
+      afterFailure: afterFailure.documents[0].title,
+      firstScoped: firstScoped.documents[0].title,
     };
   });
   expect(result).toEqual({
@@ -64,5 +94,10 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     restored: "snapshot",
     empty: true,
     file: "original",
+    atomicTitle: "atomic",
+    atomicRevision: 3,
+    cloneFailed: true,
+    afterFailure: "atomic",
+    firstScoped: "scoped",
   });
 });

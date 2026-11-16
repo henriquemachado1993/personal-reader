@@ -5,8 +5,11 @@ export function setStorageScope(userId: string) {
   scope = userId;
 }
 const connections = new Map<string, Promise<IDBPDatabase>>();
-function db() {
-  const name = `personal-reader-${scope}`;
+export function getStorageScope() {
+  return scope;
+}
+function db(ownerId = scope) {
+  const name = `personal-reader-${ownerId}`;
   const existing = connections.get(name);
   if (existing) return existing;
   const connection = openDB(name, 1, {
@@ -28,11 +31,13 @@ function db() {
   });
   return connection;
 }
-export async function readState(): Promise<LibraryState | undefined> {
-  return (await db()).get("state", "library");
+export async function readState(
+  ownerId?: string,
+): Promise<LibraryState | undefined> {
+  return (await db(ownerId)).get("state", "library");
 }
-export async function writeState(state: LibraryState) {
-  return (await db()).put("state", structuredClone(state), "library");
+export async function writeState(state: LibraryState, ownerId?: string) {
+  return (await db(ownerId)).put("state", structuredClone(state), "library");
 }
 export async function saveFile(id: string, file: Blob) {
   return (await db()).put("files", file, id);
@@ -51,12 +56,33 @@ export async function removeFile(id: string) {
   return (await db()).delete("files", id);
 }
 
-export async function readSyncRecord<T>(): Promise<T | undefined> {
-  return (await db()).get("state", "sync");
+export async function readSyncRecord<T>(
+  ownerId?: string,
+): Promise<T | undefined> {
+  return (await db(ownerId)).get("state", "sync");
 }
-export async function writeSyncRecord(record: unknown) {
-  return (await db()).put("state", structuredClone(record), "sync");
+export async function writeSyncRecord(record: unknown, ownerId?: string) {
+  return (await db(ownerId)).put("state", structuredClone(record), "sync");
 }
-export async function readCachedFile(id: string): Promise<Blob | undefined> {
-  return (await db()).get("files", id);
+export async function readCachedFile(
+  id: string,
+  ownerId?: string,
+): Promise<Blob | undefined> {
+  return (await db(ownerId)).get("files", id);
+}
+
+export async function writeSynchronizedState(
+  state: LibraryState,
+  record: unknown,
+  ownerId?: string,
+) {
+  const snapshot = structuredClone(state);
+  const syncRecord = structuredClone(record);
+  const database = await db(ownerId);
+  const transaction = database.transaction("state", "readwrite");
+  await Promise.all([
+    transaction.store.put(snapshot, "library"),
+    transaction.store.put(syncRecord, "sync"),
+    transaction.done,
+  ]);
 }

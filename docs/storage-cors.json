@@ -1,0 +1,12 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://beirereader.vercel.app",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["Content-Type", "If-None-Match"],
+    "MaxAgeSeconds": 3600
+  }
+]
