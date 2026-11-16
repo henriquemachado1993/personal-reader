@@ -1,4 +1,5 @@
 import type { LibraryState } from "@/shared/types";
+import { removeDeletedCollections } from "./collection-deletions";
 import { canonicalJson } from "./canonical-json";
 
 /** Three-way merge preserves independent edits and propagates deletions. */
@@ -6,7 +7,11 @@ export function mergeLibrary(
   base: LibraryState,
   local: LibraryState,
   remote: LibraryState,
+  deletedCollectionIds: readonly string[] = [],
 ): LibraryState {
+  base = removeDeletedCollections(base, deletedCollectionIds);
+  local = removeDeletedCollections(local, deletedCollectionIds);
+  remote = removeDeletedCollections(remote, deletedCollectionIds);
   const equal = (a: unknown, b: unknown) =>
     canonicalJson(a) === canonicalJson(b);
   const mergeValue = <T>(before: T, ours: T, theirs: T): T => {

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { isSameOrigin } from "@/modules/auth/same-origin";
 import { snapshotSchema } from "@/modules/library/snapshot-schema";
 import { persistLibraryEntities } from "@/modules/library/entity-persistence";
+import { removeDeletedCollections } from "@/modules/library/collection-deletions";
 import type { LibraryState } from "@/shared/types";
 
 export async function GET() {
@@ -13,7 +14,21 @@ export async function GET() {
   const replica = await database().libraryReplica.findUnique({
     where: { ownerId },
   });
-  return Response.json(replica, { headers: { "Cache-Control": "no-store" } });
+  const deleted = replica
+    ? await database().libraryEntity.findMany({
+        where: { ownerId, kind: "collections", deleted: true },
+        select: { entityId: true },
+      })
+    : [];
+  return Response.json(
+    replica
+      ? {
+          ...replica,
+          deletedCollectionIds: deleted.map((item) => item.entityId),
+        }
+      : null,
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 export async function PUT(request: Request) {
   const ownerId = (await auth())?.user?.id;
@@ -42,7 +57,16 @@ export async function PUT(request: Request) {
         });
         if (prior?.operationId === parsed.operationId) return prior;
         if ((prior?.revision ?? 0) !== parsed.revision) return null;
-        const snapshot = parsed.snapshot as Prisma.InputJsonValue;
+        const deleted = await tx.libraryEntity.findMany({
+          where: { ownerId, kind: "collections", deleted: true },
+          select: { entityId: true },
+        });
+        // Older clients may upload collections deleted before their first sync.
+        const incoming = removeDeletedCollections(
+          parsed.snapshot as LibraryState,
+          deleted.map((item) => item.entityId),
+        );
+        const snapshot = incoming as unknown as Prisma.InputJsonValue;
         if (!prior) {
           const created = await tx.libraryReplica.create({
             data: {
@@ -52,12 +76,7 @@ export async function PUT(request: Request) {
               snapshot,
             },
           });
-          await persistLibraryEntities(
-            tx,
-            ownerId,
-            null,
-            parsed.snapshot as LibraryState,
-          );
+          await persistLibraryEntities(tx, ownerId, null, incoming);
           return created;
         }
         const changed = await tx.libraryReplica.updateMany({
@@ -73,7 +92,7 @@ export async function PUT(request: Request) {
             tx,
             ownerId,
             prior.snapshot as unknown as LibraryState,
-            parsed.snapshot as LibraryState,
+            incoming,
           );
         return changed.count
           ? tx.libraryReplica.findUnique({ where: { ownerId } })

@@ -15,6 +15,7 @@ interface SyncRecord {
   pending?: { operationId: string; revision: number; snapshot: LibraryState };
 }
 interface Replica {
+  deletedCollectionIds?: string[];
   revision: number;
   snapshot: LibraryState;
   operationId: string;
@@ -57,7 +58,12 @@ export async function synchronizeLibrary(): Promise<{
   }
   // A newly connected browser adopts remote state; existing local libraries merge by ID.
   const snapshot = remote
-    ? mergeLibrary(record?.base ?? initialState(), local, remote.snapshot)
+    ? mergeLibrary(
+        record?.base ?? initialState(),
+        local,
+        remote.snapshot,
+        remote.deletedCollectionIds,
+      )
     : local;
   const uploaded = record?.uploaded ?? [];
   for (const book of snapshot.documents.filter(
