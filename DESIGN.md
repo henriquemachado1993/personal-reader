@@ -48,6 +48,21 @@ typography:
     fontSize: "18px"
     lineHeight: 1.3
     letterSpacing: "-0.3px"
+  section-title:
+    fontFamily: 'Georgia, "Times New Roman", serif'
+    fontSize: "28px"
+    fontWeight: 700
+    lineHeight: 1.2
+  section-title-compact:
+    fontFamily: 'Georgia, "Times New Roman", serif'
+    fontSize: "24px"
+    fontWeight: 700
+    lineHeight: 1.2
+  statistic-value:
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    fontSize: "28px"
+    fontWeight: 500
+    lineHeight: 1.2
   reader-heading:
     fontFamily: 'Georgia, "Times New Roman", serif'
     fontSize: "31px"
@@ -61,12 +76,12 @@ typography:
     fontSize: "20px"
   reader-pagination:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "18px"
-    fontWeight: 600
+    fontSize: "13px"
+    fontWeight: 500
   reader-pagination-compact:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "16px"
-    fontWeight: 600
+    fontSize: "13px"
+    fontWeight: 500
   reader-title-compact:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     fontSize: "13px"
@@ -292,3 +307,24 @@ The machine-readable sidecar includes `extensions.implementationInventory`: an e
 - **Don't** treat the palette of one book cover as a new interface accent.
 - **Don't** shrink the mobile open shelf below its two-column structure or clip filter labels to force a single row.
 - **Don't** invent decorative kicker labels or copy the reader's tiny running-title treatment into new interface hierarchy.
+
+## Caixa de ferramentas de anotação — 16/11/2026
+
+A referência IMG_0113.PNG orienta a usabilidade: desfazer e refazer permanecem à esquerda; a faixa central contém seleção, caneta, lápis, marca-texto, borracha e mão; as cores ficam agrupadas com indicação da seleção e acesso à cor personalizada. O botão “+” revela sublinhado, formas, seta, captura, texto e imagem. A ferramenta extra ativa permanece visível na faixa principal. No iPhone, apenas a faixa de ferramentas rola horizontalmente; histórico e “+” permanecem fixos, e as cores ocupam uma segunda linha. Os alvos de toque medem ao menos 44 px. Espessura e opacidade aparecem abaixo somente quando aplicáveis. Escape fecha primeiro o menu aberto e devolve o foco ao acionador.
+
+O acabamento da caixa usa a mesma família de sistema (`--sans`) do aplicativo. Rótulos e valores usam 12 px, peso 500 e entrelinha 1,4; opções do menu usam 14 px, peso 400 e entrelinha 1,4. Valores numéricos usam algarismos tabulares. A ferramenta ativa usa o fundo neutro de seleção (`--selection`) e texto (`--text`), como a navegação do aplicativo; o anel de seleção das cores usa a cor de texto para permanecer legível em todas as amostras. A cor personalizada atualiza imediatamente a anotação selecionada. A espessura exibida considera o traço mais fino do lápis.
+
+## Painéis do leitor — polish em 16/11/2026
+
+Anotações e páginas/marcadores usam superfícies flutuantes com raio de 24 px, borda discreta e altura ajustada ao conteúdo disponível. O cabeçalho com fechamento de 44 px fica fora da área rolável. Títulos usam a família de sistema em 19 px e peso 500; listas usam 14 px, texto auxiliar 13 px e números tabulares de 12 px. A página atual tem contraste e indicação semântica. O conteúdo respeita a largura do painel, inclusive notas sem espaços e capturas de imagem. O estado vazio das notas considera apenas notas, destaques e capturas exibidos na lista.
+
+A cor personalizada usa uma única caixa com seletor embutido de saturação/luminosidade, faixa de tonalidade e campo HEX. A faixa tem área de toque ampliada e o arraste permanece dentro da mesma superfície. Editar o HEX sincroniza também a área visual, inclusive imediatamente após um arraste; códigos incompletos voltam à última cor válida ao sair do campo. Não há um segundo popup sobre o campo hexadecimal.
+
+Estados selecionados do leitor seguem os mesmos tokens da navegação: fundo `--selection` (#eaeaea no claro, #393939 no escuro) e texto `--text`. O padrão vale para ferramentas, menu “+” aberto e controles ativos do cabeçalho. Botões compartilhados de ícone usam contorno circular em repouso, hover e seleção; isso inclui a alternância de visualização e o fechamento dos diálogos. Menus e controles com texto mantêm seus formatos próprios.
+
+
+## Estatísticas e Configurações — 16/11/2026
+
+Título e conteúdo compartilham uma coluna central de até 1000 px. Estatísticas separa meta de hoje, tempo acumulado e histórico dos últimos sete dias. O resumo usa uma lista de definições com números tabulares; o histórico combina tabela acessível, valores explícitos e barras proporcionais, sem fabricar atividade nos dias vazios. A meta usa `progress` nativo e só fica completa ao atingir o tempo definido. O estado sem atividade explica o período e oferece acesso à biblioteca. Preservar a paleta neutra, os títulos serifados e o tema da aplicação.
+
+Estatísticas oferece janelas móveis de 7 e 30 dias, comparadas com a janela imediatamente anterior de mesma duração. A seção “Seu ritmo” mostra frequência, média diária incluindo dias sem leitura, dias que atingem a meta atual e sequência atual/recorde. A sequência pode terminar ontem enquanto o dia de hoje está em andamento; datas futuras não compõem o recorde. A explicação fica em “Como calculamos”. O resumo da biblioteca fica depois do histórico, e uma leitura real em andamento pode ser retomada pelo documento mais recentemente aberto. O histórico de 30 dias tem rolagem própria e cabeçalho fixo.
