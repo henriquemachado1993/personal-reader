@@ -16,7 +16,9 @@ export function LibraryIdentity({
   useEffect(() => {
     void hydrate(userId, name);
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production")
-      void navigator.serviceWorker.register("/sw.js");
+      void navigator.serviceWorker.register(
+        `/sw.js?v=${process.env.NEXT_PUBLIC_CACHE_VERSION}`,
+      );
   }, [userId, name, hydrate]);
   useEffect(() => {
     if (!hydrated) return;
