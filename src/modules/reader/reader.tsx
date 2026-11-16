@@ -40,6 +40,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
+import { createLatestSearch } from "./latest-search";
 import { PdfPage } from "./pdf-page";
 import "./reader-refinements.css";
 import "./annotation-toolbar.css";
@@ -151,6 +152,11 @@ export function Reader({ documentId }: { documentId: string }) {
   const [zoom, setZoom] = useState(100);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
+  const [latestPdfSearch] = useState(createLatestSearch);
+  useEffect(
+    () => () => latestPdfSearch.invalidate(),
+    [latestPdfSearch, documentId, searching, query],
+  );
   const [appearance, setAppearance] = useState(false);
   const {
     editAnnotation,
@@ -872,7 +878,10 @@ export function Reader({ documentId }: { documentId: string }) {
           <TextField
             autoFocus
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              latestPdfSearch.invalidate();
+              setQuery(e.target.value);
+            }}
             aria-label="Buscar texto neste documento"
             placeholder="O que você quer encontrar?"
           />
@@ -881,11 +890,24 @@ export function Reader({ documentId }: { documentId: string }) {
             onClick={async () => {
               if (!query.trim()) return;
               if (realPdf) {
-                const match = await pdfSearch.current?.(
-                  query,
-                  (currentPage + 1) % book.pages,
+                const search = pdfSearch.current;
+                if (!search) {
+                  library.notify(
+                    "O PDF ainda está sendo preparado. Tente novamente.",
+                  );
+                  return;
+                }
+                const result = await latestPdfSearch.run(() =>
+                  search(query, (currentPage + 1) % book.pages),
                 );
-                if (match !== undefined && match >= 0) go(match);
+                if (result.status === "obsolete") return;
+                if (result.status === "error") {
+                  library.notify(
+                    "Não foi possível pesquisar o PDF. Tente novamente.",
+                  );
+                  return;
+                }
+                if (result.value >= 0) go(result.value);
                 else library.notify("Não encontramos esse texto no PDF.");
               } else if (realEpub) {
                 try {
