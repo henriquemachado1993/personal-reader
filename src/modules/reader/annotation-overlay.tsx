@@ -311,6 +311,8 @@ export function AnnotationOverlay({
           style={{ pointerEvents: tool === "select" ? "all" : undefined }}
           onPointerDown={(e) => {
             if (tool !== "select") return;
+            // Moving a text annotation must not also select its SVG text in the browser.
+            e.preventDefault();
             e.stopPropagation();
             const svg = e.currentTarget.ownerSVGElement!;
             const r = svg.getBoundingClientRect();

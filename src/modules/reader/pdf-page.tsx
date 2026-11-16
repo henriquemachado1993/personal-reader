@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { acquirePdf } from "./pdf-resource";
 import { useLibrary } from "@/modules/library/store";
 
-export function PdfPage({
+export const PdfPage = memo(function PdfPage({
   documentId,
   page,
   onPages,
@@ -28,11 +28,20 @@ export function PdfPage({
   const hostRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy>();
   const [width, setWidth] = useState(700);
+  const [aspect, setAspect] = useState(Math.SQRT2);
+  const rendered = useRef<{
+    pdf: PDFDocumentProxy;
+    page: number;
+    width: number;
+  } | null>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => setVisible(entries[0].isIntersecting),
-      { rootMargin: "1000px" },
+      {
+        root: hostRef.current?.closest(".reader-scroll-area"),
+        rootMargin: "1000px",
+      },
     );
     if (hostRef.current) observer.observe(hostRef.current);
     return () => observer.disconnect();
@@ -97,6 +106,12 @@ export function PdfPage({
   }, [pdf, onDocumentReady]);
   useEffect(() => {
     if (!pdf || !visible) return;
+    if (
+      rendered.current?.pdf === pdf &&
+      rendered.current.page === page &&
+      rendered.current.width === width
+    )
+      return;
     let cancelled = false;
     let renderTask: { cancel: () => void; promise: Promise<void> } | undefined;
     let textLayer: { cancel: () => void } | undefined;
@@ -106,6 +121,7 @@ export function PdfPage({
         const pdfPage = await pdf.getPage(Math.min(page + 1, pdf.numPages));
         if (cancelled || !canvasRef.current || !textRef.current) return;
         const base = pdfPage.getViewport({ scale: 1 });
+        setAspect(base.height / base.width);
         const viewport = pdfPage.getViewport({ scale: width / base.width });
         const canvas = canvasRef.current;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -135,7 +151,7 @@ export function PdfPage({
         textLayer = layer;
         await layer.render();
         if (!cancelled) {
-          onCanvas?.(canvas);
+          rendered.current = { pdf, page, width };
           setLoading(false);
         }
       } catch (error) {
@@ -153,14 +169,18 @@ export function PdfPage({
       cancelled = true;
       renderTask?.cancel();
       textLayer?.cancel();
-      onCanvas?.(null);
     };
-  }, [pdf, page, width, onCanvas, onError, visible]);
+  }, [pdf, page, width, onError, visible]);
+  // Selecting another page only changes which canvas the editor uses, not its pixels.
+  useEffect(() => {
+    if (!loading) onCanvas?.(canvasRef.current);
+    return () => onCanvas?.(null);
+  }, [loading, onCanvas]);
   return (
     <div
       ref={hostRef}
       className="pdf-page"
-      style={{ minHeight: width * 1.414 }}
+      style={{ minHeight: width * aspect }}
       aria-busy={loading}
     >
       <canvas ref={canvasRef} aria-label={`Página ${page + 1} do PDF`} />
@@ -168,4 +188,4 @@ export function PdfPage({
       {loading && <div className="pdf-loading">Preparando a página…</div>}
     </div>
   );
-}
+});

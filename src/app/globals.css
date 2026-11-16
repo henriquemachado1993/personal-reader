@@ -1787,7 +1787,7 @@ textarea::placeholder {
   background: var(--background);
   border: 1px solid var(--border);
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.8;
 }
 .note-form > .button {
@@ -1795,7 +1795,7 @@ textarea::placeholder {
   width: 100%;
 }
 .note-form blockquote {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.8;
   margin: 0 0 12px;
@@ -1813,11 +1813,11 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 12px;
 }
 .panel-annotations article p,
 .panel-annotations blockquote {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.8;
   margin: 10px 0;
   white-space: pre-wrap;
@@ -2320,7 +2320,6 @@ textarea::placeholder {
   .prose-page {
     padding: 35px 34px 70px;
     min-height: 750px;
-    font-size: 17px !important;
   }
   .prose-page h1 {
     font-size: 27px;

@@ -37,6 +37,8 @@ import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { PdfPage } from "./pdf-page";
+import "./reader-refinements.css";
+import { findVisiblePage, scrollToReaderPage } from "./page-scroll";
 import { EpubPage } from "./epub-page";
 import { downloadBlob, exportPdf } from "./export";
 import { readFile } from "@/infrastructure/storage/local";
@@ -196,10 +198,14 @@ export function Reader({ documentId }: { documentId: string }) {
     const pages = Array.from(
       host.querySelectorAll<HTMLElement>("[data-reader-page]"),
     );
+    let scheduled = 0;
     const track = () => {
+      scheduled = 0;
       const top = host.getBoundingClientRect().top + host.clientHeight * 0.35;
-      const active = pages.find(
-        (node) => node.getBoundingClientRect().bottom > top,
+      const active = findVisiblePage(
+        pages,
+        (node) => node.getBoundingClientRect().bottom,
+        top,
       );
       if (!active) return;
       const index = Number(active.dataset.readerPage);
@@ -214,16 +220,23 @@ export function Reader({ documentId }: { documentId: string }) {
           location: pageLocation(current, index),
         });
     };
-    host.addEventListener("scroll", track, { passive: true });
+    const schedule = () => {
+      if (!scheduled) scheduled = requestAnimationFrame(track);
+    };
+    host.addEventListener("scroll", schedule, { passive: true });
     const requested = Number(
       new URLSearchParams(window.location.search).get("page"),
     );
     const saved =
       requested > 0 ? Math.min(requested - 1, book.pages - 1) : book.page;
-    requestAnimationFrame(() =>
-      pages[saved]?.scrollIntoView({ block: "start" }),
-    );
-    return () => host.removeEventListener("scroll", track);
+    const restore = requestAnimationFrame(() => {
+      if (pages[saved]) scrollToReaderPage(host, pages[saved]);
+    });
+    return () => {
+      host.removeEventListener("scroll", schedule);
+      cancelAnimationFrame(restore);
+      cancelAnimationFrame(scheduled);
+    };
   }, [documentId, book?.pages, realEpub, library.hydrated]);
   const onPages = useCallback(
     (pages: number) => {
@@ -296,9 +309,11 @@ export function Reader({ documentId }: { documentId: string }) {
         location: pageLocation(document, next),
         lastReadAt: new Date().toISOString(),
       });
-      scrollHost.current
-        ?.querySelector(`[data-reader-page="${next}"]`)
-        ?.scrollIntoView({ block: "start", behavior: "instant" });
+      const host = scrollHost.current;
+      const targetPage = host?.querySelector<HTMLElement>(
+        `[data-reader-page="${next}"]`,
+      );
+      if (host && targetPage) scrollToReaderPage(host, targetPage);
     },
     [documentId, currentPage],
   );
@@ -800,6 +815,9 @@ export function Reader({ documentId }: { documentId: string }) {
               <div
                 key={pageIndex}
                 data-reader-page={pageIndex}
+                aria-current={
+                  realEpub || pageIndex === currentPage ? "page" : undefined
+                }
                 className="reader-page reader-continuous-page"
                 ref={pageIndex === currentPage ? pageHost : undefined}
                 onPointerDownCapture={(event) => {
@@ -834,7 +852,12 @@ export function Reader({ documentId }: { documentId: string }) {
                 }}
                 onMouseUp={captureSelection}
                 onTouchEnd={captureSelection}
-                style={{ maxWidth: `${(760 * zoom) / 100}px` }}
+                style={
+                  {
+                    maxWidth: `${(760 * zoom) / 100}px`,
+                    "--reader-page-width": `${zoom}%`,
+                  } as React.CSSProperties
+                }
               >
                 {realPdf ? (
                   <PdfPage
@@ -1014,7 +1037,11 @@ export function Reader({ documentId }: { documentId: string }) {
                 .map((a) => (
                   <article key={a.id}>
                     <div>
-                      <span style={{ color: a.color }}>
+                      <span className="reader-note-kind">
+                        <i
+                          aria-hidden="true"
+                          style={{ backgroundColor: a.color }}
+                        />
                         {a.kind === "highlight"
                           ? "Destaque"
                           : a.kind === "clipping"

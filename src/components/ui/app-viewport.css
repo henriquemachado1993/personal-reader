@@ -49,18 +49,36 @@ body .auth-layout {
   }
 }
 
-/* The reader already owns its scroll container; do not create a second page scroll. */
+/* Let reading continue behind the home indicator instead of clipping above it. */
+body:has(.reader-shell) {
+  padding-bottom: 0;
+}
+
 body .reader-shell {
-  height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom));
+  height: calc(100dvh - var(--app-safe-top));
 }
 
 body .reader-shell .reader-scroll-area {
   overscroll-behavior: contain;
+  padding-bottom: calc(var(--reader-bottom) + var(--app-safe-bottom));
+}
+
+body .reader-shell .reader-footer {
+  bottom: var(--app-safe-bottom);
+}
+
+body
+  .reader-shell
+  :is(.reader-left-panel, .reader-notes-panel, .selection-actions) {
+  margin-bottom: var(--app-safe-bottom);
 }
 
 body .reader-shell .annotation-toolbar {
   bottom: calc(14px + var(--app-safe-bottom));
-  max-width: calc(100vw - 24px - var(--app-safe-left) - var(--app-safe-right));
+  max-width: min(
+    760px,
+    calc(100vw - 24px - var(--app-safe-left) - var(--app-safe-right))
+  );
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {

@@ -1,0 +1,56 @@
+.reader-note-kind {
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.reader-note-kind i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.reader-shell .annotation-toolbar .mantine-Slider-root {
+  height: 44px;
+  margin-block: 0;
+  justify-content: center;
+}
+.reader-shell .annotation-toolbar .mantine-Slider-trackContainer {
+  height: 44px;
+}
+.reader-shell .annotation-toolbar .mantine-Slider-thumb::before {
+  content: "";
+  position: absolute;
+  inset: -13px;
+}
+body .reader-shell .annotation-colors {
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+  justify-content: center;
+}
+body .reader-shell .reader-page:has(> .pdf-page) {
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  body .reader-shell .reader-page {
+    width: var(--reader-page-width, 100%);
+    max-width: none !important;
+  }
+  body .reader-shell .reader-scroll-area {
+    overflow-x: auto;
+  }
+}
+@media (max-width: 760px) {
+  body .reader-shell .annotation-colors {
+    flex-basis: 100%;
+    gap: 6px;
+  }
+  body .reader-shell .annotation-colors > label {
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
+  body .reader-shell .annotation-colors .mantine-ColorInput-root {
+    flex: 1;
+  }
+}

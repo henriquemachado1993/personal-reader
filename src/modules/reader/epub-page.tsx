@@ -83,22 +83,27 @@ export function EpubPage({
             if (contents.window.getSelection()?.isCollapsed !== false) onTap();
           }, 220);
         });
-        view.on(
-          "relocated",
-          (loc: {
-            start: { cfi: string; href: string; percentage: number };
-          }) => {
-            onLocation(
-              {
-                type: "EPUB",
-                cfi: loc.start.cfi,
-                href: loc.start.href,
-                progression: loc.start.percentage,
-              },
-              Math.round(loc.start.percentage * 100),
-            );
-          },
-        );
+        const reportLocation = (loc: {
+          start: { cfi: string; href: string; percentage: number };
+          atEnd?: boolean;
+        }) => {
+          const indexed = book!.locations.percentageFromCfi(loc.start.cfi);
+          const progression = loc.atEnd
+            ? 1
+            : Number.isFinite(indexed)
+              ? indexed
+              : (loc.start.percentage ?? 0);
+          onLocation(
+            {
+              type: "EPUB",
+              cfi: loc.start.cfi,
+              href: loc.start.href,
+              progression,
+            },
+            Math.round(progression * 100),
+          );
+        };
+        view.on("relocated", reportLocation);
         view.on("selected", (cfi: string, contents: { window: Window }) => {
           const text = contents.window.getSelection()?.toString();
           if (text) onSelected(text, { type: "EPUB", cfi, href: "" });
@@ -125,6 +130,22 @@ export function EpubPage({
             : undefined,
         );
         if (!disposed) setReady(true);
+        // Index in the background so long books can open before all chapters are parsed.
+        void book.locations
+          .generate(1500)
+          .then(() => {
+            if (disposed) return;
+            const current = view.location;
+            if (current?.start) reportLocation(current);
+          })
+          .catch(() => {
+            if (!disposed)
+              useLibrary
+                .getState()
+                .notify(
+                  "Não foi possível calcular o progresso deste EPUB. Sua posição de leitura continua salva.",
+                );
+          });
       } catch (error) {
         if (!disposed)
           onError(

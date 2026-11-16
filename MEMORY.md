@@ -1,5 +1,13 @@
 # Memória do projeto
 
+- Área segura inferior no leitor: o conteúdo rola até o fim do viewport; somente controles/painéis reservam o espaço do indicador de início. `body:has(.reader-shell)` remove o padding inferior e a altura do leitor desconta apenas o inset superior. Regressão em `tests/e2e/reader-viewport.spec.ts` cobre texto/PDF, rotação, insets simulados e ausência de rolagem extra do documento.
+
+- Leitor após auditoria de 15/11/2026: preferência de fonte governa também o celular; navegação/retomada usa `scrollToReaderPage`, preservando o padding superior. Não restaurar `scrollIntoView({block: "start"})` sobre o documento.
+- Rasterização PDF independe da seleção do canvas ativo. Reaproveitar páginas prontas na mesma largura; observar o contêiner `.reader-scroll-area`. Teste comprovou 8 → 0 reinicializações de canvas na troca de página. Rolagem usa rAF e busca binária; a estrutura de todas as páginas ainda fica montada.
+- EPUB gera posições em segundo plano para calcular progresso pelo CFI. Não bloquear a abertura esperando o índice completo. Notas usam texto semântico com marcador da cor escolhida; arrastar texto SVG não deve selecionar suas letras.
+- Títulos do workspace são definidos em `generateMetadata` na rota. Não escrever `document.title` em efeito cliente: os metadados transmitidos pelo Next podem sobrescrevê-lo em produção.
+- Evidências das correções e do polish em `docs/audits/reader-remediation-2026-11-15.md`.
+
 - Viewport usa escala fixa, `viewport-fit=cover` e teclado que redimensiona conteúdo. Campos móveis têm ao menos 16px para evitar ampliação ao focar. CSS de áreas seguras em `app-viewport.css`; preservar desenho/rolagem do leitor.
 - Manifesto em `src/app/manifest.ts` usa `display: standalone`. Ícones PNG derivam do SVG existente via `scripts/generate-app-icons.mjs`. Barra do navegador só desaparece ao abrir o app instalado.
 

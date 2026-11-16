@@ -111,12 +111,16 @@ test("editing history restores moved objects and deleted final annotation", asyn
     .getByRole("button", { name: "Inserir texto", exact: true })
     .click();
   await page.getByLabel("Texto", { exact: true }).fill("Objeto para desfazer");
-  const box = (await page.locator(".annotation-overlay").boundingBox())!;
+  const box = (await page
+    .locator(".reader-page[aria-current=page] .annotation-overlay")
+    .boundingBox())!;
   await page.mouse.move(box.x + 60, box.y + 100);
   await page.mouse.down();
   await page.mouse.move(box.x + 160, box.y + 150);
   await page.mouse.up();
-  const object = page.locator(".annotation-overlay text");
+  const object = page.locator(
+    ".reader-page[aria-current=page] .annotation-overlay text",
+  );
   await expect(object).toBeVisible();
   const originalX = await object.getAttribute("x");
   const shape = (await object.boundingBox())!;
@@ -125,6 +129,8 @@ test("editing history restores moved objects and deleted final annotation", asyn
   await page.mouse.move(shape.x + 45, shape.y + 25);
   await page.mouse.up();
   await expect(object).not.toHaveAttribute("x", originalX!);
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe("");
+  await expect(page.locator(".selection-actions")).toHaveCount(0);
   await page.getByRole("button", { name: "Desfazer anotação" }).click();
   await expect(object).toHaveAttribute("x", originalX!);
   await page.getByRole("button", { name: "Borracha", exact: true }).click();
@@ -170,11 +176,18 @@ test("reader keeps contrast, inline pagination and accessible colors across them
     page.getByRole("button", { name: "Cor Rosa", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(
-    (await page.getByLabel("Espessura do traço").boundingBox())!.height,
+    await page
+      .getByRole("slider", { name: "Espessura do traço" })
+      .evaluate(
+        (node) =>
+          node.closest(".mantine-Slider-root")!.getBoundingClientRect().height,
+      ),
   ).toBeGreaterThanOrEqual(44);
-  await page.getByLabel("Espessura do traço").focus();
+  await page.getByRole("slider", { name: "Espessura do traço" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByLabel("Espessura do traço")).toHaveValue("3");
+  await expect(
+    page.getByRole("slider", { name: "Espessura do traço" }),
+  ).toHaveAttribute("aria-valuenow", "3");
   await page.screenshot({
     path: ".impeccable/review/remediation/mobile-reader-tools.png",
     animations: "disabled",

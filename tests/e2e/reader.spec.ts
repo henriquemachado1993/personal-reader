@@ -81,22 +81,40 @@ test("notes, bookmarks, progress and drawings survive a reload and undo/redo", a
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
   await page.getByRole("button", { name: "Caneta", exact: true }).click();
-  const box = await page.locator(".annotation-overlay").boundingBox();
+  const box = await page
+    .locator(".reader-page[aria-current=page] .annotation-overlay")
+    .boundingBox();
   if (!box) throw new Error("missing page");
   await page.mouse.move(box.x + 100, box.y + 100);
   await page.mouse.down();
   await page.mouse.move(box.x + 180, box.y + 150, { steps: 10 });
   await page.mouse.up();
-  await expect(page.locator(".annotation-overlay polyline")).toHaveCount(1);
+  await expect(
+    page.locator(
+      ".reader-page[aria-current=page] .annotation-overlay polyline",
+    ),
+  ).toHaveCount(1);
   await page.getByRole("button", { name: "Desfazer anotação" }).click();
-  await expect(page.locator(".annotation-overlay polyline")).toHaveCount(0);
+  await expect(
+    page.locator(
+      ".reader-page[aria-current=page] .annotation-overlay polyline",
+    ),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Refazer anotação" }).click();
-  await expect(page.locator(".annotation-overlay polyline")).toHaveCount(1);
+  await expect(
+    page.locator(
+      ".reader-page[aria-current=page] .annotation-overlay polyline",
+    ),
+  ).toHaveCount(1);
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Remover marcador" }),
   ).toBeVisible();
-  await expect(page.locator(".annotation-overlay polyline")).toHaveCount(1);
+  await expect(
+    page.locator(
+      ".reader-page[aria-current=page] .annotation-overlay polyline",
+    ),
+  ).toHaveCount(1);
   await page.goto("/knowledge");
   await expect(page.locator(".knowledge-entry")).toContainText("Uma conexão");
   await page.locator(".entry-source").click();
@@ -188,8 +206,12 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
   );
   await page.goto("/library");
   await page.getByRole("link", { name: "documento", exact: true }).click();
-  await expect(page.locator(".pdf-page")).toHaveAttribute("aria-busy", "false");
-  await expect(page.locator(".textLayer")).toContainText("A real PDF page");
+  await expect(
+    page.locator(".reader-page[aria-current=page] .pdf-page"),
+  ).toHaveAttribute("aria-busy", "false");
+  await expect(
+    page.locator(".reader-page[aria-current=page] .textLayer"),
+  ).toContainText("A real PDF page");
   await expect(page.locator(".page-thumbnail canvas")).toHaveCount(2);
   await expect
     .poll(() =>
@@ -221,13 +243,17 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
     ),
   });
   await expect(page.getByText("Imagem pronta para inserir")).toBeVisible();
-  const surface = await page.locator(".annotation-overlay").boundingBox();
+  const surface = await page
+    .locator(".reader-page[aria-current=page] .annotation-overlay")
+    .boundingBox();
   if (!surface) throw new Error("Página indisponível");
   await page.mouse.move(surface.x + 50, surface.y + 100);
   await page.mouse.down();
   await page.mouse.move(surface.x + 150, surface.y + 180);
   await page.mouse.up();
-  await expect(page.locator(".annotation-overlay image")).toHaveCount(1);
+  await expect(
+    page.locator(".reader-page[aria-current=page] .annotation-overlay image"),
+  ).toHaveCount(1);
   await page
     .getByRole("button", { name: "Fechar ferramentas de anotação" })
     .click();
@@ -244,7 +270,9 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
   await page
     .getByRole("button", { name: "Ir para página 2", exact: true })
     .click();
-  await expect(page.locator(".textLayer")).toContainText("Second page");
+  await expect(
+    page.locator(".reader-page[aria-current=page] .textLayer"),
+  ).toContainText("Second page");
   await page.reload();
   await expect(
     page.getByRole("spinbutton", { name: "Número da página" }),
@@ -274,7 +302,9 @@ test("reader controls match the reference in normal, focus and drawing states", 
       height: viewport.height,
     });
     await page.goto("/reader/dom-casmurro");
-    const paragraph = page.locator(".prose-page p").first();
+    const paragraph = page
+      .locator(".reader-page[aria-current=page] .prose-page p")
+      .first();
     await expect(paragraph).toBeVisible();
     await expect(
       page.getByRole("toolbar", { name: "Ferramentas de anotação" }),
@@ -349,11 +379,17 @@ test("touch toggles reader chrome and Escape restores keyboard access", async ({
     hasTouch: true,
     isMobile: true,
   });
+  await seedReaderLibrary(mobile);
+  await mobile.route("**/api/library", (route) =>
+    route.fulfill({ status: 503, body: "{}" }),
+  );
   await mobile.addCookies(await context.cookies());
   const page = await mobile.newPage();
   try {
     await page.goto("/reader/dom-casmurro");
-    const paragraph = page.locator(".prose-page p").first();
+    const paragraph = page
+      .locator(".reader-page[aria-current=page] .prose-page p")
+      .first();
     await paragraph.tap({ position: { x: 20, y: 12 } });
     await expect(page.locator(".reader-header")).not.toBeVisible();
     await paragraph.tap({ position: { x: 20, y: 12 } });
@@ -391,6 +427,7 @@ test("home count, named dialogs and missing collections expose correct state", a
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/collections/missing");
+  await expect(page).toHaveTitle("Coleções · Personal Reader");
   await expect(
     page.getByRole("link", { name: "Ver minhas coleções" }),
   ).toBeVisible();
@@ -403,40 +440,45 @@ test("advanced annotation controls persist text and stroke properties", async ({
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
-  await page.getByLabel("Espessura do traço").fill("7");
-  await page.getByLabel("Opacidade da marcação").fill("0.5");
+  await page.getByRole("slider", { name: "Espessura do traço" }).focus();
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+  await page.getByRole("slider", { name: "Opacidade da marcação" }).focus();
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
   await page
     .getByRole("button", { name: "Inserir texto", exact: true })
     .click();
   await page.getByLabel("Texto", { exact: true }).fill("Nota na página");
-  const box = await page.locator(".annotation-overlay").boundingBox();
+  const box = await page
+    .locator(".reader-page[aria-current=page] .annotation-overlay")
+    .boundingBox();
   if (!box) throw new Error("Página indisponível");
   await page.mouse.move(box.x + 50, box.y + 100);
   await page.mouse.down();
   await page.mouse.move(box.x + 150, box.y + 140);
   await page.mouse.up();
-  await expect(page.locator(".annotation-overlay text")).toHaveText(
-    "Nota na página",
-  );
+  await expect(
+    page.locator(".reader-page[aria-current=page] .annotation-overlay text"),
+  ).toHaveText("Nota na página");
   const beforeMove = await page
-    .locator(".annotation-overlay text")
+    .locator(".reader-page[aria-current=page] .annotation-overlay text")
     .getAttribute("x");
   const objectBox = await page
-    .locator(".annotation-overlay text")
+    .locator(".reader-page[aria-current=page] .annotation-overlay text")
     .boundingBox();
   if (!objectBox) throw new Error("Objeto indisponível");
   await page.mouse.move(objectBox.x + 4, objectBox.y + 5);
   await page.mouse.down();
   await page.mouse.move(objectBox.x + 40, objectBox.y + 25, { steps: 5 });
   await page.mouse.up();
-  await expect(page.locator(".annotation-overlay text")).not.toHaveAttribute(
-    "x",
-    beforeMove!,
-  );
+  await expect(
+    page.locator(".reader-page[aria-current=page] .annotation-overlay text"),
+  ).not.toHaveAttribute("x", beforeMove!);
   await page.reload();
-  await expect(page.locator(".annotation-overlay text")).toHaveText(
-    "Nota na página",
-  );
+  await expect(
+    page.locator(".reader-page[aria-current=page] .annotation-overlay text"),
+  ).toHaveText("Nota na página");
 });
 
 test("visited reader reloads offline from the application cache", async ({
@@ -448,10 +490,14 @@ test("visited reader reloads offline from the application cache", async ({
     await navigator.serviceWorker.ready;
   });
   await page.reload();
-  await expect(page.locator(".prose-page")).toContainText("Do livro");
+  await expect(
+    page.locator(".reader-page[aria-current=page] .prose-page"),
+  ).toContainText("Do livro");
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(".prose-page")).toContainText("Do livro");
+  await expect(
+    page.locator(".reader-page[aria-current=page] .prose-page"),
+  ).toContainText("Do livro");
   await context.setOffline(false);
 });
 

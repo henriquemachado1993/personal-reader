@@ -1,5 +1,9 @@
 # Trabalho restante
 
+- [x] Corrigir R01–R05 da auditoria do leitor: fonte móvel, progresso EPUB, contraste das notas, paleta responsiva e retomada protegida.
+- [x] Remover rasterizações redundantes na troca de página do PDF, corrigir proporção da área de anotações e reduzir medições durante rolagem, com testes de regressão.
+- [x] Polish do leitor em desktop, tablet e celular; notas legíveis, cores organizadas, sliders acessíveis e validação offline em produção. Evidências em `docs/audits/reader-remediation-2026-11-15.md`.
+
 - [x] Viewport de app, prevenção de zoom móvel e foco de campos, áreas seguras e manifesto instalável com ícones.
 
 - [x] Remover biblioteca de demonstração do estado inicial; fixtures ficam apenas nos testes.
