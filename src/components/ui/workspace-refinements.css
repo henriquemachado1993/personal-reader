@@ -1,0 +1,218 @@
+/* Controls share the library's neutral surfaces and rounded geometry. */
+body .mantine-Input-input {
+  border-radius: 14px;
+  font-size: 14px;
+}
+body .button {
+  border-radius: 24px;
+}
+.mantine-Select-dropdown,
+.mantine-DatePickerInput-dropdown,
+.mantine-ColorInput-dropdown {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  border-radius: 16px;
+}
+.mantine-Select-option[data-checked],
+.mantine-Select-option[data-combobox-selected] {
+  background: var(--selection);
+  color: var(--text);
+}
+.collection-with-actions {
+  position: relative;
+  min-width: 0;
+}
+.collection-with-actions .collection-item {
+  display: block;
+}
+.collection-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.collection-item h2 {
+  padding-right: 24px;
+  overflow-wrap: anywhere;
+}
+.books-main .knowledge-toolbar {
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 0 24px;
+}
+.knowledge-toolbar > label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  width: 170px;
+}
+.knowledge-toolbar .format-filters {
+  margin: 0;
+  align-self: center;
+}
+.knowledge-selects {
+  margin-left: auto;
+}
+.knowledge-selects .reader-select {
+  min-width: 160px;
+}
+.books-main .knowledge-selects .input {
+  font-size: 14px;
+  min-height: 44px;
+}
+.knowledge-list {
+  max-width: 100%;
+}
+.knowledge-entry {
+  padding: 28px 0;
+}
+.entry-content {
+  max-width: 780px;
+}
+.entry-meta {
+  font-size: 12px;
+}
+.entry-content > p {
+  font-size: 15px;
+}
+.books-main .settings-content {
+  max-width: 1000px;
+}
+.settings-content section {
+  padding: 32px 0;
+}
+.settings-content h2 {
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.25;
+  margin-bottom: 16px;
+}
+.settings-content p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.setting-row strong {
+  font-size: 14px;
+}
+.settings-content section[aria-label="Sincronização"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  margin-bottom: 8px;
+}
+.sync-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.sync-conflict {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.sync-conflict p {
+  margin-bottom: 16px;
+}
+.sync-conflict .button {
+  margin: 0 8px 8px 0;
+}
+.annotation-toolbar .mantine-Slider-root {
+  min-width: 100px;
+  margin: 15px 8px;
+}
+.annotation-toolbar .mantine-ColorInput-root {
+  min-width: 120px;
+}
+.annotation-toolbar .mantine-Slider-thumb {
+  width: 22px;
+  height: 22px;
+}
+.reader-continuous-page {
+  margin-bottom: 20px;
+}
+.reader-shell .toast {
+  bottom: auto;
+  top: 170px;
+  right: 16px;
+  left: auto;
+}
+.reader-shell .epub-page {
+  height: calc(100dvh - 220px);
+  min-height: 400px;
+}
+@media (max-width: 900px) {
+  .reader-shell .reader-scroll-area {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .reader-shell .reader-page {
+    width: 100%;
+    max-width: 100% !important;
+  }
+  .reader-shell .prose-page {
+    padding: 30px 22px 50px;
+  }
+  body .reader-shell .reader-header-right .reader-notes-toggle {
+    display: inline-flex;
+  }
+  .reader-shell .reader-notes-panel {
+    display: block;
+    position: absolute;
+    z-index: 45;
+    top: 88px;
+    bottom: 90px;
+    right: 10px;
+    width: min(360px, calc(100vw - 20px));
+    overflow-y: auto;
+    box-shadow: 0 16px 50px #0002;
+    border-radius: 20px;
+    background: var(--surface);
+  }
+}
+@media (max-width: 540px) {
+  body .reader-shell .reader-header {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+  }
+  body .reader-shell .reader-header-right {
+    margin-left: auto;
+  }
+  body .reader-shell {
+    --reader-top: 150px;
+  }
+  body .reader-shell .reader-page-counter {
+    top: 142px;
+  }
+  body .reader-shell .reader-notes-panel {
+    top: 145px;
+  }
+  .knowledge-toolbar > label {
+    width: calc(50% - 8px);
+  }
+  .knowledge-selects {
+    margin-left: 0;
+    width: 100%;
+  }
+  .knowledge-selects .reader-select {
+    flex: 1;
+    min-width: 135px;
+  }
+  .books-main .knowledge-toolbar .format-filters {
+    gap: 4px;
+  }
+  .settings-content section[aria-label="Sincronização"] {
+    padding: 20px;
+  }
+  .settings-content h2 {
+    font-size: 24px;
+  }
+  .theme-selector {
+    flex-wrap: wrap;
+  }
+}

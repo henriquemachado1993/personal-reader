@@ -22,6 +22,7 @@ import { readingDate } from "@/modules/library/reading-calendar";
 export function SettingsView() {
   const state = useLibrary();
   const [usage, setUsage] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [config, setConfig] = useState<{
     database: boolean;
     storage: boolean;
@@ -89,15 +90,29 @@ export function SettingsView() {
               </time>
             </p>
           )}
-          <Button
-            className="button secondary"
-            onClick={() => void state.synchronize()}
-          >
-            Sincronizar agora
-          </Button>
+          <div className="sync-actions">
+            <Button
+              className="button secondary"
+              disabled={syncing}
+              onClick={async () => {
+                setSyncing(true);
+                try {
+                  await state.synchronize();
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+            >
+              {syncing ? "Sincronizando…" : "Sincronizar agora"}
+            </Button>
+          </div>
           {/Conflito/.test(state.syncMessage) && (
-            <div>
-              <p>Uma cópia JSON será baixada antes de aplicar sua escolha.</p>
+            <div className="sync-conflict">
+              <p>
+                Há alterações diferentes neste dispositivo e na sua conta.
+                Escolha qual versão manter. Antes disso, baixaremos uma cópia de
+                segurança deste dispositivo.
+              </p>
               {[true, false].map((preferLocal) => (
                 <Button
                   key={String(preferLocal)}
@@ -119,7 +134,9 @@ export function SettingsView() {
                     }
                   }}
                 >
-                  {preferLocal ? "Manter esta versão" : "Usar versão da conta"}
+                  {preferLocal
+                    ? "Manter versão deste dispositivo"
+                    : "Usar versão da conta"}
                 </Button>
               ))}
             </div>
@@ -236,7 +253,7 @@ export function SettingsView() {
         <div className="settings-about">
           <BookOpen size={23} strokeWidth={1.4} />
           <strong>Personal Reader</strong>
-          <span>Versão 0.1 · Feito para o seu tempo de leitura.</span>
+          <span>Versão 0.1</span>
         </div>
       </div>
     </>

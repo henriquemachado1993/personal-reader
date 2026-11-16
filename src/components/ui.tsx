@@ -1,5 +1,5 @@
 "use client";
-import { ActionIcon, Modal as MantineModal } from "@mantine/core";
+import { ActionIcon, Tooltip, Modal as MantineModal } from "@mantine/core";
 import { Dropdown } from "./ui/dropdown";
 import { X, BookOpen, MoreHorizontal } from "lucide-react";
 import type { ReaderDocument } from "@/shared/types";
@@ -10,15 +10,20 @@ export function IconButton({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
-    <ActionIcon
-      type="button"
-      aria-label={label}
-      title={label}
-      className={`icon-button ${className}`}
-      {...props}
+    <Tooltip
+      label={label}
+      withArrow
+      events={{ hover: true, focus: true, touch: false }}
     >
-      {children}
-    </ActionIcon>
+      <ActionIcon
+        type="button"
+        aria-label={label}
+        className={`icon-button ${className}`}
+        {...props}
+      >
+        {children}
+      </ActionIcon>
+    </Tooltip>
   );
 }
 export function Cover({

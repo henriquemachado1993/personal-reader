@@ -281,7 +281,7 @@ export function KnowledgeView({
         >
           {search
             ? "Tente outra palavra ou ajuste os filtros."
-            : "Destaque um trecho, anote um pensamento ou capture parte de um PDF durante a leitura. Tudo encontra um lugar aqui, com o caminho de volta ao livro."}
+            : "Destaque um trecho, anote um pensamento ou capture parte de um PDF durante a leitura."}
         </EmptyState>
       )}
       {writing && (

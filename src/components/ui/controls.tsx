@@ -1,10 +1,12 @@
 "use client";
-import { forwardRef } from "react";
+import { Children, isValidElement, forwardRef } from "react";
+import { DatePickerInput } from "@mantine/dates";
+import "dayjs/locale/pt-br";
 import {
   Button as MantineButton,
   UnstyledButton,
   Input,
-  NativeSelect,
+  Select,
   Textarea as MantineTextarea,
   Checkbox,
 } from "@mantine/core";
@@ -34,6 +36,26 @@ export const TextField = forwardRef<
   { className, type = "text", hidden, size: _nativeSize, ...props },
   ref,
 ) {
+  if (type === "date") {
+    return (
+      <DatePickerInput
+        locale="pt-br"
+        valueFormat="DD/MM/YYYY"
+        placeholder="Selecionar data"
+        clearable
+        value={props.value ? String(props.value) : null}
+        onChange={(value) =>
+          props.onChange?.({
+            target: { value: value ?? "" },
+          } as React.ChangeEvent<HTMLInputElement>)
+        }
+        minDate={props.min ? String(props.min) : undefined}
+        aria-label={props["aria-label"]}
+        className="reader-field"
+        classNames={{ input: className }}
+      />
+    );
+  }
   // Keep specialized browser gestures/file pickers native, inside Mantine's input primitive.
   if (type === "checkbox")
     return <Checkbox ref={ref} {...props} className="reader-checkbox" />;
@@ -63,13 +85,57 @@ export const TextField = forwardRef<
 export const SelectField = forwardRef<
   HTMLSelectElement,
   React.SelectHTMLAttributes<HTMLSelectElement>
->(function SelectField({ className, size: _nativeSize, ...props }, ref) {
+>(function SelectField(
+  {
+    className,
+    size: _nativeSize,
+    children,
+    onChange,
+    value,
+    defaultValue,
+    ...props
+  },
+  _ref,
+) {
+  const options = Children.toArray(children).flatMap((child) => {
+    if (
+      !isValidElement<{
+        value: string;
+        children: React.ReactNode;
+        disabled?: boolean;
+      }>(child)
+    )
+      return [];
+    return [
+      {
+        value: String(child.props.value),
+        label: Children.toArray(child.props.children).join(""),
+        disabled: child.props.disabled,
+      },
+    ];
+  });
   return (
-    <NativeSelect
-      ref={ref}
+    <Select
       className="reader-select"
       classNames={{ input: className }}
-      {...props}
+      id={props.id}
+      aria-label={props["aria-label"]}
+      name={props.name}
+      disabled={props.disabled}
+      required={props.required}
+      value={value === undefined ? undefined : String(value)}
+      defaultValue={
+        defaultValue === undefined ? undefined : String(defaultValue)
+      }
+      data={options}
+      allowDeselect={false}
+      searchable={options.length > 8}
+      onChange={(next) => {
+        if (next !== null)
+          onChange?.({
+            target: { value: next },
+          } as React.ChangeEvent<HTMLSelectElement>);
+      }}
     />
   );
 });

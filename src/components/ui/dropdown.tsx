@@ -5,7 +5,7 @@ import {
   type ReactNode,
   type ReactElement,
 } from "react";
-import { Menu, UnstyledButton } from "@mantine/core";
+import { Menu, UnstyledButton, Tooltip } from "@mantine/core";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -63,14 +63,18 @@ export function Dropdown({
         offset={headerMenu ? 14 : 8}
       >
         <Menu.Target>
-          <UnstyledButton
-            type="button"
-            className={triggerClassName}
-            aria-label={label}
-            title={label}
+          <Tooltip
+            label={label}
+            events={{ hover: true, focus: true, touch: false }}
           >
-            {icon}
-          </UnstyledButton>
+            <UnstyledButton
+              type="button"
+              className={triggerClassName}
+              aria-label={label}
+            >
+              {icon}
+            </UnstyledButton>
+          </Tooltip>
         </Menu.Target>
         <Menu.Dropdown
           className={`reader-menu${headerMenu ? " reader-header-menu" : ""}`}
