@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
 import { readFile, mkdir } from "node:fs/promises";
 import dotenv from "dotenv";
 
 test.beforeEach(async ({ context }) => {
+  await seedReaderLibrary(context);
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const name = "authjs.session-token";
   const token = await encode({

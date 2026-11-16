@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { initialState } from "../src/modules/library/demo";
+import { initialState } from "./library-fixture";
 import { snapshotSchema } from "../src/modules/library/snapshot-schema";
 test("remote snapshot validation rejects incomplete documents and invalid preferences", () => {
   assert.equal(snapshotSchema.safeParse(initialState()).success, true);

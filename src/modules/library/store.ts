@@ -8,7 +8,7 @@ import type {
   Preferences,
   ReaderDocument,
 } from "@/shared/types";
-import { initialState } from "./demo";
+import { initialState } from "./initial-state";
 import { sameLocation } from "@/modules/reader/location";
 import { synchronizeLibrary } from "./synchronize";
 import { addDailySeconds } from "./reading-calendar";
@@ -37,6 +37,8 @@ interface Store extends LibraryState {
   addAnnotation: (annotation: Annotation) => void;
   removeAnnotation: (id: string) => void;
   addCollection: (collection: Collection) => void;
+  updateCollection: (id: string, name: string) => void;
+  deleteCollection: (id: string) => void;
   toggleBookmark: (bookmark: Bookmark) => void;
   setPreferences: (patch: Partial<Preferences>) => void;
   addReadingTime: (seconds: number) => void;
@@ -201,6 +203,24 @@ export const useLibrary = create<Store>((set, get) => {
     },
     addCollection: (collection) => {
       set((s) => ({ collections: [...s.collections, collection] }));
+      persist();
+    },
+    updateCollection: (id, name) => {
+      set((s) => ({
+        collections: s.collections.map((c) =>
+          c.id === id ? { ...c, name } : c,
+        ),
+      }));
+      persist();
+    },
+    deleteCollection: (id) => {
+      set((s) => ({
+        collections: s.collections.filter((c) => c.id !== id),
+        documents: s.documents.map((d) => ({
+          ...d,
+          collections: d.collections.filter((c) => c !== id),
+        })),
+      }));
       persist();
     },
     toggleBookmark: (bookmark) => {

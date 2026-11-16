@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { encode } from "next-auth/jwt";
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
-import { initialState } from "../../src/modules/library/demo";
+import { initialState } from "../library-fixture";
 test("normalized rows and entity tombstones commit atomically with versions", async ({
   request,
 }) => {

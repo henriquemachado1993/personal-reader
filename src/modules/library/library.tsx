@@ -19,6 +19,7 @@ import {
   FolderClosed,
 } from "lucide-react";
 import { useLibrary } from "./store";
+import { CollectionActions } from "./collection-actions";
 import {
   Cover,
   IconButton,
@@ -166,7 +167,10 @@ export function LibraryView({
           <div className="shelf-controls">
             <label className="sort-control">
               <span className="sr-only">Ordenar documentos</span>
-              <SelectField value={sort} onChange={(e) => setSort(e.target.value)}>
+              <SelectField
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+              >
                 <option value="recent">Mais recentes</option>
                 <option value="title">Título</option>
                 <option value="author">Autor</option>
@@ -501,32 +505,31 @@ export function CollectionsView({ search }: { search: string }) {
           .map((c) => {
             const books = documents.filter((d) => d.collections.includes(c.id));
             return (
-              <Link
-                key={c.id}
-                className="collection-item"
-                href={`/collections/${c.id}`}
-              >
-                <div
-                  className="collection-preview"
-                  style={{ background: `${c.color}22` }}
-                >
-                  {books.slice(0, 3).map((b) => (
-                    <Cover book={b} key={b.id} />
-                  ))}
-                  {!books.length && (
-                    <FolderClosed
-                      size={40}
-                      strokeWidth={1}
-                      style={{ color: c.color }}
-                    />
-                  )}
-                </div>
-                <div>
-                  <h2>{c.name}</h2>
-                  <span>{books.length} documentos</span>
-                  <ArrowUpRight size={20} />
-                </div>
-              </Link>
+              <article className="collection-with-actions" key={c.id}>
+                <Link className="collection-item" href={`/collections/${c.id}`}>
+                  <div
+                    className="collection-preview"
+                    style={{ background: `${c.color}22` }}
+                  >
+                    {books.slice(0, 3).map((b) => (
+                      <Cover book={b} key={b.id} />
+                    ))}
+                    {!books.length && (
+                      <FolderClosed
+                        size={40}
+                        strokeWidth={1}
+                        style={{ color: c.color }}
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <h2>{c.name}</h2>
+                    <span>{books.length} documentos</span>
+                    <ArrowUpRight size={20} />
+                  </div>
+                </Link>
+                <CollectionActions collection={c} />
+              </article>
             );
           })}
       </div>

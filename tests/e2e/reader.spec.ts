@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
@@ -7,6 +8,7 @@ import JSZip from "jszip";
 import { mkdir } from "node:fs/promises";
 
 test.beforeEach(async ({ context }) => {
+  await seedReaderLibrary(context);
   // Reader tests isolate local behavior; remote persistence has its own integration suite.
   await context.route("**/api/library", (route) =>
     route.fulfill({ status: 503, body: "{}" }),

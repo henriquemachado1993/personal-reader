@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { encode } from "next-auth/jwt";
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
-import { initialState } from "../../src/modules/library/demo";
+import { initialState } from "../library-fixture";
 
 test("remote snapshots enforce revisions, idempotency, ownership and restore across browsers", async ({
   browser,

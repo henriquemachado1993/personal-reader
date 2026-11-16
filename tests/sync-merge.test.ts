@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { initialState } from "../src/modules/library/demo";
+import { initialState } from "./library-fixture";
 import { mergeLibrary } from "../src/modules/library/sync-merge";
 test("independent fields of the same entity merge without losing either edit", () => {
   const base = initialState(),

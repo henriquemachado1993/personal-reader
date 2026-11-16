@@ -6,7 +6,7 @@ import {
   readCachedFile,
 } from "@/infrastructure/storage/local";
 import { mergeLibrary } from "./sync-merge";
-import { initialState } from "./demo";
+import { initialState } from "./initial-state";
 
 interface SyncRecord {
   revision: number;
