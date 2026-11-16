@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor, Download, ChevronDown } from "lucide-react";
 import { Button, SelectField } from "@/components/ui/controls";
 import { useLibrary } from "@/modules/library/store";
+import { CacheSettings } from "./cache-settings";
 import { SyncSettings } from "./sync-settings";
 import { exportLibraryBackup } from "./library-backup";
 import "./settings-view.css";
@@ -129,6 +130,18 @@ export function SettingsView() {
               Exportar backup
             </Button>
           </div>
+          <CacheSettings
+            onCleared={() => {
+              void navigator.storage
+                ?.estimate()
+                .then((estimate) => {
+                  setUsage(
+                    `${((estimate.usage ?? 0) / 1024 / 1024).toFixed(1)} MB`,
+                  );
+                })
+                .catch(() => {});
+            }}
+          />
           <details className="settings-storage">
             <summary>
               Armazenamento
