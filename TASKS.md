@@ -1,5 +1,7 @@
 # Trabalho restante
 
+- [x] Viewport de app, prevenção de zoom móvel e foco de campos, áreas seguras e manifesto instalável com ícones.
+
 - [x] Remover biblioteca de demonstração do estado inicial; fixtures ficam apenas nos testes.
 - [x] Leitor com rolagem contínua, contador sincronizado, largura móvel e notas acessíveis no celular.
 - [x] Sliders, cor, datas, selects e tooltips com Mantine.

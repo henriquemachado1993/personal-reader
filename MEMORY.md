@@ -1,5 +1,8 @@
 # Memória do projeto
 
+- Viewport usa escala fixa, `viewport-fit=cover` e teclado que redimensiona conteúdo. Campos móveis têm ao menos 16px para evitar ampliação ao focar. CSS de áreas seguras em `app-viewport.css`; preservar desenho/rolagem do leitor.
+- Manifesto em `src/app/manifest.ts` usa `display: standalone`. Ícones PNG derivam do SVG existente via `scripts/generate-app-icons.mjs`. Barra do navegador só desaparece ao abrir o app instalado.
+
 - Estado inicial vazio em `src/modules/library/initial-state.ts`; não recriar amostras em produção. Dados de teste vivem em `tests/*fixture.ts`.
 - Leitor renderiza páginas em sequência e atualiza o progresso por rolagem. PDFs compartilham recurso com contagem de referências e renderização próxima da área visível; EPUB usa gerenciador contínuo.
 - Campos de data usam `@mantine/dates` em português; selects usam combobox Mantine. Sliders precisam de `thumbLabel` para nome acessível.
