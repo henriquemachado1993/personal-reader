@@ -2,7 +2,10 @@ import type { BrowserContext } from "@playwright/test";
 import { initialState } from "../reader-fixture";
 
 // Legacy reader scenarios use explicit fixtures, never production seed data.
-export async function seedReaderLibrary(context: BrowserContext) {
+export async function seedReaderLibrary(
+  context: BrowserContext,
+  snapshot = initialState(),
+) {
   await context.addInitScript((snapshot) => {
     const request = indexedDB.open(
       "personal-reader-00000000-0000-4000-8000-000000000001",
@@ -22,5 +25,5 @@ export async function seedReaderLibrary(context: BrowserContext) {
       };
       transaction.oncomplete = () => database.close();
     };
-  }, initialState());
+  }, snapshot);
 }
