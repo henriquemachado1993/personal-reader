@@ -1,5 +1,11 @@
 # Trabalho restante
 
+- [x] Remover biblioteca de demonstração do estado inicial; fixtures ficam apenas nos testes.
+- [x] Leitor com rolagem contínua, contador sincronizado, largura móvel e notas acessíveis no celular.
+- [x] Sliders, cor, datas, selects e tooltips com Mantine.
+- [x] Edição e exclusão de coleções com confirmação, sem apagar livros.
+- [x] Conhecimento com filtros consistentes e Configurações com sincronização e conflitos organizados.
+
 - [x] Adapt/harden/polish: navegação em 320px, contraste independente do leitor, paginação horizontal, controles de toque, filtros acessíveis e recuperação de link inválido.
 - [x] Histórico de criação, movimentação, propriedades e exclusão de anotações com proteção contra alterações remotas.
 - [x] Estado de sincronização distingue conexão configurada, alterações pendentes e conclusão; capas e capturas carregam sob demanda.

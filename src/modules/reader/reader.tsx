@@ -1,4 +1,6 @@
 "use client";
+import { Slider, ColorInput } from "@mantine/core";
+
 import { Button, TextField, TextArea } from "@/components/ui/controls";
 import "./reader-controls.css";
 import "./editor-controls.css";
@@ -188,6 +190,41 @@ export function Reader({ documentId }: { documentId: string }) {
     if (target && Number(target) > 0 && Number(target) <= book.pages)
       setPage(Number(target) - 1);
   }, [documentId, library.hydrated]);
+  useEffect(() => {
+    const host = scrollHost.current;
+    if (!host || !book || realEpub) return;
+    const pages = Array.from(
+      host.querySelectorAll<HTMLElement>("[data-reader-page]"),
+    );
+    const track = () => {
+      const top = host.getBoundingClientRect().top + host.clientHeight * 0.35;
+      const active = pages.find(
+        (node) => node.getBoundingClientRect().bottom > top,
+      );
+      if (!active) return;
+      const index = Number(active.dataset.readerPage);
+      setPage((previous) => (previous === index ? previous : index));
+      const current = useLibrary
+        .getState()
+        .documents.find((d) => d.id === documentId);
+      if (current && current.page !== index)
+        useLibrary.getState().updateDocument(documentId, {
+          page: index,
+          progress: Math.round(((index + 1) / current.pages) * 100),
+          location: pageLocation(current, index),
+        });
+    };
+    host.addEventListener("scroll", track, { passive: true });
+    const requested = Number(
+      new URLSearchParams(window.location.search).get("page"),
+    );
+    const saved =
+      requested > 0 ? Math.min(requested - 1, book.pages - 1) : book.page;
+    requestAnimationFrame(() =>
+      pages[saved]?.scrollIntoView({ block: "start" }),
+    );
+    return () => host.removeEventListener("scroll", track);
+  }, [documentId, book?.pages, realEpub, library.hydrated]);
   const onPages = useCallback(
     (pages: number) => {
       const current = useLibrary
@@ -204,7 +241,17 @@ export function Reader({ documentId }: { documentId: string }) {
   const onError = useCallback((message: string) => setError(message), []);
   const onLocation = useCallback(
     (location: DocumentLocation, progress: number) => {
-      useLibrary.getState().updateDocument(documentId, { location, progress });
+      const current = useLibrary
+        .getState()
+        .documents.find((d) => d.id === documentId);
+      const page = Math.min(
+        (current?.pages ?? 1) - 1,
+        Math.floor((progress / 100) * (current?.pages ?? 1)),
+      );
+      setPage(page);
+      useLibrary
+        .getState()
+        .updateDocument(documentId, { location, progress, page });
     },
     [documentId],
   );
@@ -249,7 +296,9 @@ export function Reader({ documentId }: { documentId: string }) {
         location: pageLocation(document, next),
         lastReadAt: new Date().toISOString(),
       });
-      scrollHost.current?.scrollTo({ top: 0, behavior: "instant" });
+      scrollHost.current
+        ?.querySelector(`[data-reader-page="${next}"]`)
+        ?.scrollIntoView({ block: "start", behavior: "instant" });
     },
     [documentId, currentPage],
   );
@@ -257,7 +306,7 @@ export function Reader({ documentId }: { documentId: string }) {
     const key = (event: KeyboardEvent) => {
       if (
         (event.target as HTMLElement).matches(
-          "input, textarea, select, [contenteditable]",
+          "input, textarea, select, [contenteditable], [role=slider], [role=combobox]",
         )
       )
         return;
@@ -744,118 +793,139 @@ export function Reader({ documentId }: { documentId: string }) {
               {error}
             </EmptyState>
           ) : (
-            <div
-              className="reader-page"
-              ref={pageHost}
-              onPointerDownCapture={(event) => {
-                tap.current = {
-                  x: event.clientX,
-                  y: event.clientY,
-                  time: performance.now(),
-                  moved: false,
-                  pointerType: event.pointerType,
-                };
-              }}
-              onPointerMoveCapture={(event) => {
-                if (
-                  tap.current &&
-                  Math.hypot(
-                    event.clientX - tap.current.x,
-                    event.clientY - tap.current.y,
-                  ) > 8
-                )
-                  tap.current.moved = true;
-              }}
-              onPointerCancel={() => {
-                tap.current = null;
-                if (tapTimer.current) clearTimeout(tapTimer.current);
-              }}
-              onClick={handlePageClick}
-              onDoubleClick={() => {
-                if (tap.current?.pointerType !== "touch" && tapTimer.current)
-                  clearTimeout(tapTimer.current);
-              }}
-              onMouseUp={captureSelection}
-              onTouchEnd={captureSelection}
-              style={{ maxWidth: `${(760 * zoom) / 100}px` }}
-            >
-              {realPdf ? (
-                <PdfPage
-                  documentId={documentId}
-                  page={currentPage}
-                  onPages={onPages}
-                  onCanvas={onCanvas}
-                  onError={onError}
-                  searchRef={pdfSearch}
-                  onDocumentReady={setPdf}
-                />
-              ) : realEpub ? (
-                <EpubPage
-                  documentId={documentId}
-                  fontSize={library.preferences.fontSize}
-                  onLocation={onLocation}
-                  onSelected={onEpubSelected}
-                  onError={onError}
-                  navigationRef={epubNav}
-                  onTap={toggleChrome}
-                />
-              ) : (
-                <article
-                  className="prose-page"
-                  style={{ fontSize: `${library.preferences.fontSize}px` }}
-                >
-                  {(book.content?.[currentPage] ?? "")
-                    .split(/\n\s*\n/)
-                    .map((paragraph, i) =>
-                      i === 0 && paragraph.length < 100 ? (
-                        <h1 key={i}>{paragraph}</h1>
-                      ) : (
-                        <p key={i}>
-                          {query &&
-                          paragraph.toLowerCase().includes(query.toLowerCase())
-                            ? paragraph
-                                .split(
-                                  new RegExp(
-                                    `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-                                    "gi",
-                                  ),
-                                )
-                                .map((part, j) =>
-                                  part.toLowerCase() === query.toLowerCase() ? (
-                                    <mark key={j}>{part}</mark>
-                                  ) : (
-                                    part
-                                  ),
-                                )
-                            : paragraph}
-                        </p>
-                      ),
+            (realEpub
+              ? [0]
+              : Array.from({ length: book.pages }, (_, index) => index)
+            ).map((pageIndex) => (
+              <div
+                key={pageIndex}
+                data-reader-page={pageIndex}
+                className="reader-page reader-continuous-page"
+                ref={pageIndex === currentPage ? pageHost : undefined}
+                onPointerDownCapture={(event) => {
+                  if (!realEpub && pageIndex !== currentPage)
+                    setPage(pageIndex);
+                  tap.current = {
+                    x: event.clientX,
+                    y: event.clientY,
+                    time: performance.now(),
+                    moved: false,
+                    pointerType: event.pointerType,
+                  };
+                }}
+                onPointerMoveCapture={(event) => {
+                  if (
+                    tap.current &&
+                    Math.hypot(
+                      event.clientX - tap.current.x,
+                      event.clientY - tap.current.y,
+                    ) > 8
+                  )
+                    tap.current.moved = true;
+                }}
+                onPointerCancel={() => {
+                  tap.current = null;
+                  if (tapTimer.current) clearTimeout(tapTimer.current);
+                }}
+                onClick={handlePageClick}
+                onDoubleClick={() => {
+                  if (tap.current?.pointerType !== "touch" && tapTimer.current)
+                    clearTimeout(tapTimer.current);
+                }}
+                onMouseUp={captureSelection}
+                onTouchEnd={captureSelection}
+                style={{ maxWidth: `${(760 * zoom) / 100}px` }}
+              >
+                {realPdf ? (
+                  <PdfPage
+                    documentId={documentId}
+                    page={pageIndex}
+                    onPages={onPages}
+                    onCanvas={pageIndex === currentPage ? onCanvas : undefined}
+                    onError={onError}
+                    searchRef={pdfSearch}
+                    onDocumentReady={
+                      pageIndex === currentPage ? setPdf : undefined
+                    }
+                  />
+                ) : realEpub ? (
+                  <EpubPage
+                    documentId={documentId}
+                    fontSize={library.preferences.fontSize}
+                    onLocation={onLocation}
+                    onSelected={onEpubSelected}
+                    onError={onError}
+                    navigationRef={epubNav}
+                    onTap={toggleChrome}
+                  />
+                ) : (
+                  <article
+                    className="prose-page"
+                    style={{ fontSize: `${library.preferences.fontSize}px` }}
+                  >
+                    {(book.content?.[pageIndex] ?? "")
+                      .split(/\n\s*\n/)
+                      .map((paragraph, i) =>
+                        i === 0 && paragraph.length < 100 ? (
+                          <h1 key={i}>{paragraph}</h1>
+                        ) : (
+                          <p key={i}>
+                            {query &&
+                            paragraph
+                              .toLowerCase()
+                              .includes(query.toLowerCase())
+                              ? paragraph
+                                  .split(
+                                    new RegExp(
+                                      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+                                      "gi",
+                                    ),
+                                  )
+                                  .map((part, j) =>
+                                    part.toLowerCase() ===
+                                    query.toLowerCase() ? (
+                                      <mark key={j}>{part}</mark>
+                                    ) : (
+                                      part
+                                    ),
+                                  )
+                              : paragraph}
+                          </p>
+                        ),
+                      )}
+                  </article>
+                )}
+                {!realEpub && (
+                  <AnnotationOverlay
+                    annotations={annotations.filter(
+                      (a) => a.page === pageIndex,
                     )}
-                </article>
-              )}
-              {!realEpub && (
-                <AnnotationOverlay
-                  annotations={currentAnnotations}
-                  draft={draft}
-                  tool={tool}
-                  color={color}
-                  thickness={thickness}
-                  opacity={opacity}
-                  onDraft={setDraft}
-                  onComplete={completeDrawing}
-                  onErase={(id) => eraseAnnotation(id)}
-                  onObjectChange={editAnnotation}
-                  onObjectSelect={(id) => {
-                    setSelectedObject(id);
-                    const object = annotations.find(note => note.id === id);
-                    if (object) { setColor(object.color); setThickness(object.thickness ?? 2); setOpacity(object.opacity ?? 1); setStampText(object.text); }
-                  }}
-                />
-              )}
-              {bookmarked && (
-                <div className="page-bookmark" aria-hidden="true" />
-              )}
-            </div>
+                    draft={pageIndex === currentPage ? draft : []}
+                    tool={pageIndex === currentPage ? tool : "hand"}
+                    color={color}
+                    thickness={thickness}
+                    opacity={opacity}
+                    onDraft={setDraft}
+                    onComplete={completeDrawing}
+                    onErase={(id) => eraseAnnotation(id)}
+                    onObjectChange={editAnnotation}
+                    onObjectSelect={(id) => {
+                      setSelectedObject(id);
+                      const object = annotations.find((note) => note.id === id);
+                      if (object) {
+                        setColor(object.color);
+                        setThickness(object.thickness ?? 2);
+                        setOpacity(object.opacity ?? 1);
+                        setStampText(object.text);
+                      }
+                    }}
+                  />
+                )}
+                {bookmarked && (
+                  <div className="page-bookmark" aria-hidden="true" />
+                )}
+              </div>
+            ))
           )}
           {selection && (
             <div className="selection-actions">
@@ -1035,7 +1105,7 @@ export function Reader({ documentId }: { documentId: string }) {
           ))}
           <span className="toolbar-divider" />
           <div className="annotation-colors">
-            {annotations.some(note => note.id === selectedObject) && (
+            {annotations.some((note) => note.id === selectedObject) && (
               <Button
                 className="button secondary"
                 onClick={() => {
@@ -1058,11 +1128,13 @@ export function Reader({ documentId }: { documentId: string }) {
             )}
             <label>
               Cor{" "}
-              <TextField
+              <ColorInput
                 aria-label="Cor personalizada"
-                type="color"
                 value={color}
-                onChange={(e) => setColor(e.target.value)}
+                onChange={setColor}
+                format="hex"
+                size="xs"
+                w={120}
               />
             </label>
             {colors.map((c) => (
@@ -1078,25 +1150,28 @@ export function Reader({ documentId }: { documentId: string }) {
           </div>
           <label>
             Espessura{" "}
-            <TextField
+            <Slider
               aria-label="Espessura do traço"
-              type="range"
-              min="1"
-              max="12"
+              thumbLabel="Espessura do traço"
+              min={1}
+              max={12}
               value={thickness}
-              onChange={(e) => setThickness(Number(e.target.value))}
+              onChange={setThickness}
+              w={110}
             />
           </label>
           <label>
             Opacidade{" "}
-            <TextField
+            <Slider
               aria-label="Opacidade da marcação"
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.1"
+              thumbLabel="Opacidade da marcação"
+              min={0.1}
+              max={1}
+              step={0.1}
               value={opacity}
-              onChange={(e) => setOpacity(Number(e.target.value))}
+              onChange={setOpacity}
+              label={(value) => `${Math.round(value * 100)}%`}
+              w={110}
             />
           </label>
           {tool === "text" && (

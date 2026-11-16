@@ -63,8 +63,9 @@ export function EpubPage({
         if (disposed) return;
         const view = book.renderTo(host.current, {
           width: "100%",
-          height: 700,
-          flow: "paginated",
+          height: "100%",
+          flow: "scrolled-doc",
+          manager: "continuous",
           spread: "none",
           allowScriptedContent: false,
         });

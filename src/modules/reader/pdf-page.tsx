@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { readFile } from "@/infrastructure/storage/local";
+import { acquirePdf } from "./pdf-resource";
 import { useLibrary } from "@/modules/library/store";
 
 export function PdfPage({
@@ -16,9 +16,9 @@ export function PdfPage({
   documentId: string;
   page: number;
   onPages: (n: number) => void;
-  onCanvas: (canvas: HTMLCanvasElement | null) => void;
+  onCanvas?: (canvas: HTMLCanvasElement | null) => void;
   onError: (message: string) => void;
-  onDocumentReady: (pdf: PDFDocumentProxy | null) => void;
+  onDocumentReady?: (pdf: PDFDocumentProxy | null) => void;
   searchRef: React.MutableRefObject<
     ((query: string, start: number) => Promise<number>) | null
   >;
@@ -28,6 +28,15 @@ export function PdfPage({
   const hostRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy>();
   const [width, setWidth] = useState(700);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => setVisible(entries[0].isIntersecting),
+      { rootMargin: "1000px" },
+    );
+    if (hostRef.current) observer.observe(hostRef.current);
+    return () => observer.disconnect();
+  }, []);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!pdf) return;
@@ -62,24 +71,12 @@ export function PdfPage({
   }, []);
   useEffect(() => {
     let cancelled = false;
-    let task:
-      ReturnType<(typeof import("pdfjs-dist"))["getDocument"]> | undefined;
+    const resource = acquirePdf(documentId);
     (async () => {
       try {
-        const file = await readFile(documentId);
-        if (!file)
-          throw new Error(
-            "Arquivo não encontrado neste navegador. Importe o documento novamente.",
-          );
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        task = pdfjs.getDocument({
-          data: new Uint8Array(await file.arrayBuffer()),
-        });
-        const loaded = await task.promise;
+        const loaded = await resource.promise;
         if (cancelled) return;
         setPdf(loaded);
-        onDocumentReady(loaded);
         onPages(loaded.numPages);
       } catch (error) {
         if (!cancelled)
@@ -92,12 +89,14 @@ export function PdfPage({
     })();
     return () => {
       cancelled = true;
-      onDocumentReady(null);
-      void task?.destroy();
+      resource.release();
     };
-  }, [documentId, onPages, onError, onDocumentReady]);
+  }, [documentId, onPages, onError]);
   useEffect(() => {
-    if (!pdf) return;
+    if (pdf) onDocumentReady?.(pdf);
+  }, [pdf, onDocumentReady]);
+  useEffect(() => {
+    if (!pdf || !visible) return;
     let cancelled = false;
     let renderTask: { cancel: () => void; promise: Promise<void> } | undefined;
     let textLayer: { cancel: () => void } | undefined;
@@ -136,7 +135,7 @@ export function PdfPage({
         textLayer = layer;
         await layer.render();
         if (!cancelled) {
-          onCanvas(canvas);
+          onCanvas?.(canvas);
           setLoading(false);
         }
       } catch (error) {
@@ -154,11 +153,16 @@ export function PdfPage({
       cancelled = true;
       renderTask?.cancel();
       textLayer?.cancel();
-      onCanvas(null);
+      onCanvas?.(null);
     };
-  }, [pdf, page, width, onCanvas, onError]);
+  }, [pdf, page, width, onCanvas, onError, visible]);
   return (
-    <div ref={hostRef} className="pdf-page" aria-busy={loading}>
+    <div
+      ref={hostRef}
+      className="pdf-page"
+      style={{ minHeight: width * 1.414 }}
+      aria-busy={loading}
+    >
       <canvas ref={canvasRef} aria-label={`Página ${page + 1} do PDF`} />
       <div ref={textRef} className="textLayer" />
       {loading && <div className="pdf-loading">Preparando a página…</div>}

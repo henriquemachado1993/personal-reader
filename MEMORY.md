@@ -1,5 +1,9 @@
 # Memória do projeto
 
+- Estado inicial vazio em `src/modules/library/initial-state.ts`; não recriar amostras em produção. Dados de teste vivem em `tests/*fixture.ts`.
+- Leitor renderiza páginas em sequência e atualiza o progresso por rolagem. PDFs compartilham recurso com contagem de referências e renderização próxima da área visível; EPUB usa gerenciador contínuo.
+- Campos de data usam `@mantine/dates` em português; selects usam combobox Mantine. Sliders precisam de `thumbLabel` para nome acessível.
+
 - Refinamento de 15/11/2026: navegação em duas linhas até 380px; título do leitor usa a tinta da página e fica oculto no celular. Preservar o visual das referências.
 - Desfazer/refazer anotações mantém até 100 operações por documento durante a sessão, incluindo mover, editar e apagar. Recusar operações sobre objetos alterados remotamente.
 - Configuração de banco não comprova sincronização. Exibir sucesso e horário somente após conclusão; novas alterações locais voltam ao estado pendente.

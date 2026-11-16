@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import { Tooltip } from "@mantine/core";
 import type { ReaderDocument } from "@/shared/types";
 
 function PdfThumbnail({
@@ -92,29 +93,34 @@ export function PageFilmstrip({
       </IconButton>
       <div className="page-filmstrip-track">
         {indices.map((index) => (
-          <Button
+          <Tooltip
             key={index}
-            ref={index === currentPage ? selected : undefined}
-            className={`page-thumbnail ${index === currentPage ? "current" : ""}`}
-            aria-label={`Ir para página ${index + 1}`}
-            aria-current={index === currentPage ? "page" : undefined}
-            title={`Página ${index + 1}`}
-            onClick={() => onSelect(index)}
+            label={`Página ${index + 1}`}
+            events={{ hover: true, focus: true, touch: false }}
           >
-            {pdf ? (
-              <PdfThumbnail pdf={pdf} index={index} />
-            ) : (
-              <div className="text-thumbnail" aria-hidden="true">
-                <strong>{book.content?.[index]?.split("\n")[0]}</strong>
-                <span>
-                  {book.content?.[index]
-                    ?.split(/\n\s*\n/)
-                    .slice(1)
-                    .join("\n\n")}
-                </span>
-              </div>
-            )}
-          </Button>
+            <Button
+              key={index}
+              ref={index === currentPage ? selected : undefined}
+              className={`page-thumbnail ${index === currentPage ? "current" : ""}`}
+              aria-label={`Ir para página ${index + 1}`}
+              aria-current={index === currentPage ? "page" : undefined}
+              onClick={() => onSelect(index)}
+            >
+              {pdf ? (
+                <PdfThumbnail pdf={pdf} index={index} />
+              ) : (
+                <div className="text-thumbnail" aria-hidden="true">
+                  <strong>{book.content?.[index]?.split("\n")[0]}</strong>
+                  <span>
+                    {book.content?.[index]
+                      ?.split(/\n\s*\n/)
+                      .slice(1)
+                      .join("\n\n")}
+                  </span>
+                </div>
+              )}
+            </Button>
+          </Tooltip>
         ))}
       </div>
       <IconButton
