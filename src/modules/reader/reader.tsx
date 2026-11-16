@@ -4,7 +4,7 @@ import { Slider, Popover } from "@mantine/core";
 import { Button, TextField, TextArea } from "@/components/ui/controls";
 import "./reader-controls.css";
 import "./editor-controls.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -36,6 +36,7 @@ import {
   Palette,
   Hand,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
@@ -103,7 +104,22 @@ const annotationTools = [
 ];
 
 export function Reader({ documentId }: { documentId: string }) {
-  const library = useLibrary();
+  const library = useLibrary(
+    useShallow((store) => ({
+      annotations: store.annotations,
+      bookmarks: store.bookmarks,
+      dismissNotice: store.dismissNotice,
+      documents: store.documents,
+      hydrated: store.hydrated,
+      notice: store.notice,
+      notify: store.notify,
+      preferences: store.preferences,
+      setPreferences: store.setPreferences,
+      storageError: store.storageError,
+      toggleBookmark: store.toggleBookmark,
+      updateDocument: store.updateDocument,
+    })),
+  );
   const book = library.documents.find((d) => d.id === documentId);
   useEffect(() => {
     document.title = `${book?.title ?? "Leitor"} · Personal Reader`;
@@ -223,14 +239,19 @@ export function Reader({ documentId }: { documentId: string }) {
   const currentPage = page ?? book?.page ?? 0;
   const realPdf = book?.format === "PDF" && !book.demo;
   const realEpub = book?.format === "EPUB" && !book.demo;
-  const annotations = library.annotations.filter(
-    (a) => a.documentId === documentId,
+  const annotations = useMemo(
+    () => library.annotations.filter((a) => a.documentId === documentId),
+    [library.annotations, documentId],
   );
   const visibleAnnotations = annotations.filter((annotation) =>
     ["note", "highlight", "clipping"].includes(annotation.kind),
   );
-  const documentBookmarks = library.bookmarks.filter(
-    (bookmark) => bookmark.documentId === documentId,
+  const documentBookmarks = useMemo(
+    () =>
+      library.bookmarks.filter(
+        (bookmark) => bookmark.documentId === documentId,
+      ),
+    [library.bookmarks, documentId],
   );
   const currentAnnotations = annotations.filter((a) => a.page === currentPage);
   const selectedAnnotation = currentAnnotations.find(

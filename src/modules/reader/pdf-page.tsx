@@ -2,7 +2,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { acquirePdf } from "./pdf-resource";
-import { useLibrary } from "@/modules/library/store";
+import { findPdfText } from "./pdf-search";
 
 export const PdfPage = memo(function PdfPage({
   documentId,
@@ -49,22 +49,7 @@ export const PdfPage = memo(function PdfPage({
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!pdf) return;
-    searchRef.current = async (query, start) => {
-      const normalized = query.toLocaleLowerCase("pt-BR");
-      for (let offset = 0; offset < pdf.numPages; offset++) {
-        const index = (start + offset) % pdf.numPages;
-        const text = await (await pdf.getPage(index + 1)).getTextContent();
-        if (
-          text.items
-            .map((item) => ("str" in item ? item.str : ""))
-            .join(" ")
-            .toLocaleLowerCase("pt-BR")
-            .includes(normalized)
-        )
-          return index;
-      }
-      return -1;
-    };
+    searchRef.current = (query, start) => findPdfText(pdf, query, start);
     return () => {
       searchRef.current = null;
     };

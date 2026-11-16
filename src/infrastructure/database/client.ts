@@ -6,6 +6,6 @@ export function database() {
       "Configure DATABASE_URL do Supabase antes de usar a persistência remota.",
     );
   const client = globalDatabase.prisma ?? new PrismaClient();
-  if (process.env.NODE_ENV !== "production") globalDatabase.prisma = client;
+  globalDatabase.prisma = client;
   return client;
 }

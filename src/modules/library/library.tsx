@@ -38,7 +38,8 @@ export function LibraryView({
   search: string;
   onImport: () => void;
 }) {
-  const { documents, collections } = useLibrary();
+  const documents = useLibrary((state) => state.documents);
+  const collections = useLibrary((state) => state.collections);
   const [format, setFormat] = useState("all");
   const [sort, setSort] = useState(path === "/library" ? "author" : "recent");
   const [view, setView] = useState(path === "/library" ? "list" : "grid");

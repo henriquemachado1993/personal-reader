@@ -21,9 +21,15 @@ test("normalized rows and entity tombstones commit atomically with versions", as
     });
     const headers = {
       Cookie: `authjs.session-token=${token}`,
-      Origin: "http://127.0.0.1:3000",
+      Origin: new URL(
+        process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
+      ).origin,
     };
     const snapshot = initialState();
+    snapshot.documents = Array.from({ length: 8 }, (_, index) => ({
+      ...snapshot.documents[index % snapshot.documents.length],
+      id: `projection-fixture-${index}`,
+    }));
     const save = async (revision: number) =>
       request.put("/api/library", {
         headers,

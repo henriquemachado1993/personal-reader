@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   LogOut,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useLibrary } from "@/modules/library/store";
 import { LibraryView, CollectionsView } from "@/modules/library/library";
 import { KnowledgeView } from "@/modules/knowledge/knowledge";
@@ -34,7 +35,17 @@ import { IconButton } from "@/components/ui";
 
 export function Workspace() {
   const pathname = usePathname();
-  const state = useLibrary();
+  const state = useLibrary(
+    useShallow((store) => ({
+      collections: store.collections,
+      dismissNotice: store.dismissNotice,
+      documents: store.documents,
+      notice: store.notice,
+      preferences: store.preferences,
+      setPreferences: store.setPreferences,
+      storageError: store.storageError,
+    })),
+  );
   const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);

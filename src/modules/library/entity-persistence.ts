@@ -24,13 +24,30 @@ export async function persistLibraryEntities(
     "annotations",
     "bookmarks",
   ] as const;
+  const existingEntities = await tx.libraryEntity.findMany({
+    where: { ownerId, kind: { in: [...groups] } },
+    select: { kind: true, entityId: true, payload: true },
+  });
+  const existingByKind = new Map(
+    groups.map((kind) => [
+      kind,
+      new Map(
+        existingEntities
+          .filter((entity) => entity.kind === kind)
+          .map((entity) => [entity.entityId, entity]),
+      ),
+    ]),
+  );
   for (const kind of groups) {
     for (const item of next[kind]) {
       const where = {
         ownerId_kind_entityId: { ownerId, kind, entityId: item.id },
       };
-      const existing = await tx.libraryEntity.findUnique({ where });
-      if (!existing || canonicalJson(existing.payload) !== canonicalJson(item))
+      const existing = existingByKind.get(kind)?.get(item.id);
+      if (
+        !existing ||
+        canonicalJson(existing.payload) !== canonicalJson(item)
+      ) {
         await tx.libraryEntity.upsert({
           where,
           create: { ownerId, kind, entityId: item.id, payload: json(item) },
@@ -40,9 +57,16 @@ export async function persistLibraryEntities(
             version: { increment: 1 },
           },
         });
+        existingByKind.get(kind)?.set(item.id, {
+          kind,
+          entityId: item.id,
+          payload: json(item) as Prisma.JsonValue,
+        });
+      }
     }
+    const nextIds = new Set(next[kind].map((item) => item.id));
     for (const item of previous?.[kind] ?? [])
-      if (!next[kind].some((x) => x.id === item.id)) {
+      if (!nextIds.has(item.id)) {
         await tx.libraryEntity.upsert({
           where: {
             ownerId_kind_entityId: { ownerId, kind, entityId: item.id },
@@ -82,23 +106,31 @@ export async function persistLibraryEntities(
       },
       update: { name: item.name, color: item.color },
     });
+  const previousDocuments = new Map(
+    previous?.documents.map((item) => [item.id, item]),
+  );
+  const nextCollectionIds = new Set(next.collections.map((item) => item.id));
+  function byDocument<T extends { documentId: string }>(items: readonly T[]) {
+    const grouped = new Map<string, T[]>();
+    for (const item of items) {
+      const group = grouped.get(item.documentId);
+      if (group) group.push(item);
+      else grouped.set(item.documentId, [item]);
+    }
+    return grouped;
+  }
+  const previousNotes = byDocument(previous?.annotations ?? []);
+  const nextNotes = byDocument(next.annotations);
+  const previousMarks = byDocument(previous?.bookmarks ?? []);
+  const nextMarks = byDocument(next.bookmarks);
   for (const item of next.documents) {
     const unchanged =
       previous &&
-      canonicalJson(previous.documents.find((book) => book.id === item.id)) ===
-        canonicalJson(item) &&
-      canonicalJson(
-        previous.annotations.filter((note) => note.documentId === item.id),
-      ) ===
-        canonicalJson(
-          next.annotations.filter((note) => note.documentId === item.id),
-        ) &&
-      canonicalJson(
-        previous.bookmarks.filter((mark) => mark.documentId === item.id),
-      ) ===
-        canonicalJson(
-          next.bookmarks.filter((mark) => mark.documentId === item.id),
-        );
+      canonicalJson(previousDocuments.get(item.id)) === canonicalJson(item) &&
+      canonicalJson(previousNotes.get(item.id) ?? []) ===
+        canonicalJson(nextNotes.get(item.id) ?? []) &&
+      canonicalJson(previousMarks.get(item.id) ?? []) ===
+        canonicalJson(nextMarks.get(item.id) ?? []);
     if (unchanged) continue;
     const id = docId(item.id);
     const fields = {
@@ -108,7 +140,7 @@ export async function persistLibraryEntities(
       status: item.status,
       collections: {
         set: item.collections
-          .filter((c) => next.collections.some((x) => x.id === c))
+          .filter((c) => nextCollectionIds.has(c))
           .map((c) => ({ id: collectionId(c) })),
       },
     };
@@ -160,7 +192,7 @@ export async function persistLibraryEntities(
         update: {},
       });
     await tx.bookmark.deleteMany({ where: { documentId: id } });
-    for (const mark of next.bookmarks.filter((x) => x.documentId === item.id))
+    for (const mark of nextMarks.get(item.id) ?? [])
       await tx.bookmark.create({
         data: {
           id: scopedEntityId(ownerId, "bookmark", mark.id),
@@ -172,9 +204,7 @@ export async function persistLibraryEntities(
     await tx.annotation.deleteMany({ where: { documentId: id } });
     await tx.note.deleteMany({ where: { documentId: id } });
     await tx.highlight.deleteMany({ where: { documentId: id } });
-    for (const note of next.annotations.filter(
-      (x) => x.documentId === item.id,
-    )) {
+    for (const note of nextNotes.get(item.id) ?? []) {
       if (note.kind === "note")
         await tx.note.create({
           data: {

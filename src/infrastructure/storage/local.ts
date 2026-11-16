@@ -1,16 +1,33 @@
-import { openDB } from "idb";
+import { openDB, type IDBPDatabase } from "idb";
 import type { LibraryState } from "@/shared/types";
 let scope = "uninitialized";
 export function setStorageScope(userId: string) {
   scope = userId;
 }
-const db = () =>
-  openDB(`personal-reader-${scope}`, 1, {
+const connections = new Map<string, Promise<IDBPDatabase>>();
+function db() {
+  const name = `personal-reader-${scope}`;
+  const existing = connections.get(name);
+  if (existing) return existing;
+  const connection = openDB(name, 1, {
     upgrade(database) {
       database.createObjectStore("state");
       database.createObjectStore("files");
     },
+    blocking() {
+      connections.delete(name);
+      void connection.then((database) => database.close());
+    },
+    terminated() {
+      connections.delete(name);
+    },
   });
+  connections.set(name, connection);
+  void connection.catch(() => {
+    if (connections.get(name) === connection) connections.delete(name);
+  });
+  return connection;
+}
 export async function readState(): Promise<LibraryState | undefined> {
   return (await db()).get("state", "library");
 }
