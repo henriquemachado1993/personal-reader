@@ -45,9 +45,11 @@ export function LoginForm({
       window.location.assign("/library");
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível entrar. Tente novamente.",
+        error instanceof TypeError || error instanceof SyntaxError
+          ? "Não foi possível conectar. Verifique sua conexão e tente novamente."
+          : error instanceof Error
+            ? error.message
+            : "Não foi possível entrar. Tente novamente.",
       );
       setBusy(false);
     }
@@ -55,22 +57,22 @@ export function LoginForm({
   return (
     <form className="auth-form" onSubmit={submit}>
       <h1>
-        {firstRun ? "Sua biblioteca começa aqui" : "Bom ter você por aqui"}
+        {firstRun ? "Sua biblioteca começa aqui" : "Entre na sua biblioteca"}
       </h1>
       <p className="auth-intro">
         {firstRun
-          ? "Crie sua conta pessoal e abra espaço para novas leituras."
+          ? "Escolha o e-mail e a senha de acesso à sua biblioteca."
           : "Entre para continuar de onde parou."}
       </p>
       {!available && (
         <div className="auth-error" role="alert">
-          A conexão com sua biblioteca ainda não está pronta. Verifique a
-          configuração do banco e execute as migrações antes de entrar.
+          Não foi possível conectar à sua biblioteca. Recarregue a página para
+          tentar novamente.
         </div>
       )}
       {firstRun && (
         <label className="field-label">
-          Como podemos chamar você?
+          Seu nome
           <TextField
             className="input"
             name="name"
@@ -98,14 +100,16 @@ export function LoginForm({
         />
       </label>
       <label className="field-label">
-        Senha
+        <span id="login-password-label">Senha</span>
         <div className="password-input">
           <TextField
             className="input"
             name="password"
+            aria-labelledby="login-password-label"
             type={visible ? "text" : "password"}
             autoComplete={firstRun ? "new-password" : "current-password"}
-            placeholder={firstRun ? "Pelo menos 10 caracteres" : "Sua senha"}
+            placeholder={firstRun ? "Crie uma senha" : "Sua senha"}
+            aria-describedby={firstRun ? "password-requirements" : undefined}
             minLength={10}
             maxLength={128}
             value={password}
@@ -119,6 +123,11 @@ export function LoginForm({
             {visible ? <EyeOff size={17} /> : <Eye size={17} />}
           </IconButton>
         </div>
+        {firstRun && (
+          <small className="auth-field-help" id="password-requirements">
+            Use de 10 a 128 caracteres.
+          </small>
+        )}
       </label>
       {error && (
         <div className="auth-error" role="alert">
@@ -131,10 +140,12 @@ export function LoginForm({
         disabled={busy || !available}
       >
         {busy
-          ? "Preparando sua leitura…"
+          ? firstRun
+            ? "Criando sua conta…"
+            : "Entrando…"
           : firstRun
-            ? "Criar minha biblioteca"
-            : "Entrar na minha biblioteca"}
+            ? "Criar conta"
+            : "Entrar"}
         <ArrowRight size={17} />
       </Button>
       {!firstRun && (

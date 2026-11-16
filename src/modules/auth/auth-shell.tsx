@@ -1,4 +1,6 @@
 import Link from "next/link";
+import "./auth-books.css";
+import "./auth-form-copy.css";
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (

@@ -1,6 +1,6 @@
 "use client";
 import { Button, TextField } from "@/components/ui/controls";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 export function RecoveryForm({ reset = false }: { reset?: boolean }) {
@@ -11,8 +11,11 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
   const [invalidLink, setInvalidLink] = useState(false);
+  const tokenRead = useRef(false);
   useEffect(() => {
-    if (reset) {
+    if (reset && !tokenRead.current) {
+      // Strict Mode repeats effects after the fragment has already been removed.
+      tokenRead.current = true;
       setToken(location.hash.slice(1));
       setInvalidLink(!/^[a-f0-9]{64}$/.test(location.hash.slice(1)));
       history.replaceState(null, "", location.pathname);
@@ -48,29 +51,46 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
           );
         } catch (error) {
           setMessage(
-            error instanceof Error
-              ? error.message
-              : "Não foi possível concluir. Tente novamente.",
+            error instanceof TypeError || error instanceof SyntaxError
+              ? "Não foi possível conectar. Verifique sua conexão e tente novamente."
+              : error instanceof Error
+                ? error.message
+                : "Não foi possível concluir. Tente novamente.",
           );
         } finally {
           setBusy(false);
         }
       }}
     >
-      <h1>{reset ? "Escolha sua nova senha" : "Recupere seu acesso"}</h1>
-      <p className="auth-intro">
-        {reset
-          ? "Use uma senha de pelo menos 10 caracteres."
-          : "Enviaremos um link para o e-mail da sua conta."}
-      </p>
+      <h1>
+        {finished
+          ? reset
+            ? "Senha atualizada"
+            : "Confira seu e-mail"
+          : invalidLink
+            ? "Solicite um novo link"
+            : reset
+              ? "Crie uma nova senha"
+              : "Recupere seu acesso"}
+      </h1>
+      {!finished && !invalidLink && (
+        <p className="auth-intro">
+          {reset
+            ? "A nova senha substituirá a senha atual da sua conta."
+            : "Informe o e-mail da sua conta para solicitar um link de redefinição de senha."}
+        </p>
+      )}
       {invalidLink && (
         <div className="auth-error" role="alert">
-          <p>Este link de recuperação está ausente, inválido ou expirou.</p>
+          <p>
+            Não foi possível usar este link. Solicite um novo e abra o link
+            recebido por e-mail.
+          </p>
           <Link
             href="/forgot-password"
             className="button primary auth-retry-link"
           >
-            Solicitar outro link
+            Solicitar novo link
           </Link>
         </div>
       )}
@@ -78,17 +98,22 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
         !invalidLink &&
         (reset ? (
           <label className="field-label">
-            Nova senha
+            <span id="reset-password-label">Nova senha</span>
             <TextField
               className="input"
               type="password"
               autoComplete="new-password"
+              aria-labelledby="reset-password-label"
+              aria-describedby="reset-password-requirements"
               minLength={10}
               maxLength={128}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <small className="auth-field-help" id="reset-password-requirements">
+              Use de 10 a 128 caracteres.
+            </small>
           </label>
         ) : (
           <label className="field-label">
@@ -96,6 +121,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
             <TextField
               className="input"
               type="email"
+              placeholder="voce@exemplo.com"
               autoComplete="email"
               maxLength={254}
               required
@@ -110,6 +136,7 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
           role={finished ? "status" : "alert"}
         >
           {message}
+          {finished && !reset && " Confira também a pasta de spam."}
         </p>
       )}
       {!finished && !invalidLink && (
@@ -118,14 +145,16 @@ export function RecoveryForm({ reset = false }: { reset?: boolean }) {
           disabled={busy || (reset && !token)}
         >
           {busy
-            ? "Aguarde…"
+            ? reset
+              ? "Salvando nova senha…"
+              : "Solicitando link…"
             : reset
               ? "Salvar nova senha"
               : "Enviar link de recuperação"}
         </Button>
       )}
       <Link className="text-link" href="/login">
-        Voltar para entrar
+        Voltar ao login
       </Link>
     </form>
   );

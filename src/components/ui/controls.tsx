@@ -79,6 +79,11 @@ export const TextField = forwardRef<
       {...props}
       classNames={{ input: className }}
       className="reader-field"
+      attributes={
+        props["aria-describedby"]
+          ? { input: { "aria-describedby": props["aria-describedby"] } }
+          : undefined
+      }
     />
   );
 });
