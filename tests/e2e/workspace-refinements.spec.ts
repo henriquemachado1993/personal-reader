@@ -30,6 +30,86 @@ test.beforeEach(async ({ context }) => {
   );
 });
 
+test("modal transitions preserve keyboard focus and reduced-motion preferences", async ({
+  page,
+}) => {
+  await page.goto("/library");
+  const trigger = page.getByRole("button", {
+    name: "Importar arquivos",
+    exact: true,
+  });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 850 });
+    for (const preference of ["no-preference", "reduce"] as const) {
+      await page.emulateMedia({ reducedMotion: preference });
+      await trigger.click();
+      const modal = page.getByRole("dialog", { name: "Importar arquivos" });
+      await expect(modal).toBeVisible();
+      const duration = await modal.evaluate(
+        (node) => getComputedStyle(node).transitionDuration,
+      );
+      expect(duration).toBe(preference === "reduce" ? "0s" : "0.2s");
+      await page.keyboard.press("Tab");
+      expect(
+        await modal.evaluate((node) => node.contains(document.activeElement)),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(modal).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      await trigger.click();
+      await expect(modal).toBeVisible();
+      await modal.getByRole("button", { name: "Fechar", exact: true }).click();
+      await expect(modal).toHaveCount(0);
+    }
+  }
+});
+
+test("import dialog offers one selection action and reports mixed results", async ({
+  page,
+}) => {
+  await page.goto("/library");
+  await page
+    .getByRole("button", { name: "Importar arquivos", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Importar arquivos" });
+  for (const width of [1280, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await expect(
+      dialog.getByRole("button", { name: "Selecionar arquivos", exact: true }),
+    ).toHaveCount(1);
+    await expect(dialog.getByRole("button", { name: "Concluir" })).toHaveCount(
+      0,
+    );
+    await page.screenshot({
+      path: `.impeccable/review/workspace-update/import-${width}.png`,
+      fullPage: true,
+    });
+  }
+  await dialog.locator('input[type="file"]').setInputFiles([
+    {
+      name: "Livro.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Uma leitura para guardar."),
+    },
+    {
+      name: "arquivo.exe",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from("invalid"),
+    },
+  ]);
+  await expect(
+    dialog.getByText("Adicionado à biblioteca", { exact: true }),
+  ).toBeVisible();
+  await expect(dialog.locator(".import-error")).toHaveCount(1);
+  await expect(page.locator(".book-card")).toHaveCount(1);
+  await page.screenshot({
+    path: ".impeccable/review/workspace-update/import-results.png",
+    fullPage: true,
+  });
+  await dialog.getByRole("button", { name: "Concluir" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test("empty library, collection edit and delete keep imported documents", async ({
   page,
 }) => {
@@ -37,10 +117,17 @@ test("empty library, collection edit and delete keep imported documents", async 
   await expect(page.locator(".book-card")).toHaveCount(0);
   await page.goto("/collections");
   await page.getByRole("button", { name: "Nova coleção" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Nova coleção" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Nome da coleção")).toBeFocused();
   await page.getByLabel("Nome da coleção").fill("Estudos");
   await page.getByRole("button", { name: "Criar coleção" }).click();
   await page.getByRole("button", { name: "Editar Estudos" }).click();
-  await page.getByLabel("Nome da coleção").fill("Pesquisa");
+  await page
+    .getByRole("dialog", { name: "Editar coleção" })
+    .getByLabel("Nome da coleção")
+    .fill("Pesquisa");
   await page.getByRole("button", { name: "Salvar alterações" }).click();
   await expect(page.getByRole("heading", { name: "Pesquisa" })).toBeVisible();
   await page.getByRole("button", { name: "Excluir Pesquisa" }).click();
@@ -82,6 +169,32 @@ test("continuous reading updates pagination and mobile notes remain available", 
   await expect(page.getByText("Nota no celular")).toBeVisible();
 });
 
+test("settings preferences persist and backup remains available", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Escuro", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("combobox", { name: "Meta diária em minutos" }).click();
+  await page.getByRole("option", { name: "30 minutos", exact: true }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Escuro", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("combobox", { name: "Meta diária em minutos" }),
+  ).toHaveValue("30 minutos");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar backup" }).click();
+  expect((await download).suggestedFilename()).toBe(
+    "personal-reader-backup.json",
+  );
+  await page.getByText("Armazenamento", { exact: true }).click();
+  await expect(
+    page.getByText("Arquivos na nuvem", { exact: true }),
+  ).toBeVisible();
+});
+
 test("knowledge and settings controls match the shared system", async ({
   page,
 }) => {
@@ -108,13 +221,11 @@ test("PDF scroll, arrows and Mantine annotation controls work together", async (
   await page
     .getByRole("button", { name: "Importar arquivos", exact: true })
     .click();
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "Páginas.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from(await pdf.save()),
-    });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "Páginas.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(await pdf.save()),
+  });
   await expect(page.locator(".book-card")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await page.locator(".book-cover-link").click();

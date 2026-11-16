@@ -1,4 +1,78 @@
 /* Controls share the library's neutral surfaces and rounded geometry. */
+.import-flow .upload-zone {
+  margin-top: 8px;
+  min-height: 220px;
+  padding: 28px 20px;
+  border-color: var(--border);
+  border-radius: 16px;
+  transition:
+    background 150ms,
+    border-color 150ms;
+}
+.import-flow .upload-zone:hover:not(:disabled),
+.import-flow .upload-zone.dragging {
+  background: var(--surface-secondary);
+  border-color: var(--text-secondary);
+}
+.import-flow .upload-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 18px;
+}
+.import-flow .upload-zone > strong {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.import-flow .upload-zone > span:not(.upload-icon) {
+  font-size: 14px;
+}
+.import-flow .upload-zone > small {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 20px;
+  white-space: normal;
+}
+.import-flow .import-privacy {
+  justify-content: center;
+  font-size: 13px;
+  margin-top: 16px;
+}
+.import-flow .import-results {
+  margin-top: 20px;
+  max-height: 240px;
+}
+.import-flow .import-results li {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+}
+.import-flow .import-results svg {
+  margin-top: 3px;
+}
+.import-flow .import-results strong {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.import-flow .import-results span {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.import-flow .import-results li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.import-flow .import-progress {
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (hover: none) {
+  .import-flow .import-drop-hint {
+    display: none;
+  }
+}
 body .mantine-Input-input {
   border-radius: 14px;
   font-size: 14px;

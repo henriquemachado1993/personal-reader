@@ -1,0 +1,209 @@
+.books-main .settings-refined {
+  max-width: 1000px;
+}
+.preferences-section {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--border);
+}
+.preferences-section:first-child {
+  padding-top: 0;
+}
+.preferences-section h2 {
+  font: 700 28px/1.2 var(--serif);
+  letter-spacing: -0.5px;
+}
+.preference-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 24px 0;
+}
+.preference-row:last-child {
+  padding-bottom: 0;
+}
+.preference-row > div:first-child {
+  max-width: 460px;
+  min-width: 0;
+}
+.settings-refined h3,
+.settings-conflict > strong {
+  font: 600 15px/1.5 var(--sans);
+}
+.settings-refined p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.preference-row p {
+  margin-top: 5px;
+}
+.preference-row > .reader-select {
+  width: 180px;
+  flex-shrink: 0;
+}
+.preference-row > .button {
+  flex-shrink: 0;
+}
+.preference-themes {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+}
+.preference-themes button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+}
+.preference-themes button.active {
+  background: var(--selection);
+  font-weight: 600;
+}
+.preference-themes button:hover:not(.active) {
+  background: var(--surface);
+}
+.preferences-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.settings-sync-content {
+  margin-top: 20px;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: 16px;
+}
+.settings-sync-content p {
+  max-width: 65ch;
+}
+.settings-sync-content .settings-sync-date {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.settings-sync-button {
+  margin-top: 18px;
+}
+.settings-conflict {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.settings-conflict > p {
+  margin-top: 6px;
+}
+.settings-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.settings-refined .settings-action-error {
+  color: var(--text);
+  margin-top: 16px;
+}
+.settings-storage {
+  margin-top: 8px;
+}
+.settings-storage summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  list-style: none;
+}
+.settings-storage summary::-webkit-details-marker {
+  display: none;
+}
+.settings-storage[open] summary svg {
+  transform: rotate(180deg);
+}
+.settings-storage dl {
+  margin: 8px 0 0;
+}
+.settings-storage dl > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  padding: 16px 0;
+}
+.settings-storage dt {
+  font-size: 14px;
+  font-weight: 500;
+}
+.settings-storage dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.settings-storage p {
+  grid-column: 1 / -1;
+}
+.settings-refined .settings-version {
+  display: flex;
+  gap: 12px;
+  padding-top: 24px;
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .preference-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    padding: 22px 0;
+  }
+  .preferences-section h2 {
+    font-size: 26px;
+  }
+  .preference-themes {
+    max-width: 100%;
+    width: 100%;
+  }
+  .preference-themes button {
+    flex: 1;
+    padding: 10px;
+    gap: 6px;
+  }
+  .settings-sync-content {
+    padding: 20px;
+  }
+  .settings-action-row {
+    flex-direction: column;
+  }
+  .settings-action-row .button {
+    width: 100%;
+    white-space: normal;
+    height: auto;
+    min-height: 44px;
+  }
+  .settings-action-row .mantine-Button-label {
+    white-space: normal;
+  }
+  .settings-storage dl > div {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 380px) {
+  .books-main .settings-heading h1 {
+    font-size: 36px;
+  }
+}

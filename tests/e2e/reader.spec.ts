@@ -387,7 +387,7 @@ test("home count, named dialogs and missing collections expose correct state", a
     .getByRole("button", { name: "Importar arquivos", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Novas leituras começam aqui" }),
+    page.getByRole("dialog", { name: "Importar arquivos" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/collections/missing");
@@ -504,6 +504,8 @@ test("mobile workspace controls retain touch targets without horizontal overflow
 test("knowledge date filters narrow saved notes and restore them when cleared", async ({
   page,
 }) => {
+  await page.clock.setFixedTime(new Date("2026-11-15T12:00:00Z"));
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/knowledge");
   await page.getByRole("button", { name: "Nova anotação" }).click();
   await page
@@ -511,8 +513,34 @@ test("knowledge date filters narrow saved notes and restore them when cleared", 
     .fill("Ideia para filtrar por data");
   await page.getByRole("button", { name: "Salvar anotação" }).click();
   await expect(page.locator(".knowledge-entry")).toHaveCount(1);
-  await page.getByLabel("De", { exact: true }).fill("2099-01-01");
+  await page.getByLabel("Período", { exact: true }).click();
+  await page.screenshot({
+    path: ".impeccable/review/workspace-update/knowledge-period.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  const day = page
+    .locator(
+      ".mantine-DatePickerInput-day:not([data-outside]):not([data-hidden])",
+    )
+    .first();
+  await day.click();
+  await day.click();
   await expect(page.locator(".knowledge-entry")).toHaveCount(0);
-  await page.getByLabel("De", { exact: true }).fill("");
+  await page.getByRole("button", { name: "Limpar período" }).click();
+  await expect(page.locator(".knowledge-entry")).toHaveCount(1);
+  await page.getByLabel("Período", { exact: true }).click();
+  const today = page.locator('.mantine-DatePickerInput-day[data-today="true"]');
+  await today.click();
+  await today.click();
+  await expect(page.locator(".knowledge-entry")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Limpar filtros", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Limpar período" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Destaques", exact: true }).click();
+  await page.goto("/notes");
   await expect(page.locator(".knowledge-entry")).toHaveCount(1);
 });

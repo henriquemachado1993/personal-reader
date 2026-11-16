@@ -315,7 +315,7 @@ export function Workspace() {
           />
         )}
       </main>
-      {importing && <ImportDialog onClose={() => setImporting(false)} />}
+      <ImportDialog opened={importing} onClose={() => setImporting(false)} />
       {state.notice && (
         <div role="status" className="toast">
           <CheckCheck size={18} />

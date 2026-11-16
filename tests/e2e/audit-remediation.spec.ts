@@ -89,9 +89,10 @@ test("configured database does not claim successful synchronization", async ({
     }),
   );
   await page.goto("/settings");
+  await page.getByText("Armazenamento", { exact: true }).click();
   await expect(
     page.getByText(
-      "Conexão configurada. Consulte o estado da sincronização acima.",
+      "A configuração da conexão não confirma a sincronização. Consulte o estado acima.",
     ),
   ).toBeVisible();
   await expect(

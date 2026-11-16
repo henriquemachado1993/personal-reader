@@ -1,0 +1,166 @@
+.knowledge-heading .heading-actions {
+  flex-shrink: 0;
+}
+.knowledge-filters {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.knowledge-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.knowledge-types button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.knowledge-types button[aria-pressed="true"] {
+  background: var(--selection);
+  color: var(--text);
+  font-weight: 600;
+}
+.knowledge-types button:hover {
+  background: var(--surface-secondary);
+}
+.knowledge-filter-fields {
+  display: grid;
+  grid-template-columns: minmax(270px, 1.25fr) minmax(180px, 1fr) minmax(
+      150px,
+      0.7fr
+    );
+  gap: 16px;
+  max-width: 1050px;
+}
+.knowledge-filter-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.knowledge-filter-fields .mantine-InputWrapper-label {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.knowledge-filter-fields .reader-select {
+  width: 100%;
+}
+.knowledge-filter-fields :is(#document-filter, #color-filter) {
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+}
+.knowledge-filter-fields .mantine-Input-input {
+  min-height: 44px;
+  font-weight: 400;
+}
+.knowledge-filter-fields .mantine-DatePickerInput-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.knowledge-results-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+}
+.knowledge-results-summary p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.knowledge-clear {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 20px;
+}
+.knowledge-clear:hover {
+  background: var(--surface-secondary);
+}
+.knowledge-list .knowledge-entry {
+  padding: 24px 0;
+}
+.knowledge-list .entry-content {
+  max-width: 760px;
+}
+.knowledge-list .entry-meta {
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+}
+.knowledge-list .entry-content > p {
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.knowledge-list .entry-source {
+  margin-top: 16px;
+}
+.knowledge-list .entry-source strong {
+  font-size: 13px;
+}
+.knowledge-list .entry-source small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.knowledge-list blockquote {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .books-main .knowledge-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+  .knowledge-heading .heading-actions {
+    justify-content: flex-start;
+  }
+  .books-main .knowledge-heading .heading-actions .button {
+    width: auto;
+    height: 44px;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  .knowledge-filter-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .knowledge-filter-fields > :first-child {
+    grid-column: 1 / -1;
+  }
+  .knowledge-types {
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .knowledge-types button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 540px) {
+  .knowledge-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 380px) {
+  .knowledge-types button {
+    padding: 8px 10px;
+  }
+  .books-main .knowledge-heading h1 {
+    font-size: 36px;
+  }
+  .knowledge-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

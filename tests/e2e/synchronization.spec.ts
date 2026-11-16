@@ -112,7 +112,7 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
   await page.getByRole("button", { name: "Sincronizar agora" }).click();
   await expect(page.getByText(/Conflito de sincronização/)).toBeVisible();
   const backup = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Manter esta versão" }).click();
+  await page.getByRole("button", { name: "Manter deste dispositivo" }).click();
   expect((await backup).suggestedFilename()).toBe(
     "personal-reader-backup.json",
   );

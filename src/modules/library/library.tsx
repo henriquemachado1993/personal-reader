@@ -1,6 +1,6 @@
 "use client";
 import { Button, TextField, SelectField } from "@/components/ui/controls";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -273,6 +273,7 @@ export function LibraryView({
   );
 }
 function BookCard({ book }: { book: ReaderDocument }) {
+  const pendingRemoval = useRef(false);
   const { updateDocument, deleteDocument, collections, notify } = useLibrary();
   const [confirm, setConfirm] = useState(false);
   const [rename, setRename] = useState(false);
@@ -347,100 +348,112 @@ function BookCard({ book }: { book: ReaderDocument }) {
           </BookMenu>
         </div>
       </div>
-      {confirm && (
-        <Modal title="Remover da biblioteca?" onClose={() => setConfirm(false)}>
-          <p className="dialog-description">
-            “{book.title}”, seus destaques, notas e marcadores serão removidos
-            deste navegador.
-          </p>
+      <Modal
+        opened={confirm}
+        title="Remover da biblioteca?"
+        onClose={() => setConfirm(false)}
+        onExitTransitionEnd={() => {
+          if (pendingRemoval.current) {
+            pendingRemoval.current = false;
+            deleteDocument(book.id);
+            notify("Documento removido da biblioteca.");
+          }
+        }}
+      >
+        <p className="dialog-description">
+          “{book.title}”, seus destaques, notas e marcadores serão removidos
+          deste navegador.
+        </p>
+        <div className="dialog-actions">
+          <Button
+            className="button secondary"
+            onClick={() => setConfirm(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="button danger-button"
+            onClick={() => {
+              pendingRemoval.current = true;
+              setConfirm(false);
+            }}
+          >
+            Remover documento
+          </Button>
+        </div>
+      </Modal>
+      <Modal
+        opened={rename}
+        title="Renomear documento"
+        onClose={() => setRename(false)}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (title.trim()) {
+              updateDocument(book.id, { title: title.trim() });
+              setRename(false);
+            }
+          }}
+        >
+          <label className="field-label">
+            Título
+            <TextField
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+              maxLength={180}
+              required
+            />
+          </label>
           <div className="dialog-actions">
             <Button
+              type="button"
               className="button secondary"
-              onClick={() => setConfirm(false)}
+              onClick={() => setRename(false)}
             >
               Cancelar
             </Button>
-            <Button
-              className="button danger-button"
-              onClick={() => {
-                deleteDocument(book.id);
-                setConfirm(false);
-                notify("Documento removido da biblioteca.");
-              }}
-            >
-              Remover documento
+            <Button className="button primary" disabled={!title.trim()}>
+              Salvar título
             </Button>
           </div>
-        </Modal>
-      )}
-      {rename && (
-        <Modal title="Renomear documento" onClose={() => setRename(false)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (title.trim()) {
-                updateDocument(book.id, { title: title.trim() });
-                setRename(false);
-              }
-            }}
-          >
-            <label className="field-label">
-              Título
+        </form>
+      </Modal>
+      <Modal
+        opened={assign}
+        title="Organizar em coleções"
+        onClose={() => setAssign(false)}
+      >
+        <p className="dialog-description">
+          Um livro pode fazer parte de várias coleções.
+        </p>
+        <div className="assign-collections">
+          {collections.map((c) => (
+            <label key={c.id}>
+              <FolderClosed size={18} style={{ color: c.color }} />
+              <span>{c.name}</span>
               <TextField
-                className="input"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                autoFocus
-                maxLength={180}
-                required
+                type="checkbox"
+                checked={book.collections.includes(c.id)}
+                onChange={(e) =>
+                  updateDocument(book.id, {
+                    collections: e.target.checked
+                      ? [...book.collections, c.id]
+                      : book.collections.filter((id) => id !== c.id),
+                  })
+                }
               />
             </label>
-            <div className="dialog-actions">
-              <Button
-                type="button"
-                className="button secondary"
-                onClick={() => setRename(false)}
-              >
-                Cancelar
-              </Button>
-              <Button className="button primary" disabled={!title.trim()}>
-                Salvar título
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-      {assign && (
-        <Modal title="Organizar em coleções" onClose={() => setAssign(false)}>
-          <p className="dialog-description">
-            Um livro pode fazer parte de várias coleções.
-          </p>
-          <div className="assign-collections">
-            {collections.map((c) => (
-              <label key={c.id}>
-                <FolderClosed size={18} style={{ color: c.color }} />
-                <span>{c.name}</span>
-                <TextField
-                  type="checkbox"
-                  checked={book.collections.includes(c.id)}
-                  onChange={(e) =>
-                    updateDocument(book.id, {
-                      collections: e.target.checked
-                        ? [...book.collections, c.id]
-                        : book.collections.filter((id) => id !== c.id),
-                    })
-                  }
-                />
-              </label>
-            ))}
-          </div>
-          <div className="dialog-actions">
-            <Button className="button primary" onClick={() => setAssign(false)}>
-              Concluir
-            </Button>
-          </div>
-        </Modal>
-      )}
+          ))}
+        </div>
+        <div className="dialog-actions">
+          <Button className="button primary" onClick={() => setAssign(false)}>
+            Concluir
+          </Button>
+        </div>
+      </Modal>
     </article>
   );
 }
@@ -455,14 +468,23 @@ export function CollectionsView({ search }: { search: string }) {
           <h1>Coleções</h1>
           <p>Um lugar para cada interesse. Uma nova conexão entre livros.</p>
         </div>
-        <Button className="button primary" onClick={() => setAdding(true)}>
+        <Button
+          className="button primary"
+          onClick={() => {
+            setName("");
+            setAdding(true);
+          }}
+        >
           <Plus size={17} />
           Nova coleção
         </Button>
       </div>
-      {adding && (
+      <Modal
+        opened={adding}
+        title="Nova coleção"
+        onClose={() => setAdding(false)}
+      >
         <form
-          className="inline-form"
           onSubmit={(e) => {
             e.preventDefault();
             if (name.trim()) {
@@ -476,29 +498,34 @@ export function CollectionsView({ search }: { search: string }) {
             }
           }}
         >
-          <label htmlFor="collection-name">Nome da coleção</label>
-          <TextField
-            id="collection-name"
-            className="input"
-            placeholder="Ex.: Leituras de fim de semana"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoFocus
-            maxLength={70}
-            required
-          />
-          <Button className="button primary" disabled={!name.trim()}>
-            Criar coleção
-          </Button>
-          <Button
-            type="button"
-            className="button secondary"
-            onClick={() => setAdding(false)}
-          >
-            Cancelar
-          </Button>
+          <label className="field-label" htmlFor="collection-name">
+            Nome da coleção
+            <TextField
+              id="collection-name"
+              data-autofocus
+              className="input"
+              placeholder="Ex.: Leituras de fim de semana"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              maxLength={70}
+              required
+            />
+          </label>
+          <div className="dialog-actions">
+            <Button
+              type="button"
+              className="button secondary"
+              onClick={() => setAdding(false)}
+            >
+              Cancelar
+            </Button>
+            <Button className="button primary" disabled={!name.trim()}>
+              Criar coleção
+            </Button>
+          </div>
         </form>
-      )}
+      </Modal>
       <div className="collections-grid">
         {collections
           .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))

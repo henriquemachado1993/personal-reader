@@ -1,6 +1,8 @@
 "use client";
 import { ActionIcon, Tooltip, Modal as MantineModal } from "@mantine/core";
 import { Dropdown } from "./ui/dropdown";
+import { useReducedMotion } from "@mantine/hooks";
+import { modalTransition } from "./ui/modal-motion";
 import { X, BookOpen, MoreHorizontal } from "lucide-react";
 import type { ReaderDocument } from "@/shared/types";
 export function IconButton({
@@ -58,19 +60,24 @@ export function Cover({
   );
 }
 export function Modal({
+  opened,
   title,
   children,
   onClose,
   wide = false,
+  onExitTransitionEnd,
 }: {
+  opened: boolean;
   title: string;
   children: React.ReactNode;
   onClose: () => void;
   wide?: boolean;
+  onExitTransitionEnd?: () => void;
 }) {
+  const reducedMotion = useReducedMotion();
   return (
     <MantineModal
-      opened
+      opened={opened}
       onClose={onClose}
       title={title}
       size={wide ? 700 : 560}
@@ -80,8 +87,29 @@ export function Modal({
         body: "reader-modal-body",
       }}
       closeButtonProps={{ "aria-label": "Fechar" }}
+      onExitTransitionEnd={onExitTransitionEnd}
+      transitionProps={{
+        transition: modalTransition,
+        duration: reducedMotion ? 0 : 200,
+        exitDuration: reducedMotion ? 0 : 140,
+        timingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+      }}
+      overlayProps={{
+        transitionProps: {
+          duration: reducedMotion ? 0 : 160,
+          // Keep the page shielded until dialog content has left, so rapid actions cannot hit a closing form.
+          exitDuration: reducedMotion ? 0 : 160,
+        },
+      }}
     >
-      {children}
+      <fieldset
+        disabled={!opened}
+        inert={!opened}
+        aria-hidden={!opened}
+        style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+      >
+        {children}
+      </fieldset>
     </MantineModal>
   );
 }

@@ -39,7 +39,7 @@ test("Mantine menus, modal focus and theme stay consistent on desktop and mobile
         .getByRole("button", { name: "Importar arquivos", exact: true })
         .click();
       const modal = page.getByRole("dialog", {
-        name: "Novas leituras começam aqui",
+        name: "Importar arquivos",
       });
       await expect(modal).toBeVisible();
       expect(

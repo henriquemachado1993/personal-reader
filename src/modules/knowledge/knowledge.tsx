@@ -1,10 +1,7 @@
 "use client";
-import {
-  Button,
-  TextField,
-  SelectField,
-  TextArea,
-} from "@/components/ui/controls";
+import { Button, SelectField, TextArea } from "@/components/ui/controls";
+import { KnowledgeFilters, type KnowledgePeriod } from "./knowledge-filters";
+import "./knowledge-view.css";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -31,8 +28,14 @@ export function KnowledgeView({
   const [filter, setFilter] = useState("all");
   const [document, setDocument] = useState("all");
   const [color, setColor] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [untilDate, setUntilDate] = useState("");
+  const [period, setPeriod] = useState<KnowledgePeriod>([null, null]);
+  const [fromDate, untilDate] = period[0] && period[1] ? period : [null, null];
+  const clearFilters = () => {
+    setFilter("all");
+    setDocument("all");
+    setColor("all");
+    setPeriod([null, null]);
+  };
   const [writing, setWriting] = useState(false);
   const [text, setText] = useState("");
   const [noteDoc, setNoteDoc] = useState(state.documents[0]?.id ?? "");
@@ -42,12 +45,17 @@ export function KnowledgeView({
       string
     >
   )[kind];
+  const hasFilters =
+    (!forcedKind && filter !== "all") ||
+    document !== "all" ||
+    color !== "all" ||
+    !!period[0];
   const visible = state.annotations
     .filter(
       (a) =>
         ["highlight", "note", "clipping"].includes(a.kind) &&
         (!forcedKind || a.kind === forcedKind) &&
-        (filter === "all" || a.kind === filter) &&
+        (!!forcedKind || filter === "all" || a.kind === filter) &&
         (document === "all" || a.documentId === document) &&
         (color === "all" || a.color === color) &&
         (!fromDate || a.createdAt.slice(0, 10) >= fromDate) &&
@@ -64,7 +72,7 @@ export function KnowledgeView({
         notes: "Anotações",
         clippings: "Capturas",
       } as Record<string, string>
-    )[kind] ?? "Seu conhecimento, conectado";
+    )[kind] ?? "Conhecimento";
   const exportNotes = () => {
     const markdown = `# Minhas leituras e ideias\n\n${visible.map((a) => `## ${state.documents.find((d) => d.id === a.documentId)?.title ?? "Documento"} — página ${a.page + 1}\n\n${a.quote ? `> ${a.quote}\n\n` : ""}${a.text}\n\n${a.image ? `![Captura](${a.image})\n\n` : ""}`).join("---\n\n")}`;
     downloadBlob(
@@ -74,10 +82,10 @@ export function KnowledgeView({
   };
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading knowledge-heading">
         <div>
           <h1>{title}</h1>
-          <p>O que fica com você depois da última página.</p>
+          <p>Destaques, anotações e capturas das suas leituras.</p>
         </div>
         <div className="heading-actions">
           <Button
@@ -91,104 +99,38 @@ export function KnowledgeView({
           <Button
             className="button primary"
             disabled={!state.documents.length}
-            onClick={() => setWriting(true)}
+            onClick={() => {
+              setNoteDoc(state.documents[0]?.id ?? "");
+              setWriting(true);
+            }}
           >
             <Plus size={16} />
             Nova anotação
           </Button>
         </div>
       </div>
-      <div className="knowledge-toolbar">
-        <label>
-          De{" "}
-          <TextField
-            type="date"
-            className="input"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-        </label>
-        <label>
-          Até{" "}
-          <TextField
-            type="date"
-            className="input"
-            value={untilDate}
-            min={fromDate || undefined}
-            onChange={(e) => setUntilDate(e.target.value)}
-          />
-        </label>
-        {!forcedKind && (
-          <div
-            className="format-filters"
-            role="group"
-            aria-label="Tipo de anotação"
-          >
-            <Button
-              className={filter === "all" ? "active" : ""}
-              aria-pressed={filter === "all"}
-              onClick={() => setFilter("all")}
-            >
-              Tudo
-              <span>
-                {
-                  state.annotations.filter((a) =>
-                    ["note", "highlight", "clipping"].includes(a.kind),
-                  ).length
-                }
-              </span>
-            </Button>
-            {[
-              { id: "highlight", name: "Destaques", icon: Highlighter },
-              { id: "note", name: "Anotações", icon: StickyNote },
-              { id: "clipping", name: "Capturas", icon: ScanLine },
-            ].map(({ id, name, icon: Icon }) => (
-              <Button
-                key={id}
-                className={filter === id ? "active" : ""}
-                aria-pressed={filter === id}
-                onClick={() => setFilter(id)}
-              >
-                <Icon size={15} />
-                {name}
-              </Button>
-            ))}
-          </div>
+      <KnowledgeFilters
+        forcedKind={forcedKind}
+        type={filter}
+        onType={setFilter}
+        document={document}
+        onDocument={setDocument}
+        color={color}
+        onColor={setColor}
+        period={period}
+        onPeriod={setPeriod}
+        documents={state.documents}
+      />
+      <div className="knowledge-results-summary">
+        <p role="status">
+          {visible.length} {visible.length === 1 ? "registro" : "registros"}
+          {hasFilters || search ? " nesta seleção" : " na biblioteca"}
+        </p>
+        {hasFilters && (
+          <Button className="knowledge-clear" onClick={clearFilters}>
+            Limpar filtros
+          </Button>
         )}
-        <div className="knowledge-selects">
-          <label className="sr-only" htmlFor="document-filter">
-            Filtrar por documento
-          </label>
-          <SelectField
-            id="document-filter"
-            className="input"
-            value={document}
-            onChange={(e) => setDocument(e.target.value)}
-          >
-            <option value="all">Todos os documentos</option>
-            {state.documents.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.title}
-              </option>
-            ))}
-          </SelectField>
-          <label className="sr-only" htmlFor="color-filter">
-            Filtrar por cor
-          </label>
-          <SelectField
-            id="color-filter"
-            className="input"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          >
-            <option value="all">Todas as cores</option>
-            <option value="#e8bb45">Amarelo</option>
-            <option value="#db7f88">Rosa</option>
-            <option value="#6a997d">Verde</option>
-            <option value="#7f9fc4">Azul</option>
-            <option value="#3e3830">Grafite</option>
-          </SelectField>
-        </div>
       </div>
       {visible.length ? (
         <div className="knowledge-list">
@@ -268,97 +210,101 @@ export function KnowledgeView({
         <EmptyState
           icon={<Shapes size={38} strokeWidth={1.15} />}
           title={
-            search
-              ? "Nenhuma ideia com esse termo"
+            search || hasFilters
+              ? "Nenhum resultado"
               : "Uma boa ideia merece ficar"
           }
           action={
-            <Link className="button secondary" href="/library">
-              <BookIcon />
-              Explorar minha biblioteca
-            </Link>
+            hasFilters ? undefined : (
+              <Link className="button secondary" href="/library">
+                <BookIcon />
+                Explorar minha biblioteca
+              </Link>
+            )
           }
         >
-          {search
-            ? "Tente outra palavra ou ajuste os filtros."
+          {search || hasFilters
+            ? "Tente outro período, ajuste os filtros ou busque por outra palavra."
             : "Destaque um trecho, anote um pensamento ou capture parte de um PDF durante a leitura."}
         </EmptyState>
       )}
-      {writing && (
-        <Modal title="Uma ideia para guardar" onClose={() => setWriting(false)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!text.trim() || !noteDoc) return;
-              const book = state.documents.find((d) => d.id === noteDoc)!;
-              const now = new Date().toISOString();
-              state.addAnnotation({
-                id: crypto.randomUUID(),
-                documentId: noteDoc,
-                kind: "note",
-                page: book.page,
-                location:
-                  book.location ??
-                  (book.format === "PDF"
-                    ? { type: "PDF", pageIndex: book.page }
-                    : book.format === "EPUB"
-                      ? { type: "EPUB", cfi: "", href: "" }
-                      : {
-                          type: book.format,
-                          blockIndex: book.page,
-                          offset: 0,
-                        }),
-                text: text.trim(),
-                color: "#e8bb45",
-                createdAt: now,
-                updatedAt: now,
-              });
-              setWriting(false);
-              setText("");
-              state.notify("Ideia salva nas suas anotações.");
-            }}
-          >
-            <label className="field-label">
-              Relacionada a
-              <SelectField
-                className="input"
-                value={noteDoc}
-                onChange={(e) => setNoteDoc(e.target.value)}
-              >
-                {state.documents.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.title}
-                  </option>
-                ))}
-              </SelectField>
-            </label>
-            <label className="field-label">
-              Sua anotação
-              <TextArea
-                className="input note-textarea"
-                autoFocus
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Escreva uma ideia, uma conexão, uma pergunta…"
-                required
-                maxLength={10000}
-              />
-            </label>
-            <div className="dialog-actions">
-              <Button
-                type="button"
-                className="button secondary"
-                onClick={() => setWriting(false)}
-              >
-                Cancelar
-              </Button>
-              <Button className="button primary" disabled={!text.trim()}>
-                Salvar anotação
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      <Modal
+        opened={writing}
+        title="Uma ideia para guardar"
+        onClose={() => setWriting(false)}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!text.trim() || !noteDoc) return;
+            const book = state.documents.find((d) => d.id === noteDoc)!;
+            const now = new Date().toISOString();
+            state.addAnnotation({
+              id: crypto.randomUUID(),
+              documentId: noteDoc,
+              kind: "note",
+              page: book.page,
+              location:
+                book.location ??
+                (book.format === "PDF"
+                  ? { type: "PDF", pageIndex: book.page }
+                  : book.format === "EPUB"
+                    ? { type: "EPUB", cfi: "", href: "" }
+                    : {
+                        type: book.format,
+                        blockIndex: book.page,
+                        offset: 0,
+                      }),
+              text: text.trim(),
+              color: "#e8bb45",
+              createdAt: now,
+              updatedAt: now,
+            });
+            setWriting(false);
+            setText("");
+            state.notify("Ideia salva nas suas anotações.");
+          }}
+        >
+          <label className="field-label">
+            Relacionada a
+            <SelectField
+              className="input"
+              value={noteDoc}
+              onChange={(e) => setNoteDoc(e.target.value)}
+            >
+              {state.documents.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
+            </SelectField>
+          </label>
+          <label className="field-label">
+            Sua anotação
+            <TextArea
+              className="input note-textarea"
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Escreva uma ideia, uma conexão, uma pergunta…"
+              required
+              maxLength={10000}
+            />
+          </label>
+          <div className="dialog-actions">
+            <Button
+              type="button"
+              className="button secondary"
+              onClick={() => setWriting(false)}
+            >
+              Cancelar
+            </Button>
+            <Button className="button primary" disabled={!text.trim()}>
+              Salvar anotação
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }
