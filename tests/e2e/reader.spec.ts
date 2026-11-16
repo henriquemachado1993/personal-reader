@@ -1,3 +1,4 @@
+import { chooseAnnotationTool } from "./annotation-tools";
 import { test, expect } from "@playwright/test";
 import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
@@ -231,9 +232,7 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
-  await page
-    .getByRole("button", { name: "Inserir imagem", exact: true })
-    .click();
+  await chooseAnnotationTool(page, "Inserir imagem");
   await page.locator('.annotation-toolbar input[type="file"]').setInputFiles({
     name: "pixel.png",
     mimeType: "image/png",
@@ -321,7 +320,7 @@ test("reader controls match the reference in normal, focus and drawing states", 
       await page
         .getByRole("spinbutton", { name: "Número da página" })
         .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
-    ).toBeGreaterThanOrEqual(16);
+    ).toBe(viewport.width <= 760 ? 16 : 13);
     await page.screenshot({
       path: `.impeccable/review/reader-refinement/${viewport.name}-normal.png`,
       animations: "disabled",
@@ -440,15 +439,14 @@ test("advanced annotation controls persist text and stroke properties", async ({
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
+  await page.getByRole("button", { name: "Caneta", exact: true }).click();
   await page.getByRole("slider", { name: "Espessura do traço" }).focus();
   await page.keyboard.press("Home");
   for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
   await page.getByRole("slider", { name: "Opacidade da marcação" }).focus();
   await page.keyboard.press("Home");
   for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
-  await page
-    .getByRole("button", { name: "Inserir texto", exact: true })
-    .click();
+  await chooseAnnotationTool(page, "Inserir texto");
   await page.getByLabel("Texto", { exact: true }).fill("Nota na página");
   const box = await page
     .locator(".reader-page[aria-current=page] .annotation-overlay")

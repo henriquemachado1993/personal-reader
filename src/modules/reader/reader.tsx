@@ -1,5 +1,5 @@
 "use client";
-import { Slider, ColorInput } from "@mantine/core";
+import { Slider, Popover } from "@mantine/core";
 
 import { Button, TextField, TextArea } from "@/components/ui/controls";
 import "./reader-controls.css";
@@ -16,6 +16,7 @@ import {
   Download,
   MousePointer2,
   PenLine,
+  Pencil,
   Highlighter,
   Eraser,
   Undo2,
@@ -32,12 +33,17 @@ import {
   PenTool,
   Check,
   LoaderCircle,
+  Palette,
+  Hand,
 } from "lucide-react";
 import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { PdfPage } from "./pdf-page";
 import "./reader-refinements.css";
+import "./annotation-toolbar.css";
+import "./reader-panels.css";
+import { AnnotationColorPicker } from "./annotation-color-picker";
 import { findVisiblePage, scrollToReaderPage } from "./page-scroll";
 import { EpubPage } from "./epub-page";
 import { downloadBlob, exportPdf } from "./export";
@@ -75,6 +81,27 @@ const colorNames: Record<string, string> = {
   "#7f9fc4": "Azul",
   "#3e3830": "Grafite",
 };
+const annotationTools = [
+  {
+    id: "select",
+    label: "Selecionar texto",
+    icon: MousePointer2,
+    primary: true,
+  },
+  { id: "pen", label: "Caneta", icon: PenLine, primary: true },
+  { id: "pencil", label: "Lápis", icon: Pencil, primary: true },
+  { id: "highlight", label: "Marca-texto", icon: Highlighter, primary: true },
+  { id: "eraser", label: "Borracha", icon: Eraser, primary: true },
+  { id: "hand", label: "Mover página", icon: Hand, primary: true },
+  { id: "underline", label: "Sublinhar", icon: Highlighter, primary: false },
+  { id: "rectangle", label: "Retângulo", icon: Square, primary: false },
+  { id: "circle", label: "Círculo", icon: Circle, primary: false },
+  { id: "arrow", label: "Seta", icon: MoveUpRight, primary: false },
+  { id: "clipping", label: "Capturar trecho", icon: ScanLine, primary: false },
+  { id: "text", label: "Inserir texto", icon: StickyNote, primary: false },
+  { id: "image", label: "Inserir imagem", icon: Plus, primary: false },
+];
+
 export function Reader({ documentId }: { documentId: string }) {
   const library = useLibrary();
   const book = library.documents.find((d) => d.id === documentId);
@@ -86,6 +113,8 @@ export function Reader({ documentId }: { documentId: string }) {
   const [right, setRight] = useState(false);
   const [focus, setFocus] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [extraToolsOpen, setExtraToolsOpen] = useState(false);
+  const [customColorOpen, setCustomColorOpen] = useState(false);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [tool, setTool] = useState("select");
   const [color, setColor] = useState(colors[0]);
@@ -132,6 +161,8 @@ export function Reader({ documentId }: { documentId: string }) {
   const toggleChrome = useCallback(() => {
     setFocus((value) => !value);
     setToolsOpen(false);
+    setExtraToolsOpen(false);
+    setCustomColorOpen(false);
     setTool("select");
     setDraft([]);
     setLeft(false);
@@ -172,13 +203,78 @@ export function Reader({ documentId }: { documentId: string }) {
     go: (cfi: string) => void;
     search: (query: string) => Promise<number>;
   } | null>(null);
+  useEffect(() => {
+    if (!toolsOpen || focus || extraToolsOpen) return;
+    const rail = document.querySelector<HTMLElement>(
+      ".annotation-primary-tools",
+    );
+    if (!rail) return;
+    const revealSelection = () =>
+      rail.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+        behavior: "instant",
+      });
+    revealSelection();
+    const observer = new ResizeObserver(revealSelection);
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [tool, toolsOpen, focus, extraToolsOpen]);
   const currentPage = page ?? book?.page ?? 0;
   const realPdf = book?.format === "PDF" && !book.demo;
   const realEpub = book?.format === "EPUB" && !book.demo;
   const annotations = library.annotations.filter(
     (a) => a.documentId === documentId,
   );
+  const visibleAnnotations = annotations.filter((annotation) =>
+    ["note", "highlight", "clipping"].includes(annotation.kind),
+  );
+  const documentBookmarks = library.bookmarks.filter(
+    (bookmark) => bookmark.documentId === documentId,
+  );
   const currentAnnotations = annotations.filter((a) => a.page === currentPage);
+  const selectedAnnotation = currentAnnotations.find(
+    (annotation) => annotation.id === selectedObject,
+  );
+  const annotationStyleKind =
+    tool === "select" ? selectedAnnotation?.kind : tool;
+  const showStrokeThickness =
+    !realEpub &&
+    ["pen", "pencil", "underline", "rectangle", "circle", "arrow"].includes(
+      annotationStyleKind ?? "",
+    );
+  const showAnnotationOpacity =
+    !realEpub &&
+    [
+      "pen",
+      "pencil",
+      "underline",
+      "rectangle",
+      "circle",
+      "arrow",
+      "highlight",
+      "text",
+      "image",
+    ].includes(annotationStyleKind ?? "");
+  const updateSelectedAnnotationStyle = (
+    style: Partial<Pick<Annotation, "thickness" | "opacity">>,
+  ) => {
+    if (tool === "select" && selectedAnnotation)
+      editAnnotation({
+        ...selectedAnnotation,
+        ...style,
+        updatedAt: new Date().toISOString(),
+      });
+  };
+  const changeAnnotationColor = (nextColor: string) => {
+    setColor(nextColor);
+    if (tool === "select" && selectedAnnotation)
+      editAnnotation({
+        ...selectedAnnotation,
+        color: nextColor,
+        updatedAt: new Date().toISOString(),
+      });
+  };
   const bookmarked = library.bookmarks.some(
     (b) =>
       b.documentId === documentId &&
@@ -189,7 +285,12 @@ export function Reader({ documentId }: { documentId: string }) {
   useEffect(() => {
     if (!book) return;
     const target = new URLSearchParams(window.location.search).get("page");
-    if (target && Number(target) > 0 && Number(target) <= book.pages)
+    if (
+      target &&
+      Number.isInteger(Number(target)) &&
+      Number(target) > 0 &&
+      Number(target) <= book.pages
+    )
       setPage(Number(target) - 1);
   }, [documentId, library.hydrated]);
   useEffect(() => {
@@ -198,9 +299,22 @@ export function Reader({ documentId }: { documentId: string }) {
     const pages = Array.from(
       host.querySelectorAll<HTMLElement>("[data-reader-page]"),
     );
+    let initialized = false;
     let scheduled = 0;
+    let viewportWidth = host.clientWidth;
+    let viewportHeight = host.clientHeight;
+    let contentHeight = host.scrollHeight;
+    let readingAnchor: { index: number; fraction: number } | null = null;
     const track = () => {
       scheduled = 0;
+      if (!initialized) return;
+      if (
+        host.clientWidth !== viewportWidth ||
+        host.clientHeight !== viewportHeight ||
+        host.scrollHeight !== contentHeight
+      ) {
+        preservePosition();
+      }
       const top = host.getBoundingClientRect().top + host.clientHeight * 0.35;
       const active = findVisiblePage(
         pages,
@@ -209,6 +323,11 @@ export function Reader({ documentId }: { documentId: string }) {
       );
       if (!active) return;
       const index = Number(active.dataset.readerPage);
+      const bounds = active.getBoundingClientRect();
+      readingAnchor = {
+        index,
+        fraction: Math.max(0, Math.min(1, (top - bounds.top) / bounds.height)),
+      };
       setPage((previous) => (previous === index ? previous : index));
       const current = useLibrary
         .getState()
@@ -223,17 +342,49 @@ export function Reader({ documentId }: { documentId: string }) {
     const schedule = () => {
       if (!scheduled) scheduled = requestAnimationFrame(track);
     };
+    // Restore after each geometry change, including asynchronous PDF sizing.
+    // Applying it inside ResizeObserver leaves subsequent user/script scrolls free.
+    const preservePosition = () => {
+      viewportWidth = host.clientWidth;
+      viewportHeight = host.clientHeight;
+      contentHeight = host.scrollHeight;
+      if (!readingAnchor) return;
+      const target = pages[readingAnchor.index];
+      if (!target) return;
+      const bounds = target.getBoundingClientRect();
+      host.scrollTop +=
+        bounds.top +
+        bounds.height * readingAnchor.fraction -
+        host.getBoundingClientRect().top -
+        host.clientHeight * 0.35;
+    };
+    const pageSizes = new ResizeObserver(() => {
+      if (
+        host.clientWidth !== viewportWidth ||
+        host.clientHeight !== viewportHeight ||
+        host.scrollHeight !== contentHeight
+      )
+        preservePosition();
+    });
+    pages.forEach((node) => pageSizes.observe(node));
+    window.addEventListener("resize", preservePosition);
     host.addEventListener("scroll", schedule, { passive: true });
     const requested = Number(
       new URLSearchParams(window.location.search).get("page"),
     );
     const saved =
-      requested > 0 ? Math.min(requested - 1, book.pages - 1) : book.page;
+      Number.isInteger(requested) && requested > 0
+        ? Math.min(requested - 1, book.pages - 1)
+        : book.page;
     const restore = requestAnimationFrame(() => {
+      initialized = true;
       if (pages[saved]) scrollToReaderPage(host, pages[saved]);
+      track();
     });
     return () => {
       host.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", preservePosition);
+      pageSizes.disconnect();
       cancelAnimationFrame(restore);
       cancelAnimationFrame(scheduled);
     };
@@ -320,6 +471,17 @@ export function Reader({ documentId }: { documentId: string }) {
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (
+        event.defaultPrevented ||
+        (event.target as HTMLElement).closest(".annotation-popup")
+      )
+        return;
+      if (event.key === "Escape" && (extraToolsOpen || customColorOpen)) {
+        setExtraToolsOpen(false);
+        setCustomColorOpen(false);
+        return;
+      }
+      if (document.querySelector(".annotation-popup")) return;
+      if (
         (event.target as HTMLElement).matches(
           "input, textarea, select, [contenteditable], [role=slider], [role=combobox]",
         )
@@ -347,7 +509,7 @@ export function Reader({ documentId }: { documentId: string }) {
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [currentPage, go, undo, redoAction]);
+  }, [currentPage, go, undo, redoAction, extraToolsOpen, customColorOpen]);
   const addAnnotation = (
     kind: AnnotationKind,
     points: Point[] = [],
@@ -550,6 +712,8 @@ export function Reader({ documentId }: { documentId: string }) {
             aria-controls="annotation-tools"
             onClick={() => {
               setToolsOpen((open) => !open);
+              setExtraToolsOpen(false);
+              setCustomColorOpen(false);
               setTool("select");
               setDraft([]);
             }}
@@ -566,6 +730,7 @@ export function Reader({ documentId }: { documentId: string }) {
           <Button
             className="icon-button type-control"
             aria-label="Ajustar aparência"
+            aria-expanded={appearance}
             onClick={() => setAppearance(!appearance)}
           >
             Aa
@@ -615,34 +780,36 @@ export function Reader({ documentId }: { documentId: string }) {
               <X size={17} />
             </IconButton>
           </div>
-          <label>
-            Tamanho do texto
-            <span>
-              <IconButton
-                label="Diminuir fonte"
-                disabled={library.preferences.fontSize <= 14}
-                onClick={() =>
-                  library.setPreferences({
-                    fontSize: Math.max(14, library.preferences.fontSize - 1),
-                  })
-                }
-              >
-                <Minus size={16} />
-              </IconButton>
-              {library.preferences.fontSize}
-              <IconButton
-                label="Aumentar fonte"
-                disabled={library.preferences.fontSize >= 30}
-                onClick={() =>
-                  library.setPreferences({
-                    fontSize: Math.min(30, library.preferences.fontSize + 1),
-                  })
-                }
-              >
-                <Plus size={16} />
-              </IconButton>
-            </span>
-          </label>
+          {book.format !== "PDF" && (
+            <label>
+              Tamanho do texto
+              <span>
+                <IconButton
+                  label="Diminuir fonte"
+                  disabled={library.preferences.fontSize <= 14}
+                  onClick={() =>
+                    library.setPreferences({
+                      fontSize: Math.max(14, library.preferences.fontSize - 1),
+                    })
+                  }
+                >
+                  <Minus size={16} />
+                </IconButton>
+                {library.preferences.fontSize}
+                <IconButton
+                  label="Aumentar fonte"
+                  disabled={library.preferences.fontSize >= 30}
+                  onClick={() =>
+                    library.setPreferences({
+                      fontSize: Math.min(30, library.preferences.fontSize + 1),
+                    })
+                  }
+                >
+                  <Plus size={16} />
+                </IconButton>
+              </span>
+            </label>
+          )}
           <label>
             Zoom
             <span className="zoom-control">
@@ -731,46 +898,48 @@ export function Reader({ documentId }: { documentId: string }) {
       )}
       <div className="reader-body">
         {left && (
-          <aside className="reader-left-panel">
+          <aside
+            className="reader-left-panel"
+            aria-label="Páginas e marcadores"
+          >
             <div className="panel-title">
               <h2>Páginas</h2>
               <IconButton label="Fechar páginas" onClick={() => setLeft(false)}>
                 <X size={17} />
               </IconButton>
             </div>
-            <div className="page-navigation-list">
-              {Array.from({ length: Math.min(book.pages, 1000) }, (_, i) => (
-                <Button
-                  className={currentPage === i ? "current" : ""}
-                  key={i}
-                  onClick={() => go(i)}
-                >
-                  <span>{i + 1}</span>
-                  <span>
-                    {book.content?.[i]?.split("\n")[0] ?? `Página ${i + 1}`}
-                  </span>
-                  {library.bookmarks.some(
-                    (b) => b.documentId === documentId && b.page === i,
-                  ) && <Bookmark size={13} fill="currentColor" />}
-                </Button>
-              ))}
-            </div>
-            <h3 className="panel-subheading">Marcadores</h3>
-            <Button
-              className="bookmark-link"
-              onClick={() => {
-                setLeft(false);
-                setRight(true);
-              }}
-            >
-              <StickyNote size={15} />
-              Anotações deste livro
-            </Button>
-            {library.bookmarks.filter((b) => b.documentId === documentId)
-              .length ? (
-              library.bookmarks
-                .filter((b) => b.documentId === documentId)
-                .map((b) => (
+            <div className="reader-panel-content">
+              <div className="page-navigation-list">
+                {Array.from({ length: Math.min(book.pages, 1000) }, (_, i) => (
+                  <Button
+                    className={currentPage === i ? "current" : ""}
+                    aria-current={currentPage === i ? "page" : undefined}
+                    key={i}
+                    onClick={() => go(i)}
+                  >
+                    <span>{i + 1}</span>
+                    <span>
+                      {book.content?.[i]?.split("\n")[0] ?? `Página ${i + 1}`}
+                    </span>
+                    {documentBookmarks.some(
+                      (bookmark) => bookmark.page === i,
+                    ) && <Bookmark size={13} fill="currentColor" />}
+                  </Button>
+                ))}
+              </div>
+              <h3 className="panel-subheading">Marcadores</h3>
+              <Button
+                className="bookmark-link"
+                onClick={() => {
+                  setLeft(false);
+                  setRight(true);
+                }}
+              >
+                <StickyNote size={15} />
+                Anotações deste livro
+              </Button>
+              {documentBookmarks.length ? (
+                documentBookmarks.map((b) => (
                   <Button
                     key={b.id}
                     className="bookmark-link"
@@ -788,11 +957,12 @@ export function Reader({ documentId }: { documentId: string }) {
                     Página {b.page + 1}
                   </Button>
                 ))
-            ) : (
-              <p className="panel-empty">
-                Marque uma página para voltar a ela depois.
-              </p>
-            )}
+              ) : (
+                <p className="panel-empty">
+                  Marque uma página para voltar a ela depois.
+                </p>
+              )}
+            </div>
           </aside>
         )}
         <div className="reader-scroll-area" ref={scrollHost}>
@@ -821,8 +991,22 @@ export function Reader({ documentId }: { documentId: string }) {
                 className="reader-page reader-continuous-page"
                 ref={pageIndex === currentPage ? pageHost : undefined}
                 onPointerDownCapture={(event) => {
-                  if (!realEpub && pageIndex !== currentPage)
+                  if (
+                    !realEpub &&
+                    toolsOpen &&
+                    tool !== "select" &&
+                    tool !== "hand" &&
+                    pageIndex !== currentPage
+                  ) {
                     setPage(pageIndex);
+                    library.updateDocument(documentId, {
+                      page: pageIndex,
+                      progress: Math.round(
+                        ((pageIndex + 1) / book.pages) * 100,
+                      ),
+                      location: pageLocation(book, pageIndex),
+                    });
+                  }
                   tap.current = {
                     x: event.clientX,
                     y: event.clientY,
@@ -990,7 +1174,7 @@ export function Reader({ documentId }: { documentId: string }) {
           )}
         </div>
         {right && (
-          <aside className="reader-notes-panel">
+          <aside className="reader-notes-panel" aria-label="Anotações do livro">
             <div className="panel-title">
               <h2>À margem da leitura</h2>
               <IconButton
@@ -1000,41 +1184,38 @@ export function Reader({ documentId }: { documentId: string }) {
                 <X size={17} />
               </IconButton>
             </div>
-            <p className="panel-description">
-              Guarde o que merece uma segunda leitura.
-            </p>
-            <form
-              className="note-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (note.trim()) {
-                  addAnnotation("note", [], note.trim());
-                  setNote("");
-                }
-              }}
-            >
-              {selection && <blockquote>{selection.text}</blockquote>}
-              <label className="sr-only" htmlFor="new-note">
-                Sua anotação
-              </label>
-              <TextArea
-                id="new-note"
-                placeholder="O que esta página fez você pensar?"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={10000}
-              />
-              <Button className="button primary" disabled={!note.trim()}>
-                <Plus size={15} />
-                Salvar anotação
-              </Button>
-            </form>
-            <div className="panel-annotations">
-              {annotations
-                .filter((a) =>
-                  ["note", "highlight", "clipping"].includes(a.kind),
-                )
-                .map((a) => (
+            <div className="reader-panel-content">
+              <p className="panel-description">
+                Guarde o que merece uma segunda leitura.
+              </p>
+              <form
+                className="note-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (note.trim()) {
+                    addAnnotation("note", [], note.trim());
+                    setNote("");
+                  }
+                }}
+              >
+                {selection && <blockquote>{selection.text}</blockquote>}
+                <label className="sr-only" htmlFor="new-note">
+                  Sua anotação
+                </label>
+                <TextArea
+                  id="new-note"
+                  placeholder="O que esta página fez você pensar?"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={10000}
+                />
+                <Button className="button primary" disabled={!note.trim()}>
+                  <Plus size={15} />
+                  Salvar anotação
+                </Button>
+              </form>
+              <div className="panel-annotations">
+                {visibleAnnotations.map((a) => (
                   <article key={a.id}>
                     <div>
                       <span className="reader-note-kind">
@@ -1080,11 +1261,12 @@ export function Reader({ documentId }: { documentId: string }) {
                     </Button>
                   </article>
                 ))}
-              {!annotations.length && (
-                <p className="panel-empty">
-                  Suas ideias começam com uma anotação.
-                </p>
-              )}
+                {!visibleAnnotations.length && (
+                  <p className="panel-empty">
+                    Suas ideias começam com uma anotação.
+                  </p>
+                )}
+              </div>
             </div>
           </aside>
         )}
@@ -1096,42 +1278,139 @@ export function Reader({ documentId }: { documentId: string }) {
           role="toolbar"
           aria-label="Ferramentas de anotação"
         >
-          <IconButton
-            label="Selecionar texto"
-            aria-pressed={tool === "select"}
-            className={tool === "select" ? "selected" : ""}
-            onClick={() => setTool("select")}
-          >
-            <MousePointer2 size={19} />
-          </IconButton>
-          <span className="toolbar-divider" />
-          {[
-            { id: "highlight", label: "Marca-texto", icon: Highlighter },
-            { id: "pen", label: "Caneta", icon: PenLine },
-            { id: "hand", label: "Mover página", icon: MousePointer2 },
-            { id: "underline", label: "Sublinhar", icon: Highlighter },
-            { id: "pencil", label: "Lápis", icon: PenLine },
-            { id: "eraser", label: "Borracha", icon: Eraser },
-            { id: "rectangle", label: "Retângulo", icon: Square },
-            { id: "circle", label: "Círculo", icon: Circle },
-            { id: "arrow", label: "Seta", icon: MoveUpRight },
-            { id: "clipping", label: "Capturar trecho", icon: ScanLine },
-            { id: "text", label: "Inserir texto", icon: StickyNote },
-            { id: "image", label: "Inserir imagem", icon: Plus },
-          ].map(({ id, label, icon: Icon }) => (
-            <IconButton
-              key={id}
-              label={label}
-              disabled={realEpub || (id === "clipping" && !realPdf)}
-              aria-pressed={tool === id}
-              className={tool === id ? "selected" : ""}
-              onClick={() => setTool(id)}
+          <div className="annotation-main-row">
+            <div
+              className="annotation-history"
+              role="group"
+              aria-label="Histórico de anotações"
             >
-              <Icon size={19} />
-            </IconButton>
-          ))}
-          <span className="toolbar-divider" />
-          <div className="annotation-colors">
+              <IconButton
+                label="Desfazer anotação"
+                disabled={!canUndo}
+                onClick={undo}
+              >
+                <Undo2 size={20} />
+              </IconButton>
+              <IconButton
+                label="Refazer anotação"
+                disabled={!canRedo}
+                onClick={redoAction}
+              >
+                <Redo2 size={20} />
+              </IconButton>
+            </div>
+            <div
+              className="annotation-primary-tools"
+              role="group"
+              aria-label="Ferramentas principais"
+            >
+              {annotationTools
+                .filter(
+                  (item) =>
+                    item.primary || (item.id === tool && !extraToolsOpen),
+                )
+                .map(({ id, label, icon: Icon }) => (
+                  <IconButton
+                    key={id}
+                    label={label}
+                    disabled={realEpub && id !== "select"}
+                    aria-pressed={tool === id}
+                    className={tool === id ? "selected" : ""}
+                    onClick={() => setTool(id)}
+                  >
+                    <Icon size={22} />
+                  </IconButton>
+                ))}
+            </div>
+            <div
+              className="annotation-colors"
+              role="group"
+              aria-label="Cores da anotação"
+            >
+              {colors.map((c) => (
+                <Button
+                  key={c}
+                  aria-label={`Cor ${colorNames[c]}`}
+                  aria-pressed={color === c}
+                  className={color === c ? "active" : ""}
+                  style={{ "--swatch-color": c } as React.CSSProperties}
+                  onClick={() => changeAnnotationColor(c)}
+                />
+              ))}
+              <Popover
+                opened={customColorOpen}
+                onChange={setCustomColorOpen}
+                onDismiss={() => setCustomColorOpen(false)}
+                position="top"
+                withinPortal={false}
+                width={240}
+                trapFocus
+                returnFocus
+              >
+                <Popover.Target>
+                  <Button
+                    className={`annotation-custom-color ${colors.includes(color) ? "" : "active"}`}
+                    style={{ "--swatch-color": color } as React.CSSProperties}
+                    aria-pressed={!colors.includes(color)}
+                    aria-label="Escolher cor personalizada"
+                    onClick={() => setCustomColorOpen((open) => !open)}
+                  >
+                    <Palette size={22} />
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown className="annotation-popup annotation-color-popup">
+                  <AnnotationColorPicker
+                    color={color}
+                    onChange={changeAnnotationColor}
+                  />
+                </Popover.Dropdown>
+              </Popover>
+            </div>
+            <div className="annotation-more">
+              <Popover
+                transitionProps={{ duration: 0 }}
+                opened={extraToolsOpen}
+                onChange={setExtraToolsOpen}
+                onDismiss={() => setExtraToolsOpen(false)}
+                trapFocus
+                position="top-end"
+                withinPortal={false}
+                width={240}
+                returnFocus
+              >
+                <Popover.Target>
+                  <Button
+                    className="icon-button annotation-add"
+                    aria-label="Mais ferramentas"
+                    aria-expanded={extraToolsOpen}
+                    onClick={() => setExtraToolsOpen((open) => !open)}
+                  >
+                    <Plus size={24} />
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown className="annotation-popup annotation-extra-tools">
+                  {annotationTools
+                    .filter((item) => !item.primary)
+                    .map(({ id, label, icon: Icon }) => (
+                      <Button
+                        key={id}
+                        disabled={realEpub || (id === "clipping" && !realPdf)}
+                        aria-label={label}
+                        aria-pressed={tool === id}
+                        onClick={() => {
+                          setTool(id);
+                          setExtraToolsOpen(false);
+                        }}
+                      >
+                        <Icon size={20} />
+                        <span>{label}</span>
+                      </Button>
+                    ))}
+                </Popover.Dropdown>
+              </Popover>
+            </div>
+          </div>
+          <div className="annotation-options">
             {annotations.some((note) => note.id === selectedObject) && (
               <Button
                 className="button secondary"
@@ -1153,98 +1432,91 @@ export function Reader({ documentId }: { documentId: string }) {
                 Aplicar ao objeto selecionado
               </Button>
             )}
-            <label>
-              Cor{" "}
-              <ColorInput
-                aria-label="Cor personalizada"
-                value={color}
-                onChange={setColor}
-                format="hex"
-                size="xs"
-                w={120}
-              />
-            </label>
-            {colors.map((c) => (
-              <Button
-                key={c}
-                aria-label={`Cor ${colorNames[c]}`}
-                aria-pressed={color === c}
-                className={color === c ? "active" : ""}
-                style={{ backgroundColor: c }}
-                onClick={() => setColor(c)}
-              />
-            ))}
+            {showStrokeThickness && (
+              <label>
+                <span className="annotation-setting-heading">
+                  Espessura
+                  <output
+                    className="annotation-setting-value"
+                    aria-hidden="true"
+                  >
+                    {annotationStyleKind === "pencil"
+                      ? thickness * 0.5
+                      : thickness}{" "}
+                    px
+                  </output>
+                </span>
+                <Slider
+                  aria-label="Espessura do traço"
+                  thumbLabel="Espessura do traço"
+                  min={1}
+                  max={12}
+                  value={thickness}
+                  onChange={(value) => {
+                    setThickness(value);
+                    updateSelectedAnnotationStyle({ thickness: value });
+                  }}
+                  w={110}
+                />
+              </label>
+            )}
+            {showAnnotationOpacity && (
+              <label>
+                <span className="annotation-setting-heading">
+                  Opacidade
+                  <output
+                    className="annotation-setting-value"
+                    aria-hidden="true"
+                  >
+                    {Math.round(opacity * 100)}%
+                  </output>
+                </span>
+                <Slider
+                  aria-label="Opacidade da marcação"
+                  thumbLabel="Opacidade da marcação"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={opacity}
+                  onChange={(value) => {
+                    setOpacity(value);
+                    updateSelectedAnnotationStyle({ opacity: value });
+                  }}
+                  label={(value) => `${Math.round(value * 100)}%`}
+                  w={110}
+                />
+              </label>
+            )}
+            {tool === "text" && (
+              <label>
+                Texto{" "}
+                <TextField
+                  value={stampText}
+                  maxLength={500}
+                  onChange={(e) => setStampText(e.target.value)}
+                />
+              </label>
+            )}
+            {tool === "image" && (
+              <label>
+                Imagem{" "}
+                <TextField
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || file.size > 5_000_000) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setStampImage(String(reader.result));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+            )}
+            {tool === "image" && stampImage && (
+              <span role="status">Imagem pronta para inserir</span>
+            )}
           </div>
-          <label>
-            Espessura{" "}
-            <Slider
-              aria-label="Espessura do traço"
-              thumbLabel="Espessura do traço"
-              min={1}
-              max={12}
-              value={thickness}
-              onChange={setThickness}
-              w={110}
-            />
-          </label>
-          <label>
-            Opacidade{" "}
-            <Slider
-              aria-label="Opacidade da marcação"
-              thumbLabel="Opacidade da marcação"
-              min={0.1}
-              max={1}
-              step={0.1}
-              value={opacity}
-              onChange={setOpacity}
-              label={(value) => `${Math.round(value * 100)}%`}
-              w={110}
-            />
-          </label>
-          {tool === "text" && (
-            <label>
-              Texto{" "}
-              <TextField
-                value={stampText}
-                maxLength={500}
-                onChange={(e) => setStampText(e.target.value)}
-              />
-            </label>
-          )}
-          {tool === "image" && (
-            <label>
-              Imagem{" "}
-              <TextField
-                type="file"
-                accept="image/png,image/jpeg"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file || file.size > 5_000_000) return;
-                  const reader = new FileReader();
-                  reader.onload = () => setStampImage(String(reader.result));
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
-          )}
-          {tool === "image" && stampImage && (
-            <span role="status">Imagem pronta para inserir</span>
-          )}
-          <span className="toolbar-divider" />
-          <IconButton
-            label="Desfazer anotação"
-            disabled={!canUndo}
-            onClick={undo}
-          >
-            <Undo2 size={18} />
-          </IconButton>
-          <IconButton
-            label="Refazer anotação"
-            disabled={!canRedo}
-            onClick={redoAction}
-          >
-            <Redo2 size={18} />
-          </IconButton>
         </div>
       )}
       <div className="reader-page-counter" inert={focus}>
@@ -1261,7 +1533,12 @@ export function Reader({ documentId }: { documentId: string }) {
                 value={currentPage + 1}
                 onChange={(e) => {
                   const value = Number(e.target.value);
-                  if (value > 0 && value <= book.pages) go(value - 1);
+                  if (
+                    Number.isInteger(value) &&
+                    value > 0 &&
+                    value <= book.pages
+                  )
+                    go(value - 1);
                 }}
               />{" "}
               <span>de {book.pages}</span>

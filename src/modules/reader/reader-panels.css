@@ -1,0 +1,166 @@
+body .reader-shell :is(.reader-left-panel, .reader-notes-panel) {
+  display: flex;
+  flex-direction: column;
+  top: var(--reader-top);
+  bottom: auto;
+  max-height: calc(100% - var(--reader-top) - 80px - var(--app-safe-bottom));
+  width: min(360px, calc(100% - 32px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: none;
+  background: var(--surface);
+  color: var(--text);
+  z-index: 25;
+  font-family: var(--sans);
+}
+body .reader-shell .reader-left-panel {
+  left: 16px;
+  width: min(300px, calc(100% - 32px));
+}
+body .reader-shell .reader-notes-panel {
+  right: 16px;
+}
+.reader-shell .panel-title {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.reader-shell .panel-title h2 {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.reader-shell .panel-title .icon-button {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  color: var(--text-secondary);
+  border-radius: 50%;
+}
+.reader-panel-content {
+  min-height: 0;
+  padding: 0 20px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.reader-shell .page-navigation-list {
+  margin-top: 16px;
+  max-height: min(38dvh, 320px);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.reader-shell .page-navigation-list button {
+  min-height: 44px;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 0 0 4px;
+  border-radius: 7px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.reader-shell .page-navigation-list button > span:first-child {
+  width: 3ch;
+  flex-shrink: 0;
+  font-size: 12px;
+  text-align: right;
+}
+.reader-shell .page-navigation-list button.current {
+  color: var(--text);
+  background: var(--selection);
+  font-weight: 600;
+}
+.reader-shell .page-navigation-list button.current > span:first-child {
+  color: inherit;
+}
+.reader-shell .page-navigation-list button svg {
+  flex-shrink: 0;
+}
+.reader-shell .panel-subheading {
+  margin: 24px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.reader-shell :is(.panel-empty, .panel-description) {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 16px 0 0;
+  overflow-wrap: anywhere;
+}
+.reader-shell .bookmark-link {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  gap: 12px;
+  border-radius: 7px;
+  text-align: left;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.reader-shell .bookmark-link:hover {
+  background: var(--surface-secondary);
+}
+.reader-shell .note-form {
+  margin-top: 16px;
+}
+.reader-shell .note-form textarea {
+  min-height: 120px;
+  max-height: 240px;
+  padding: 12px;
+  line-height: 1.6;
+  caret-color: var(--text);
+}
+.reader-shell .note-form > .button {
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.reader-shell .panel-annotations {
+  margin-top: 24px;
+}
+.reader-shell .panel-annotations article {
+  padding: 16px 0;
+}
+.reader-shell .panel-annotations article > div {
+  gap: 12px;
+}
+.reader-shell .panel-annotations article p,
+.reader-shell .panel-annotations blockquote {
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.reader-shell .panel-annotations img {
+  display: block;
+  max-width: 100%;
+  border-radius: 7px;
+}
+.reader-shell .panel-annotations .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.reader-shell .panel-annotations .icon-button {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+}
+.reader-shell .reader-panel-content button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}

@@ -1,3 +1,4 @@
+import { chooseAnnotationTool } from "./annotation-tools";
 import { test, expect } from "@playwright/test";
 import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
@@ -107,9 +108,7 @@ test("editing history restores moved objects and deleted final annotation", asyn
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
-  await page
-    .getByRole("button", { name: "Inserir texto", exact: true })
-    .click();
+  await chooseAnnotationTool(page, "Inserir texto");
   await page.getByLabel("Texto", { exact: true }).fill("Objeto para desfazer");
   const box = (await page
     .locator(".reader-page[aria-current=page] .annotation-overlay")
@@ -175,6 +174,7 @@ test("reader keeps contrast, inline pagination and accessible colors across them
   await expect(
     page.getByRole("button", { name: "Cor Rosa", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Caneta", exact: true }).click();
   expect(
     await page
       .getByRole("slider", { name: "Espessura do traço" })

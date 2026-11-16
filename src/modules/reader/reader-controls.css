@@ -1,5 +1,10 @@
 .reader-shell .reader-header {
   z-index: 20;
+  /* Only the floating control groups should intercept touches over the page. */
+  pointer-events: none;
+}
+.reader-shell .reader-header > * {
+  pointer-events: auto;
 }
 .reader-shell .reader-header .icon-button {
   width: 42px;
@@ -16,9 +21,11 @@
   order: -1;
   font-size: 22px;
 }
-.reader-shell .reader-header-right .reader-brush.selected {
-  background: var(--text);
-  color: var(--background);
+.reader-shell
+  .reader-header
+  .icon-button:is(.selected, [aria-pressed="true"], [aria-expanded="true"]) {
+  background: var(--selection);
+  color: var(--text);
   border-radius: 50%;
 }
 .reader-shell .reader-title strong {
@@ -30,16 +37,28 @@
   top: 110px;
   right: 24px;
   z-index: 11;
-  padding: 8px 15px;
+  padding: 0 6px;
   border-radius: 28px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 0;
+  background: transparent;
   color: var(--text);
+  isolation: isolate;
+}
+/* Keep the editable target generous while the visible capsule recedes. */
+.reader-shell .reader-page-counter::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0;
+  z-index: -1;
+  border: 1px solid var(--border);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  pointer-events: none;
 }
 .reader-page-counter .reader-pagination {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
 }
 .reader-page-counter .reader-pagination input {
@@ -225,7 +244,7 @@
   .reader-shell .reader-page-counter {
     top: 82px;
     right: 16px;
-    padding: 6px 12px;
+    padding: 0 6px;
   }
   .reader-shell > .reader-search {
     top: 76px;
@@ -233,7 +252,7 @@
     right: 12px;
   }
   .reader-page-counter .reader-pagination {
-    font-size: 16px;
+    font-size: 13px;
   }
   .reader-shell .reader-footer {
     padding: 10px 12px 14px;
@@ -270,4 +289,18 @@
       opacity 160ms ease-out,
       visibility 160ms;
   }
+}
+
+.reader-shell .reader-page-counter .reader-pagination label {
+  gap: 4px;
+}
+.reader-shell .reader-page-counter .reader-field input,
+.reader-shell .reader-page-counter .reader-field input:focus {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  color: inherit;
+  caret-color: currentColor;
 }

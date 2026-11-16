@@ -1,0 +1,262 @@
+.reader-shell .annotation-toolbar {
+  font-family: var(--sans);
+  display: block;
+  width: min(760px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px - var(--app-safe-left) - var(--app-safe-right));
+  max-height: none;
+  padding: 12px;
+  overflow: visible;
+}
+.annotation-main-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.annotation-history,
+.annotation-primary-tools {
+  display: flex;
+  align-items: center;
+}
+.annotation-history {
+  border-right: 1px solid var(--border);
+  padding-right: 8px;
+}
+.annotation-primary-tools {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  padding-inline: 4px;
+  scroll-padding-inline: 8px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8px,
+    #000 calc(100% - 8px),
+    transparent
+  );
+}
+.reader-shell .annotation-toolbar .annotation-main-row .icon-button {
+  display: inline-flex;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.reader-shell .annotation-toolbar .annotation-colors {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  gap: 0;
+  padding: 0;
+  flex-basis: auto;
+}
+.reader-shell .annotation-toolbar .annotation-colors > button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+.annotation-colors > button:not(.annotation-custom-color)::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+}
+.annotation-colors > button.active::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+}
+.reader-shell .annotation-toolbar .annotation-colors > button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+.reader-shell .annotation-toolbar .annotation-add {
+  background: var(--surface-secondary);
+}
+.annotation-popup {
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.annotation-extra-tools {
+  display: grid;
+  gap: 4px;
+  max-height: min(380px, 60dvh);
+  overflow-y: auto;
+}
+.annotation-extra-tools button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.annotation-extra-tools button:not(:disabled):hover,
+.annotation-extra-tools button[aria-pressed="true"] {
+  background: var(--selection);
+}
+.annotation-options {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  max-height: 28dvh;
+  overflow-y: auto;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.annotation-options:empty {
+  display: none;
+}
+.annotation-options label {
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .annotation-main-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 4px;
+  }
+  .reader-shell .annotation-toolbar .annotation-colors {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: repeat(6, 44px);
+    justify-content: center;
+  }
+  .annotation-more {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .annotation-options {
+    gap: 8px 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .annotation-options > label:has(.mantine-Slider-root) {
+    display: grid;
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 0;
+    justify-items: center;
+  }
+}
+
+.reader-shell .annotation-toolbar .annotation-main-row .icon-button {
+  color: var(--text);
+}
+.reader-shell .annotation-toolbar .annotation-history .icon-button {
+  background: var(--surface-secondary);
+}
+.reader-shell .annotation-toolbar .annotation-main-row .icon-button:disabled {
+  opacity: 0.35;
+}
+.reader-shell
+  .annotation-toolbar
+  .annotation-primary-tools
+  .icon-button[aria-pressed="true"],
+.reader-shell .annotation-toolbar .annotation-add[aria-expanded="true"] {
+  background: var(--selection);
+  color: var(--text);
+}
+.reader-shell
+  .annotation-toolbar
+  .annotation-main-row
+  .icon-button:focus-visible,
+.annotation-extra-tools button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+.annotation-extra-tools button:disabled {
+  opacity: 0.35;
+}
+.annotation-options > label:has(.mantine-Slider-root) {
+  display: grid;
+  gap: 0;
+  flex: 0 1 160px;
+  justify-items: center;
+}
+.annotation-setting-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 110px;
+}
+.annotation-setting-value {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: inherit;
+}
+@media (max-width: 600px) {
+  .annotation-options > label:has(.mantine-Slider-root) {
+    flex: 1 1 0;
+  }
+}
+
+.annotation-setting-heading {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.annotation-setting-value {
+  font-weight: 500;
+}
+.annotation-extra-tools button {
+  font-family: inherit;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.annotation-custom-color.active svg {
+  color: var(--swatch-color);
+}
+
+.annotation-color-picker {
+  display: grid;
+  gap: 12px;
+}
+.annotation-color-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.reader-shell .annotation-toolbar .annotation-color-code {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.annotation-color-code input {
+  font-variant-numeric: tabular-nums;
+}
+/* Enlarge the hue hit area without covering the saturation surface. */
+.annotation-color-picker [data-hue]::before {
+  content: "";
+  position: absolute;
+  inset: -13px 0;
+}
+.annotation-color-picker [role="slider"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

@@ -102,6 +102,34 @@ for (const format of ["text", "pdf"] as const) {
       );
       expect(geometry.documentHeight).toBeLessThanOrEqual(viewport.height);
       expect(geometry.edgeInReader).toBe(true);
+      const counter = page.locator(".reader-page-counter");
+      await expect(counter.locator(".reader-pagination")).toHaveCSS(
+        "font-size",
+        "13px",
+      );
+      const counterBounds = await counter.boundingBox();
+      expect(counterBounds!.height).toBeLessThanOrEqual(46);
+      expect(counterBounds!.width).toBeLessThanOrEqual(125);
+      const pageInput = page.getByRole("spinbutton", {
+        name: "Número da página",
+      });
+      expect((await pageInput.boundingBox())!.height).toBeGreaterThanOrEqual(
+        44,
+      );
+      for (const focused of [false, true]) {
+        if (focused) await pageInput.focus();
+        await expect(pageInput).toHaveCSS("border-top-width", "0px");
+        await expect(pageInput).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+        await expect(pageInput).toHaveCSS("box-shadow", "none");
+        await expect(pageInput).toHaveCSS("outline-style", "none");
+      }
+      const capsuleHeight = await counter.evaluate((element) =>
+        parseFloat(getComputedStyle(element, "::before").height),
+      );
+      expect(capsuleHeight).toBeLessThanOrEqual(34);
+      await pageInput.fill("1");
+      await expect(pageInput).toHaveValue("1");
+      await pageInput.blur();
       await page.screenshot({
         path: `.impeccable/review/reader-edge/${format}-${viewport.name}.png`,
       });
