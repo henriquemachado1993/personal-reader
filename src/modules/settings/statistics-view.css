@@ -1,0 +1,302 @@
+.statistics-page h2 {
+  font: 700 28px/1.2 var(--serif);
+  letter-spacing: -0.02em;
+}
+.statistics-today {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 360px);
+  align-items: center;
+  gap: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.statistics-today p {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.statistics-today p strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.statistics-goal {
+  display: grid;
+  gap: 12px;
+  font-size: 13px;
+}
+.statistics-goal > span {
+  font-weight: 500;
+}
+.statistics-goal progress {
+  display: block;
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--selection);
+  color: var(--text);
+}
+.statistics-goal progress::-webkit-progress-bar {
+  background: var(--selection);
+}
+.statistics-goal progress::-webkit-progress-value {
+  background: var(--text);
+  border-radius: 24px;
+}
+.statistics-goal progress::-moz-progress-bar {
+  background: var(--text);
+}
+.statistics-goal a {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: var(--text-secondary);
+}
+.statistics-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  padding: 32px 0;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+.statistics-summary > div {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+.statistics-summary dt {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.statistics-summary dd {
+  margin: 12px 0 0;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.statistics-history {
+  padding-top: 32px;
+}
+.statistics-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.statistics-section-heading > span,
+.statistics-footnote {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.statistics-history table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 24px;
+  text-align: left;
+  font-size: 14px;
+}
+.statistics-history thead th {
+  padding: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.statistics-history tbody tr {
+  border-top: 1px solid var(--border);
+}
+.statistics-history tbody th {
+  width: 160px;
+  padding: 16px 20px 16px 0;
+  font-weight: 500;
+}
+.statistics-history time span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.statistics-day {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.statistics-day-track {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--surface-secondary);
+}
+.statistics-day-track > span {
+  display: block;
+  height: 100%;
+  background: var(--text-secondary);
+  border-radius: inherit;
+}
+.statistics-day-value {
+  width: 120px;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.statistics-empty {
+  padding: 32px 0;
+}
+.statistics-empty p {
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.statistics-footnote {
+  margin-top: 24px;
+  max-width: 75ch;
+}
+@media (max-width: 760px) {
+  .statistics-today {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .statistics-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 20px;
+  }
+  .statistics-page h2 {
+    font-size: 24px;
+  }
+  .statistics-history tbody th {
+    width: 100px;
+    padding-right: 12px;
+  }
+  .statistics-day {
+    gap: 12px;
+  }
+  .statistics-day-value {
+    width: 110px;
+  }
+}
+.statistics-page > .page-heading {
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.statistics-period-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+}
+.statistics-period-switch button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+}
+.statistics-period-switch button[aria-pressed="true"] {
+  background: var(--selection);
+  color: var(--text);
+  font-weight: 600;
+}
+.statistics-period-switch button:hover:not([aria-pressed="true"]) {
+  background: var(--surface-secondary);
+}
+.statistics-rhythm,
+.statistics-library {
+  padding-top: 32px;
+}
+.statistics-habits {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  padding: 24px 0 16px;
+  margin: 0;
+}
+.statistics-habits > div {
+  min-width: 0;
+}
+.statistics-habits dt,
+.statistics-record,
+.statistics-method,
+.statistics-comparison {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.statistics-habits dd {
+  margin: 12px 0 0;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.statistics-record {
+  display: block;
+  margin-top: 8px;
+}
+.statistics-method {
+  max-width: 75ch;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.statistics-comparison {
+  margin-top: 12px;
+}
+.statistics-today .statistics-remaining {
+  font-size: 13px;
+}
+.statistics-resume {
+  margin-top: 16px;
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.statistics-history-scroll.is-month {
+  max-height: 560px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.statistics-history-scroll thead {
+  position: sticky;
+  top: 0;
+  background: var(--background);
+  z-index: 1;
+}
+@media (max-width: 760px) {
+  .statistics-habits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 20px;
+  }
+}
+.statistics-method summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.statistics-method p {
+  padding-top: 8px;
+}
+@media (max-width: 760px) {
+  .statistics-habits dt {
+    min-height: 3.2em;
+  }
+}

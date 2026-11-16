@@ -88,7 +88,7 @@
   margin-top: 20px;
   padding: 24px;
   background: var(--surface);
-  border-radius: 16px;
+  border-radius: 15px;
 }
 .settings-sync-content p {
   max-width: 65ch;
@@ -172,7 +172,7 @@
     padding: 22px 0;
   }
   .preferences-section h2 {
-    font-size: 26px;
+    font-size: 24px;
   }
   .preference-themes {
     max-width: 100%;
@@ -200,10 +200,5 @@
   }
   .settings-storage dl > div {
     grid-template-columns: 1fr;
-  }
-}
-@media (max-width: 380px) {
-  .books-main .settings-heading h1 {
-    font-size: 36px;
   }
 }

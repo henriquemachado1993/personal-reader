@@ -6,6 +6,7 @@ import { useLibrary } from "@/modules/library/store";
 import { SyncSettings } from "./sync-settings";
 import { exportLibraryBackup } from "./library-backup";
 import "./settings-view.css";
+import "./workspace-page.css";
 
 export function SettingsView() {
   const { preferences, setPreferences } = useLibrary();
@@ -47,7 +48,7 @@ export function SettingsView() {
           ? "Configurado"
           : "Não configurado";
   return (
-    <>
+    <div className="workspace-page settings-page">
       <div className="page-heading settings-heading">
         <div>
           <h1>Configurações</h1>
@@ -161,6 +162,6 @@ export function SettingsView() {
           Personal Reader <span>Versão 0.1</span>
         </p>
       </div>
-    </>
+    </div>
   );
 }

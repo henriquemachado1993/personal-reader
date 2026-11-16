@@ -1,0 +1,11 @@
+.books-main .workspace-page {
+  width: 100%;
+  max-width: 1000px;
+  margin-inline: auto;
+}
+@media (max-width: 600px) {
+  .books-main .workspace-page > .page-heading h1 {
+    font-size: 32px;
+    line-height: 1.2;
+  }
+}
