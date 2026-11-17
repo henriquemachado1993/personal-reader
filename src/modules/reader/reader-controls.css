@@ -28,25 +28,6 @@
   color: var(--text);
   border-radius: 50%;
 }
-.reader-shell .reader-title {
-  position: relative;
-  isolation: isolate;
-  background: var(--surface);
-  border-radius: 24px;
-}
-.reader-shell .reader-title::before {
-  content: "";
-  position: absolute;
-  inset: -8px;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--surface);
-  pointer-events: none;
-}
-.reader-shell .reader-title strong {
-  max-width: min(440px, 36vw);
-  font-size: 18px;
-}
 .reader-shell .reader-page-counter {
   position: absolute;
   top: 110px;
@@ -276,10 +257,6 @@
   }
   .reader-shell .reader-header-right .type-control {
     font-size: 20px;
-  }
-  .reader-shell .reader-title strong {
-    max-width: 32vw;
-    font-size: 13px;
   }
   .reader-shell .reader-page-counter {
     top: 82px;

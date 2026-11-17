@@ -6,12 +6,13 @@ import { seedReaderLibrary } from "./seed-library";
 import { initialState } from "../reader-fixture";
 
 for (const viewport of [
+  { name: "desktop", width: 1440, height: 1000, theme: "light" },
   { name: "phone", width: 393, height: 852, theme: "light" },
   { name: "ipad", width: 820, height: 1180, theme: "light" },
   { name: "ipad-landscape", width: 1180, height: 820, theme: "light" },
   { name: "ipad-dark", width: 820, height: 1180, theme: "dark" },
 ] as const) {
-  test(`${viewport.name}: title stays opaque over scrolling text`, async ({
+  test(`${viewport.name}: reader keeps the center clear and identifies the book`, async ({
     page,
     context,
   }) => {
@@ -44,32 +45,42 @@ for (const viewport of [
       route.fulfill({ status: 503, body: "{}" }),
     );
     await page.goto(`/reader/${book.id}`);
-    const title = page.locator(".reader-title");
-    await expect(title).toHaveText(book.title);
+    await expect(page).toHaveTitle(`${book.title} · Le-Books`);
+    const header = page.getByRole("banner", { name: `Leitor: ${book.title}` });
+    await expect(header).toBeVisible();
+    await expect(header).not.toContainText(book.title);
+    await expect(header.locator(":scope > *")).toHaveCount(2);
     await page.locator(".reader-scroll-area").evaluate((element) => {
       element.scrollTop = 500;
     });
-    const geometry = await title.evaluate((element) => {
-      const title = element.getBoundingClientRect();
-      const page = document
-        .querySelector(".reader-continuous-page")!
+    const geometry = await header.evaluate((element) => {
+      const left = element
+        .querySelector(".reader-header-left")!
         .getBoundingClientRect();
-      const controls = document.querySelector(".reader-header-left")!;
+      const right = element
+        .querySelector(".reader-header-right")!
+        .getBoundingClientRect();
+      const gap = document.elementFromPoint(
+        (left.right + right.left) / 2,
+        left.top + left.height / 2,
+      );
       return {
-        background: getComputedStyle(element).backgroundColor,
-        controlsBackground: getComputedStyle(controls).backgroundColor,
-        titleTop: title.top,
-        titleBottom: title.bottom,
-        pageTop: page.top,
-        pageBottom: page.bottom,
-        opacity: getComputedStyle(element).opacity,
+        left: left.toJSON(),
+        right: right.toJSON(),
+        gapBlocked: element.contains(gap),
+        documentWidth: document.documentElement.scrollWidth,
       };
     });
-    expect(geometry.background).toBe(geometry.controlsBackground);
-    expect(geometry.background).not.toBe("rgba(0, 0, 0, 0)");
-    expect(geometry.opacity).toBe("1");
-    expect(geometry.pageTop).toBeLessThan(geometry.titleTop);
-    expect(geometry.pageBottom).toBeGreaterThan(geometry.titleBottom);
+    expect(geometry.left.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right.right).toBeLessThanOrEqual(viewport.width);
+    expect(
+      Math.max(
+        geometry.right.left - geometry.left.right,
+        geometry.right.top - geometry.left.bottom,
+      ),
+    ).toBeGreaterThanOrEqual(8);
+    expect(geometry.gapBlocked).toBe(false);
+    expect(geometry.documentWidth).toBeLessThanOrEqual(viewport.width);
     await expect(
       page.getByRole("button", {
         name: "Mostrar páginas e marcadores",

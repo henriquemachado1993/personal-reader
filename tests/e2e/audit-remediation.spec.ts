@@ -1,4 +1,4 @@
-import { chooseAnnotationTool } from "./annotation-tools";
+import { chooseAnnotationTool, insertTextAnnotation } from "./annotation-tools";
 import { test, expect } from "@playwright/test";
 import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
@@ -108,15 +108,7 @@ test("editing history restores moved objects and deleted final annotation", asyn
   await page
     .getByRole("button", { name: "Abrir ferramentas de anotação" })
     .click();
-  await chooseAnnotationTool(page, "Inserir texto");
-  await page.getByLabel("Texto", { exact: true }).fill("Objeto para desfazer");
-  const box = (await page
-    .locator(".reader-page[aria-current=page] .annotation-overlay")
-    .boundingBox())!;
-  await page.mouse.move(box.x + 60, box.y + 100);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 160, box.y + 150);
-  await page.mouse.up();
+  await insertTextAnnotation(page, "Objeto para desfazer");
   const object = page.locator(
     ".reader-page[aria-current=page] .annotation-overlay text",
   );
@@ -142,17 +134,17 @@ test("editing history restores moved objects and deleted final annotation", asyn
   await expect(object).toBeVisible();
 });
 
-test("reader keeps contrast, inline pagination and accessible colors across themes", async ({
+test("reader keeps book identification, inline pagination and accessible colors across themes", async ({
   page,
 }) => {
   await mkdir(".impeccable/review/remediation", { recursive: true });
   await page.goto("/settings");
   await page.getByRole("button", { name: "Escuro", exact: true }).click();
   await page.goto("/reader/dom-casmurro");
-  const ink = await page
-    .locator(".reader-title strong")
-    .evaluate((e) => getComputedStyle(e).color);
-  expect(ink).not.toBe("rgb(245, 245, 245)");
+  await expect(page).toHaveTitle("Dom Casmurro · Le-Books");
+  await expect(
+    page.getByRole("banner", { name: "Leitor: Dom Casmurro" }),
+  ).toBeVisible();
   const field = (await page
     .getByRole("spinbutton", { name: "Número da página" })
     .boundingBox())!;

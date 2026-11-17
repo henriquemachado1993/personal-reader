@@ -142,9 +142,21 @@ export async function exportPdf(
       const rendered = await renderUnicodeNote(
         annotation.text,
         annotation.color,
+        annotation.kind === "text" && p1 && p2
+          ? {
+              width: Math.max(
+                16,
+                Math.round(Math.abs(p2.x - p1.x) * width * 2),
+              ),
+              fontSize: (((annotation.fontSize ?? 24) * width) / 1000) * 2,
+            }
+          : undefined,
       );
       const image = await pdf.embedPng(rendered.bytes);
-      const targetWidth = Math.min(width - 48, (height - 48) / rendered.aspect);
+      const targetWidth =
+        annotation.kind === "text" && p1 && p2
+          ? Math.abs(p2.x - p1.x) * width
+          : Math.min(width - 48, (height - 48) / rendered.aspect);
       const targetHeight = targetWidth * rendered.aspect;
       page.drawImage(image, {
         x: Math.min(p1 ? p1.x * width : 24, width - targetWidth),

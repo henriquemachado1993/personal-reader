@@ -1,5 +1,5 @@
 "use client";
-import { Slider, Popover } from "@mantine/core";
+import { Slider, Popover, Tabs } from "@mantine/core";
 
 import { Button, TextField, TextArea } from "@/components/ui/controls";
 import "./reader-controls.css";
@@ -37,11 +37,24 @@ import {
   LoaderCircle,
   Palette,
   Hand,
+  Type,
+  ImagePlus,
+  Trash2,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
+import { AnnotationExcerpt } from "./annotation-excerpt";
+import { captureAnnotationPreview } from "./annotation-preview";
+import { AnnotationTextEditor } from "./annotation-text-editor";
+import { annotationTextLines, fitImagePoints } from "./annotation-objects";
+import { prepareAnnotationImage } from "./annotation-image";
+import {
+  annotationBounds,
+  annotationLabels,
+  textInAnnotation,
+} from "./annotation-context";
 import { createLatestSearch } from "./latest-search";
 import { PdfPage } from "./pdf-page";
 import { findPdfOccurrences } from "./pdf-search";
@@ -49,6 +62,7 @@ import { findTextMatches } from "./search-matches";
 import { SearchHighlights } from "./search-highlights";
 import "./reader-refinements.css";
 import "./annotation-toolbar.css";
+import "./annotation-objects.css";
 import "./reader-panels.css";
 import { AnnotationColorPicker } from "./annotation-color-picker";
 import { findVisiblePage, scrollToReaderPage } from "./page-scroll";
@@ -105,8 +119,8 @@ const annotationTools = [
   { id: "circle", label: "Círculo", icon: Circle, primary: false },
   { id: "arrow", label: "Seta", icon: MoveUpRight, primary: false },
   { id: "clipping", label: "Capturar trecho", icon: ScanLine, primary: false },
-  { id: "text", label: "Inserir texto", icon: StickyNote, primary: false },
-  { id: "image", label: "Inserir imagem", icon: Plus, primary: false },
+  { id: "text", label: "Inserir texto", icon: Type, primary: false },
+  { id: "image", label: "Inserir imagem", icon: ImagePlus, primary: false },
 ];
 
 export function Reader({ documentId }: { documentId: string }) {
@@ -132,8 +146,28 @@ export function Reader({ documentId }: { documentId: string }) {
     document.title = `${book?.title ?? "Leitor"} · Le-Books`;
   }, [book?.title]);
   const [page, setPage] = useState<number | null>(null);
-  const [left, setLeft] = useState(false);
-  const [right, setRight] = useState(false);
+  const [activePanel, setActivePanel] = useState<"navigation" | "notes" | null>(
+    null,
+  );
+  const [navigationTab, setNavigationTab] = useState<string | null>("pages");
+  const left = activePanel === "navigation";
+  const right = activePanel === "notes";
+  const closeReaderPanel = useCallback(() => {
+    setActivePanel(null);
+    document
+      .getElementById(
+        activePanel === "navigation"
+          ? "reader-navigation-toggle"
+          : "reader-notes-toggle",
+      )
+      ?.focus();
+  }, [activePanel]);
+  useEffect(() => {
+    if (left && navigationTab === "pages")
+      document
+        .querySelector('#reader-navigation-panel [aria-current="page"]')
+        ?.scrollIntoView({ block: "nearest" });
+  }, [left, navigationTab, page]);
   const [focus, setFocus] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [extraToolsOpen, setExtraToolsOpen] = useState(false);
@@ -143,8 +177,24 @@ export function Reader({ documentId }: { documentId: string }) {
   const [color, setColor] = useState(colors[0]);
   const [thickness, setThickness] = useState(2);
   const [opacity, setOpacity] = useState(1);
-  const [stampText, setStampText] = useState("");
-  const [stampImage, setStampImage] = useState<string>();
+  const [pendingImage, setPendingImage] =
+    useState<Awaited<ReturnType<typeof prepareAnnotationImage>>>();
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const imageInput = useRef<HTMLInputElement>(null);
+  const imageReplacement = useRef<string | undefined>(undefined);
+  const imageRequest = useRef(0);
+  useEffect(
+    () => () => {
+      imageRequest.current++;
+    },
+    [documentId],
+  );
+  const [textEditor, setTextEditor] = useState<{
+    point: Point;
+    anchor: { x: number; y: number };
+    annotation?: Annotation;
+  } | null>(null);
   const [selectedObject, setSelectedObject] = useState<string>();
   const [draft, setDraft] = useState<Point[]>([]);
   const [selection, setSelection] = useState<{
@@ -191,6 +241,9 @@ export function Reader({ documentId }: { documentId: string }) {
   >(null);
   const scrollHost = useRef<HTMLDivElement>(null);
   const restoredDocument = useRef<string | null>(null);
+  const navigationTarget = useRef<{ index: number; scrollTop: number } | null>(
+    null,
+  );
   const tap = useRef<{
     x: number;
     y: number;
@@ -206,11 +259,11 @@ export function Reader({ documentId }: { documentId: string }) {
     setCustomColorOpen(false);
     setTool("select");
     setDraft([]);
-    setLeft(false);
-    setRight(false);
+    setActivePanel(null);
     setAppearance(false);
     setSearching(false);
     setSelection(null);
+    setTextEditor(null);
   }, []);
   useEffect(
     () => () => {
@@ -268,9 +321,7 @@ export function Reader({ documentId }: { documentId: string }) {
     () => library.annotations.filter((a) => a.documentId === documentId),
     [library.annotations, documentId],
   );
-  const visibleAnnotations = annotations.filter((annotation) =>
-    ["note", "highlight", "clipping"].includes(annotation.kind),
-  );
+  const visibleAnnotations = annotations;
   const documentBookmarks = useMemo(
     () =>
       library.bookmarks.filter(
@@ -342,6 +393,7 @@ export function Reader({ documentId }: { documentId: string }) {
   useEffect(() => {
     const host = scrollHost.current;
     if (!host || !book || realEpub) return;
+    navigationTarget.current = null;
     const pages = Array.from(
       host.querySelectorAll<HTMLElement>("[data-reader-page]"),
     );
@@ -355,6 +407,11 @@ export function Reader({ documentId }: { documentId: string }) {
       scheduled = 0;
       if (!initialized) return;
       if (
+        navigationTarget.current &&
+        Math.abs(host.scrollTop - navigationTarget.current.scrollTop) > 1
+      )
+        navigationTarget.current = null;
+      if (
         host.clientWidth !== viewportWidth ||
         host.clientHeight !== viewportHeight ||
         host.scrollHeight !== contentHeight
@@ -362,11 +419,13 @@ export function Reader({ documentId }: { documentId: string }) {
         preservePosition();
       }
       const top = host.getBoundingClientRect().top + host.clientHeight * 0.35;
-      const active = findVisiblePage(
-        pages,
-        (node) => node.getBoundingClientRect().bottom,
-        top,
-      );
+      const active = navigationTarget.current
+        ? pages[navigationTarget.current.index]
+        : findVisiblePage(
+            pages,
+            (node) => node.getBoundingClientRect().bottom,
+            top,
+          );
       if (!active) return;
       const index = Number(active.dataset.readerPage);
       const bounds = active.getBoundingClientRect();
@@ -394,6 +453,14 @@ export function Reader({ documentId }: { documentId: string }) {
       viewportWidth = host.clientWidth;
       viewportHeight = host.clientHeight;
       contentHeight = host.scrollHeight;
+      if (navigationTarget.current) {
+        const target = pages[navigationTarget.current.index];
+        if (target) {
+          scrollToReaderPage(host, target);
+          navigationTarget.current.scrollTop = host.scrollTop;
+        }
+        return;
+      }
       if (!readingAnchor) return;
       const target = pages[readingAnchor.index];
       if (!target) return;
@@ -428,7 +495,10 @@ export function Reader({ documentId }: { documentId: string }) {
     const restore = requestAnimationFrame(() => {
       initialized = true;
       setPage(saved);
-      if (pages[saved]) scrollToReaderPage(host, pages[saved]);
+      if (pages[saved]) {
+        scrollToReaderPage(host, pages[saved]);
+        navigationTarget.current = { index: saved, scrollTop: host.scrollTop };
+      }
       track();
     });
     return () => {
@@ -507,8 +577,11 @@ export function Reader({ documentId }: { documentId: string }) {
         return;
       }
       const next = Math.max(0, Math.min(target, document.pages - 1));
+      imageRequest.current++;
+      setImageLoading(false);
       setPage(next);
       setSelection(null);
+      setTextEditor(null);
       setError("");
       useLibrary.getState().updateDocument(documentId, {
         page: next,
@@ -520,7 +593,12 @@ export function Reader({ documentId }: { documentId: string }) {
       const targetPage = host?.querySelector<HTMLElement>(
         `[data-reader-page="${next}"]`,
       );
-      if (host && targetPage) scrollToReaderPage(host, targetPage);
+      if (host && targetPage) {
+        scrollToReaderPage(host, targetPage);
+        // A short page may end above the reading line while still being the
+        // explicitly selected page. Resume scroll tracking once it moves.
+        navigationTarget.current = { index: next, scrollTop: host.scrollTop };
+      }
     },
     [documentId, currentPage],
   );
@@ -537,6 +615,11 @@ export function Reader({ documentId }: { documentId: string }) {
         return;
       }
       if (document.querySelector(".annotation-popup")) return;
+      if (event.key === "Escape" && activePanel) {
+        event.preventDefault();
+        closeReaderPanel();
+        return;
+      }
       if (
         (event.target as HTMLElement).matches(
           "input, textarea, select, [contenteditable], [role=slider], [role=combobox]",
@@ -565,45 +648,84 @@ export function Reader({ documentId }: { documentId: string }) {
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [currentPage, go, undo, redoAction, extraToolsOpen, customColorOpen]);
+  }, [
+    currentPage,
+    go,
+    undo,
+    redoAction,
+    extraToolsOpen,
+    customColorOpen,
+    activePanel,
+    closeReaderPanel,
+  ]);
   const addAnnotation = (
     kind: AnnotationKind,
     points: Point[] = [],
     text = "",
     image?: string,
+    fontSize?: number,
   ) => {
     if (!book) return;
     const now = new Date().toISOString();
-    editAnnotation({
+    const selected =
+      kind === "note" || (kind === "highlight" && text) ? selection : null;
+    const quote =
+      selected?.text ||
+      (pageHost.current && textInAnnotation(pageHost.current, points, kind)) ||
+      undefined;
+    const annotation: Annotation = {
       id: crypto.randomUUID(),
       documentId,
       kind,
       page: currentPage,
-      location: selection?.location ?? pageLocation(book, currentPage),
+      location: selected?.location ?? pageLocation(book, currentPage),
       text,
-      quote: selection?.text,
+      quote,
       color,
       points,
-      image,
+      image:
+        image ||
+        (!quote && !text && realPdf && canvas.current
+          ? captureAnnotationPreview(canvas.current, {
+              points,
+              kind,
+              color,
+              thickness,
+              opacity,
+            })
+          : undefined),
       thickness,
       opacity,
+      fontSize,
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    editAnnotation(annotation);
     if (kind === "note" || kind === "highlight") setSelection(null);
+    return annotation;
   };
   const completeDrawing = (points: Point[], kind: AnnotationKind) => {
-    if (kind === "text" || kind === "image") {
-      if (
-        (kind === "text" && !stampText.trim()) ||
-        (kind === "image" && !stampImage)
-      ) {
-        library.notify(
-          "Preencha o texto ou escolha uma imagem antes de marcar a página.",
-        );
+    if (kind === "image") {
+      if (!pendingImage) {
+        imageInput.current?.click();
         return;
       }
-      addAnnotation(kind, points, stampText, stampImage);
+      const bounds = pageHost.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const placed = fitImagePoints(
+        points[0],
+        points.at(-1)!,
+        pendingImage.width / pendingImage.height,
+        bounds.width,
+        bounds.height,
+      );
+      const annotation = addAnnotation(
+        "image",
+        placed,
+        "",
+        pendingImage.source,
+      );
+      setSelectedObject(annotation?.id);
       setTool("select");
       return;
     }
@@ -640,6 +762,101 @@ export function Reader({ documentId }: { documentId: string }) {
       return;
     }
     addAnnotation(kind, points);
+  };
+  const openTextEditor = (point: Point, annotation?: Annotation) => {
+    const bounds = pageHost.current?.getBoundingClientRect();
+    if (!bounds) return;
+    setTextEditor({
+      point,
+      anchor: {
+        x: bounds.left + point.x * bounds.width,
+        y: bounds.top + point.y * bounds.height,
+      },
+      annotation,
+    });
+  };
+  const saveTextObject = (text: string, fontSize: number) => {
+    const bounds = pageHost.current?.getBoundingClientRect();
+    if (!bounds || !textEditor) return "A página ainda está sendo preparada.";
+    const existing = textEditor.annotation;
+    const width = existing?.points
+      ? Math.abs(existing.points.at(-1)!.x - existing.points[0].x) *
+        bounds.width
+      : Math.min(320, bounds.width * 0.75);
+    const height =
+      annotationTextLines(text, width, fontSize).length * fontSize * 1.35 +
+      fontSize * 0.5;
+    if (height > bounds.height - 16)
+      return "O texto não cabe na página. Reduza o tamanho ou a quantidade de texto.";
+    const x = Math.max(
+      0,
+      Math.min(textEditor.point.x, 1 - width / bounds.width),
+    );
+    const y = Math.max(
+      0,
+      Math.min(textEditor.point.y, 1 - height / bounds.height),
+    );
+    const points = [
+      { x, y },
+      { x: x + width / bounds.width, y: y + height / bounds.height },
+    ];
+    const normalizedFont = (fontSize * 1000) / bounds.width;
+    if (existing)
+      editAnnotation({
+        ...existing,
+        text,
+        points,
+        fontSize: normalizedFont,
+        updatedAt: new Date().toISOString(),
+      });
+    const annotation =
+      existing ??
+      addAnnotation("text", points, text, undefined, normalizedFont);
+    setSelectedObject(annotation?.id);
+    setTool("select");
+    setTextEditor(null);
+  };
+  const chooseImage = (replacement?: string) => {
+    imageReplacement.current = replacement;
+    if (imageInput.current) {
+      imageInput.current.value = "";
+      imageInput.current.click();
+    }
+  };
+  const selectAnnotationTool = (next: string) => {
+    setTextEditor(null);
+    setSelection(null);
+    setImageError("");
+    if (next !== "select") setSelectedObject(undefined);
+    if (next === "text" && color === colors[0])
+      setColor(
+        library.preferences.readerTheme === "night" ? "#ece5d8" : "#3e3830",
+      );
+    setTool(next);
+    if (next === "image" && !pendingImage) chooseImage();
+  };
+  const moveAnnotationObject = (annotation: Annotation) => {
+    const points = annotation.points ?? [];
+    const textual = ["highlight", "underline"].includes(annotation.kind);
+    const quote =
+      textual && pageHost.current
+        ? textInAnnotation(pageHost.current, points, annotation.kind)
+        : "";
+    editAnnotation({
+      ...annotation,
+      ...(textual
+        ? { quote: quote || undefined, text: annotation.text ? quote : "" }
+        : {}),
+      ...(!["image", "clipping", "text"].includes(annotation.kind) &&
+      realPdf &&
+      canvas.current
+        ? {
+            image: quote
+              ? undefined
+              : captureAnnotationPreview(canvas.current, annotation),
+          }
+        : {}),
+    });
   };
   const captureSelection = () => {
     if (tool !== "select" || realEpub) return;
@@ -733,8 +950,14 @@ export function Reader({ documentId }: { documentId: string }) {
     <div
       className={`reader-shell ${focus ? "focus-mode" : ""} ${toolsOpen ? "annotation-open" : ""}`}
       data-reader-theme={library.preferences.readerTheme}
+      data-reader-panel={activePanel ?? undefined}
+      data-text-editing={textEditor ? "true" : undefined}
     >
-      <header className="reader-header" inert={focus}>
+      <header
+        className="reader-header"
+        aria-label={`Leitor: ${book.title}`}
+        inert={focus}
+      >
         <div className="reader-header-left">
           <Link
             className="icon-button"
@@ -744,9 +967,12 @@ export function Reader({ documentId }: { documentId: string }) {
             <X size={23} />
           </Link>
           <IconButton
+            id="reader-navigation-toggle"
             label="Mostrar páginas e marcadores"
             aria-pressed={left}
-            onClick={() => setLeft(!left)}
+            aria-expanded={left}
+            aria-controls={left ? "reader-navigation-panel" : undefined}
+            onClick={() => setActivePanel(left ? null : "navigation")}
           >
             <PanelLeft size={19} />
           </IconButton>
@@ -762,9 +988,6 @@ export function Reader({ documentId }: { documentId: string }) {
             )}
           </IconButton>
         </div>
-        <div className="reader-title">
-          <strong>{book.title}</strong>
-        </div>
         <div className="reader-header-right">
           <IconButton
             label={
@@ -776,6 +999,7 @@ export function Reader({ documentId }: { documentId: string }) {
             aria-expanded={toolsOpen}
             aria-controls="annotation-tools"
             onClick={() => {
+              setTextEditor(null);
               setToolsOpen((open) => !open);
               setExtraToolsOpen(false);
               setCustomColorOpen(false);
@@ -817,10 +1041,13 @@ export function Reader({ documentId }: { documentId: string }) {
             <Bookmark size={19} fill={bookmarked ? "currentColor" : "none"} />
           </IconButton>
           <IconButton
+            id="reader-notes-toggle"
             label="Mostrar anotações"
             className="reader-notes-toggle"
             aria-pressed={right}
-            onClick={() => setRight(!right)}
+            aria-expanded={right}
+            aria-controls={right ? "reader-notes-panel" : undefined}
+            onClick={() => setActivePanel(right ? null : "notes")}
           >
             <PanelRight size={19} />
           </IconButton>
@@ -1021,70 +1248,86 @@ export function Reader({ documentId }: { documentId: string }) {
       <div className="reader-body">
         {left && (
           <aside
+            id="reader-navigation-panel"
             className="reader-left-panel"
             aria-label="Páginas e marcadores"
           >
             <div className="panel-title">
-              <h2>Páginas</h2>
-              <IconButton label="Fechar páginas" onClick={() => setLeft(false)}>
+              <h2>Navegação</h2>
+              <IconButton label="Fechar páginas" onClick={closeReaderPanel}>
                 <X size={17} />
               </IconButton>
             </div>
-            <div className="reader-panel-content">
-              <div className="page-navigation-list">
-                {Array.from({ length: Math.min(book.pages, 1000) }, (_, i) => (
-                  <Button
-                    className={currentPage === i ? "current" : ""}
-                    aria-current={currentPage === i ? "page" : undefined}
-                    key={i}
-                    onClick={() => go(i)}
-                  >
-                    <span>{i + 1}</span>
-                    <span>
-                      {book.content?.[i]?.split("\n")[0] ?? `Página ${i + 1}`}
-                    </span>
-                    {documentBookmarks.some(
-                      (bookmark) => bookmark.page === i,
-                    ) && <Bookmark size={13} fill="currentColor" />}
-                  </Button>
-                ))}
-              </div>
-              <h3 className="panel-subheading">Marcadores</h3>
-              <Button
-                className="bookmark-link"
-                onClick={() => {
-                  setLeft(false);
-                  setRight(true);
-                }}
-              >
-                <StickyNote size={15} />
-                Anotações deste livro
-              </Button>
-              {documentBookmarks.length ? (
-                documentBookmarks.map((b) => (
-                  <Button
-                    key={b.id}
-                    className="bookmark-link"
-                    onClick={() => {
-                      if (
-                        b.location.type === "EPUB" &&
-                        b.location.cfi &&
-                        realEpub
-                      )
-                        epubNav.current?.go(b.location.cfi);
-                      else go(b.page);
-                    }}
-                  >
-                    <Bookmark size={15} />
-                    Página {b.page + 1}
-                  </Button>
-                ))
-              ) : (
-                <p className="panel-empty">
-                  Marque uma página para voltar a ela depois.
-                </p>
-              )}
-            </div>
+            <Tabs
+              className="reader-navigation-tabs"
+              value={navigationTab}
+              onChange={setNavigationTab}
+              keepMounted={false}
+            >
+              <Tabs.List grow aria-label="Navegação do livro">
+                <Tabs.Tab value="pages">Páginas</Tabs.Tab>
+                <Tabs.Tab value="bookmarks">Marcadores</Tabs.Tab>
+              </Tabs.List>
+              <Tabs.Panel value="pages" className="reader-panel-content">
+                <div className="page-navigation-list">
+                  {Array.from(
+                    { length: Math.min(book.pages, 1000) },
+                    (_, i) => (
+                      <Button
+                        className={currentPage === i ? "current" : ""}
+                        aria-current={currentPage === i ? "page" : undefined}
+                        key={i}
+                        onClick={() => go(i)}
+                      >
+                        <span>{i + 1}</span>
+                        <span>
+                          {book.content?.[i]?.split("\n")[0] ??
+                            `Página ${i + 1}`}
+                        </span>
+                        {documentBookmarks.some(
+                          (bookmark) => bookmark.page === i,
+                        ) && <Bookmark size={13} fill="currentColor" />}
+                      </Button>
+                    ),
+                  )}
+                </div>
+              </Tabs.Panel>
+              <Tabs.Panel value="bookmarks" className="reader-panel-content">
+                <Button
+                  className="bookmark-link"
+                  onClick={() => {
+                    setActivePanel("notes");
+                  }}
+                >
+                  <StickyNote size={15} />
+                  Anotações deste livro
+                </Button>
+                {documentBookmarks.length ? (
+                  documentBookmarks.map((b) => (
+                    <Button
+                      key={b.id}
+                      className="bookmark-link"
+                      onClick={() => {
+                        if (
+                          b.location.type === "EPUB" &&
+                          b.location.cfi &&
+                          realEpub
+                        )
+                          epubNav.current?.go(b.location.cfi);
+                        else go(b.page);
+                      }}
+                    >
+                      <Bookmark size={15} />
+                      Página {b.page + 1}
+                    </Button>
+                  ))
+                ) : (
+                  <p className="panel-empty">
+                    Marque uma página para voltar a ela depois.
+                  </p>
+                )}
+              </Tabs.Panel>
+            </Tabs>
           </aside>
         )}
         <div className="reader-scroll-area" ref={scrollHost}>
@@ -1229,7 +1472,7 @@ export function Reader({ documentId }: { documentId: string }) {
                     onDraft={setDraft}
                     onComplete={completeDrawing}
                     onErase={(id) => eraseAnnotation(id)}
-                    onObjectChange={editAnnotation}
+                    onObjectChange={moveAnnotationObject}
                     onObjectSelect={(id) => {
                       setSelectedObject(id);
                       const object = annotations.find((note) => note.id === id);
@@ -1237,9 +1480,16 @@ export function Reader({ documentId }: { documentId: string }) {
                         setColor(object.color);
                         setThickness(object.thickness ?? 2);
                         setOpacity(object.opacity ?? 1);
-                        setStampText(object.text);
                       }
                     }}
+                    selectedId={selectedObject}
+                    onInsertText={(point) => openTextEditor(point)}
+                    onEditText={(annotation) =>
+                      openTextEditor(
+                        annotation.points?.[0] ?? { x: 0.1, y: 0.1 },
+                        annotation,
+                      )
+                    }
                   />
                 )}
                 {(realEpub
@@ -1268,7 +1518,7 @@ export function Reader({ documentId }: { documentId: string }) {
               </Button>
               <Button
                 onClick={() => {
-                  setRight(true);
+                  setActivePanel("notes");
                   setNote("");
                 }}
               >
@@ -1290,20 +1540,18 @@ export function Reader({ documentId }: { documentId: string }) {
           )}
         </div>
         {right && (
-          <aside className="reader-notes-panel" aria-label="Anotações do livro">
+          <aside
+            id="reader-notes-panel"
+            className="reader-notes-panel"
+            aria-label="Anotações do livro"
+          >
             <div className="panel-title">
-              <h2>À margem da leitura</h2>
-              <IconButton
-                label="Fechar anotações"
-                onClick={() => setRight(false)}
-              >
+              <h2>Anotações</h2>
+              <IconButton label="Fechar anotações" onClick={closeReaderPanel}>
                 <X size={17} />
               </IconButton>
             </div>
             <div className="reader-panel-content">
-              <p className="panel-description">
-                Guarde o que merece uma segunda leitura.
-              </p>
               <form
                 className="note-form"
                 onSubmit={(e) => {
@@ -1315,11 +1563,17 @@ export function Reader({ documentId }: { documentId: string }) {
                 }}
               >
                 {selection && <blockquote>{selection.text}</blockquote>}
-                <label className="sr-only" htmlFor="new-note">
-                  Sua anotação
+                <label
+                  id="reader-note-page"
+                  className="note-page-label"
+                  htmlFor="new-note"
+                >
+                  {realEpub ? "Na posição atual" : `Página ${currentPage + 1}`}
                 </label>
                 <TextArea
                   id="new-note"
+                  aria-label="Sua anotação"
+                  aria-describedby="reader-note-page"
                   placeholder="O que esta página fez você pensar?"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -1339,11 +1593,7 @@ export function Reader({ documentId }: { documentId: string }) {
                           aria-hidden="true"
                           style={{ backgroundColor: a.color }}
                         />
-                        {a.kind === "highlight"
-                          ? "Destaque"
-                          : a.kind === "clipping"
-                            ? "Captura"
-                            : "Anotação"}
+                        {annotationLabels[a.kind]}
                       </span>
                       <IconButton
                         label="Remover anotação"
@@ -1352,24 +1602,33 @@ export function Reader({ documentId }: { documentId: string }) {
                         <X size={13} />
                       </IconButton>
                     </div>
-                    {a.image && (
-                      <img
-                        src={a.image}
-                        alt={a.text}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    )}
-                    {a.quote && a.quote !== a.text && (
-                      <blockquote>{a.quote}</blockquote>
-                    )}
-                    <p>{a.text}</p>
+                    <AnnotationExcerpt annotation={a} />
                     <Button
                       className="text-link"
                       onClick={() => {
                         if (realEpub && a.location.type === "EPUB")
                           epubNav.current?.go(a.location.cfi);
-                        else go(a.page);
+                        else {
+                          go(a.page);
+                          requestAnimationFrame(() => {
+                            const host = scrollHost.current;
+                            const target = host?.querySelector<HTMLElement>(
+                              `[data-reader-page="${a.page}"]`,
+                            );
+                            const bounds = annotationBounds(a.points ?? []);
+                            if (!host || !target || !bounds) return;
+                            const pageBounds = target.getBoundingClientRect();
+                            host.scrollBy({
+                              top:
+                                pageBounds.top +
+                                (bounds.y + bounds.height / 2) *
+                                  pageBounds.height -
+                                host.getBoundingClientRect().top -
+                                host.clientHeight * 0.35,
+                              behavior: "instant",
+                            });
+                          });
+                        }
                       }}
                     >
                       Página {a.page + 1}
@@ -1391,6 +1650,12 @@ export function Reader({ documentId }: { documentId: string }) {
         <div
           id="annotation-tools"
           className="annotation-toolbar"
+          data-object={
+            tool === "image" ||
+            (tool === "select" && selectedAnnotation?.kind === "image")
+              ? "image"
+              : undefined
+          }
           role="toolbar"
           aria-label="Ferramentas de anotação"
         >
@@ -1432,7 +1697,7 @@ export function Reader({ documentId }: { documentId: string }) {
                     disabled={realEpub && id !== "select"}
                     aria-pressed={tool === id}
                     className={tool === id ? "selected" : ""}
-                    onClick={() => setTool(id)}
+                    onClick={() => selectAnnotationTool(id)}
                   >
                     <Icon size={22} />
                   </IconButton>
@@ -1514,7 +1779,7 @@ export function Reader({ documentId }: { documentId: string }) {
                         aria-label={label}
                         aria-pressed={tool === id}
                         onClick={() => {
-                          setTool(id);
+                          selectAnnotationTool(id);
                           setExtraToolsOpen(false);
                         }}
                       >
@@ -1527,26 +1792,97 @@ export function Reader({ documentId }: { documentId: string }) {
             </div>
           </div>
           <div className="annotation-options">
-            {annotations.some((note) => note.id === selectedObject) && (
-              <Button
-                className="button secondary"
-                onClick={() => {
-                  const object = annotations.find(
-                    (a) => a.id === selectedObject,
-                  );
-                  if (object)
+            <input
+              ref={imageInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                const request = ++imageRequest.current;
+                const replacementId = imageReplacement.current;
+                setImageLoading(true);
+                setImageError("");
+                try {
+                  const image = await prepareAnnotationImage(file);
+                  if (request !== imageRequest.current) return;
+                  setPendingImage(image);
+                  const object = useLibrary
+                    .getState()
+                    .annotations.find(
+                      (annotation) => annotation.id === replacementId,
+                    );
+                  const bounds = pageHost.current?.getBoundingClientRect();
+                  if (object?.points?.length && bounds) {
+                    const box = annotationBounds(object.points)!;
+                    const points = fitImagePoints(
+                      { x: box.x, y: box.y },
+                      { x: box.x + box.width, y: 1 },
+                      image.width / image.height,
+                      bounds.width,
+                      bounds.height,
+                    );
                     editAnnotation({
                       ...object,
-                      color,
-                      thickness,
-                      opacity,
-                      text: stampText || object.text,
+                      image: image.source,
+                      points,
                       updatedAt: new Date().toISOString(),
                     });
-                }}
-              >
-                Aplicar ao objeto selecionado
-              </Button>
+                  }
+                } catch (error) {
+                  if (request === imageRequest.current)
+                    setImageError(
+                      error instanceof Error
+                        ? error.message
+                        : "Não foi possível abrir a imagem.",
+                    );
+                } finally {
+                  if (request === imageRequest.current) setImageLoading(false);
+                }
+              }}
+            />
+            {tool === "select" && selectedAnnotation && (
+              <div className="annotation-object-actions">
+                <span>
+                  {selectedAnnotation.kind === "image"
+                    ? "Imagem selecionada"
+                    : selectedAnnotation.kind === "text"
+                      ? "Texto selecionado"
+                      : "Marcação selecionada"}
+                </span>
+                {selectedAnnotation.kind === "text" && (
+                  <Button
+                    className="button secondary"
+                    onClick={() =>
+                      openTextEditor(
+                        selectedAnnotation.points?.[0] ?? { x: 0.1, y: 0.1 },
+                        selectedAnnotation,
+                      )
+                    }
+                  >
+                    Editar texto
+                  </Button>
+                )}
+                {selectedAnnotation.kind === "image" && (
+                  <Button
+                    className="button secondary"
+                    disabled={imageLoading}
+                    onClick={() => chooseImage(selectedAnnotation.id)}
+                  >
+                    Trocar imagem
+                  </Button>
+                )}
+                <IconButton
+                  label="Remover objeto selecionado"
+                  onClick={() => {
+                    eraseAnnotation(selectedAnnotation.id);
+                    setSelectedObject(undefined);
+                  }}
+                >
+                  <Trash2 size={18} />
+                </IconButton>
+              </div>
             )}
             {showStrokeThickness && (
               <label>
@@ -1604,36 +1940,69 @@ export function Reader({ documentId }: { documentId: string }) {
               </label>
             )}
             {tool === "text" && (
-              <label>
-                Texto{" "}
-                <TextField
-                  value={stampText}
-                  maxLength={500}
-                  onChange={(e) => setStampText(e.target.value)}
-                />
-              </label>
+              <p className="annotation-insert-hint">
+                Toque na página para escrever. Depois, arraste o texto para
+                mover.
+              </p>
             )}
             {tool === "image" && (
-              <label>
-                Imagem{" "}
-                <TextField
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || file.size > 5_000_000) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setStampImage(String(reader.result));
-                    reader.readAsDataURL(file);
-                  }}
-                />
-              </label>
+              <div className="annotation-image-insert">
+                {pendingImage && (
+                  <img
+                    src={pendingImage.source}
+                    alt="Prévia da imagem a inserir"
+                  />
+                )}
+                <div>
+                  <Button
+                    type="button"
+                    className="button secondary"
+                    disabled={imageLoading}
+                    onClick={() => chooseImage()}
+                  >
+                    {pendingImage ? "Trocar imagem" : "Escolher imagem"}
+                  </Button>
+                  {pendingImage && (
+                    <p className="annotation-insert-hint">
+                      Toque na página para inserir ou arraste para definir o
+                      tamanho.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-            {tool === "image" && stampImage && (
-              <span role="status">Imagem pronta para inserir</span>
+            {imageLoading && <p role="status">Preparando imagem…</p>}
+            {imageError && (
+              <p role="alert" className="annotation-insert-error">
+                {imageError}
+              </p>
             )}
           </div>
         </div>
+      )}
+      {textEditor && (
+        <AnnotationTextEditor
+          key={textEditor.annotation?.id ?? "new"}
+          anchor={textEditor.anchor}
+          text={textEditor.annotation?.text}
+          fontSize={
+            textEditor.annotation
+              ? ((textEditor.annotation.fontSize ?? 24) *
+                  (pageHost.current?.clientWidth ?? 760)) /
+                1000
+              : 18
+          }
+          editing={!!textEditor.annotation}
+          onSave={saveTextObject}
+          onCancel={() => {
+            setTextEditor(null);
+            document
+              .querySelector<HTMLButtonElement>(
+                '.annotation-primary-tools button[aria-pressed="true"]',
+              )
+              ?.focus();
+          }}
+        />
       )}
       <div className="reader-page-counter" inert={focus}>
         <div className="reader-pagination">

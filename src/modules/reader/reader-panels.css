@@ -2,37 +2,39 @@ body .reader-shell :is(.reader-left-panel, .reader-notes-panel) {
   display: flex;
   flex-direction: column;
   top: var(--reader-top);
-  bottom: auto;
-  max-height: calc(100% - var(--reader-top) - 80px - var(--app-safe-bottom));
-  width: min(360px, calc(100% - 32px));
+  bottom: 0;
+  max-height: none;
+  width: min(320px, calc(100% - 24px));
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
   background: var(--surface);
   color: var(--text);
   z-index: 25;
   font-family: var(--sans);
+  margin-bottom: 0;
 }
 body .reader-shell .reader-left-panel {
-  left: 16px;
-  width: min(300px, calc(100% - 32px));
+  left: 0;
+  border-right: 1px solid var(--border);
 }
 body .reader-shell .reader-notes-panel {
-  right: 16px;
+  right: 0;
+  border-left: 1px solid var(--border);
 }
 .reader-shell .panel-title {
   flex-shrink: 0;
-  padding: 16px 20px;
+  padding: 8px 16px;
   gap: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 .reader-shell .panel-title h2 {
   margin: 0;
-  font-family: var(--sans);
-  font-size: 19px;
-  font-weight: 500;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.02em;
 }
@@ -44,19 +46,40 @@ body .reader-shell .reader-notes-panel {
   border-radius: 50%;
 }
 .reader-panel-content {
+  flex: 1;
   min-height: 0;
-  padding: 0 20px 20px;
+  padding: 16px 16px calc(24px + var(--app-safe-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
+.reader-navigation-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.reader-navigation-tabs .mantine-Tabs-list {
+  flex-shrink: 0;
+  margin: 0 16px;
+}
+.reader-navigation-tabs .mantine-Tabs-tab {
+  min-height: 44px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+.reader-navigation-tabs .mantine-Tabs-tab[data-active] {
+  color: var(--text);
+  border-color: var(--text);
+}
 .reader-shell .page-navigation-list {
-  margin-top: 16px;
-  max-height: min(38dvh, 320px);
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  margin-top: 0;
+  max-height: none;
+  overflow: visible;
 }
 .reader-shell .page-navigation-list button {
   min-height: 44px;
@@ -112,20 +135,33 @@ body .reader-shell .reader-notes-panel {
   background: var(--surface-secondary);
 }
 .reader-shell .note-form {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+}
+.note-page-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
 }
 .reader-shell .note-form textarea {
-  min-height: 120px;
-  max-height: 240px;
-  padding: 12px;
+  min-height: 96px;
+  max-height: 200px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
   line-height: 1.6;
   caret-color: var(--text);
 }
 .reader-shell .note-form > .button {
+  align-self: flex-end;
+  width: auto;
   min-height: 44px;
   margin-top: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
 }
 .reader-shell .panel-annotations {
   margin-top: 24px;
@@ -140,6 +176,22 @@ body .reader-shell .reader-notes-panel {
 .reader-shell .panel-annotations blockquote {
   overflow-wrap: anywhere;
   line-height: 1.6;
+}
+.reader-shell .panel-annotations .annotation-excerpt {
+  display: block;
+  font-size: 14px;
+}
+.reader-shell .panel-annotations .annotation-excerpt blockquote {
+  color: var(--text);
+  font-size: 14px;
+  font-style: normal;
+}
+.reader-shell .panel-annotations .annotation-context-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.reader-shell .panel-annotations .annotation-region-preview {
+  margin-block: 8px;
 }
 .reader-shell .panel-annotations img {
   display: block;
@@ -163,4 +215,28 @@ body .reader-shell .reader-notes-panel {
 .reader-shell .reader-panel-content button:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: -2px;
+}
+@media (min-width: 1100px) {
+  body .reader-shell :is(.reader-left-panel, .reader-notes-panel) {
+    position: static;
+    flex: 0 0 320px;
+    margin-top: var(--reader-top);
+  }
+}
+@media (min-width: 700px) {
+  .reader-shell[data-reader-panel="navigation"] .reader-footer {
+    left: 320px;
+  }
+  .reader-shell[data-reader-panel="notes"] .reader-footer {
+    right: 320px;
+  }
+  body .reader-shell[data-reader-panel="notes"] .reader-page-counter {
+    right: 344px;
+  }
+}
+@media (max-width: 699px) {
+  .reader-shell[data-reader-panel] :is(.reader-footer, .reader-page-counter) {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }

@@ -85,6 +85,7 @@ export const snapshotSchema = z.object({
         image: z.string().max(10000000).optional(),
         thickness: z.number().min(1).max(12).optional(),
         opacity: z.number().min(0.1).max(1).optional(),
+        fontSize: z.number().min(1).max(500).optional(),
         createdAt: z.iso.datetime(),
         updatedAt: z.iso.datetime(),
       }),

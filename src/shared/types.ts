@@ -67,6 +67,8 @@ export interface Annotation {
   image?: string;
   thickness?: number;
   opacity?: number;
+  /** Text size relative to a page width of 1000 units. */
+  fontSize?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import { chooseAnnotationTool } from "./annotation-tools";
+import { chooseAnnotationTool, insertTextAnnotation } from "./annotation-tools";
 import { test, expect } from "@playwright/test";
 import { seedReaderLibrary } from "./seed-library";
 import { encode } from "next-auth/jwt";
@@ -313,11 +313,13 @@ test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", asyn
     name: "pixel.png",
     mimeType: "image/png",
     buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aDlgAAAAASUVORK5CYII=",
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
       "base64",
     ),
   });
-  await expect(page.getByText("Imagem pronta para inserir")).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Prévia da imagem a inserir" }),
+  ).toBeVisible();
   const surface = await page
     .locator(".reader-page[aria-current=page] .annotation-overlay")
     .boundingBox();
@@ -522,16 +524,7 @@ test("advanced annotation controls persist text and stroke properties", async ({
   await page.getByRole("slider", { name: "Opacidade da marcação" }).focus();
   await page.keyboard.press("Home");
   for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
-  await chooseAnnotationTool(page, "Inserir texto");
-  await page.getByLabel("Texto", { exact: true }).fill("Nota na página");
-  const box = await page
-    .locator(".reader-page[aria-current=page] .annotation-overlay")
-    .boundingBox();
-  if (!box) throw new Error("Página indisponível");
-  await page.mouse.move(box.x + 50, box.y + 100);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 150, box.y + 140);
-  await page.mouse.up();
+  await insertTextAnnotation(page, "Nota na página");
   await expect(
     page.locator(".reader-page[aria-current=page] .annotation-overlay text"),
   ).toHaveText("Nota na página");

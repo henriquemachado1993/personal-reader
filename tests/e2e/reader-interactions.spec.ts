@@ -67,6 +67,7 @@ for (const device of [
         } else await page.goto("/reader/dom-casmurro");
         const input = page.getByRole("spinbutton", {
           name: "Número da página",
+          includeHidden: true,
         });
         await expect(input).toBeVisible();
         const cdp = await context.newCDPSession(page);

@@ -1372,20 +1372,6 @@ textarea::placeholder {
   background: var(--border);
   margin: 0 10px;
 }
-.reader-title {
-  text-align: center;
-  min-width: 0;
-  margin-left: 135px;
-}
-.reader-title strong {
-  font-size: 12px;
-  font-weight: 550;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 320px;
-}
 .type-control {
   font-family: var(--serif);
   font-size: 18px;
@@ -1524,9 +1510,16 @@ textarea::placeholder {
   top: 0;
   width: 22px;
   height: 45px;
-  background: #b95947;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  filter: drop-shadow(1px 2px 2px #00000026);
+  pointer-events: none;
   z-index: 4;
+}
+.page-bookmark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ed333b;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }
 .annotation-toolbar {
   position: fixed;
@@ -1991,9 +1984,6 @@ textarea::placeholder {
     gap: 27px 19px;
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-  .reader-title {
-    margin-left: 70px;
-  }
   .reader-scroll-area {
     padding-right: 30px;
     padding-left: 30px;
@@ -2048,9 +2038,6 @@ textarea::placeholder {
   }
   .reader-header-left {
     min-width: auto;
-  }
-  .reader-title {
-    margin-left: 0;
   }
   .reader-header-right {
     gap: 0;
@@ -2218,10 +2205,6 @@ textarea::placeholder {
     padding: 0 10px;
     gap: 8px;
     min-height: 65px;
-  }
-  .reader-title strong {
-    font-size: 11px;
-    max-width: 180px;
   }
   .reader-header-right .icon-button:nth-child(1),
   .reader-header-right .icon-button:nth-last-child(2) {
@@ -2419,9 +2402,6 @@ textarea::placeholder {
   .collection-preview {
     height: 240px;
     padding: 30px 45px;
-  }
-  .reader-title strong {
-    max-width: 135px;
   }
   .reader-header-right .icon-button {
     width: 27px;
@@ -3113,13 +3093,6 @@ textarea::placeholder {
   box-shadow: 0 9px 24px #00000008;
   gap: 5px;
 }
-.reader-title {
-  margin: 0;
-}
-.reader-title strong {
-  font-size: 16px;
-  font-weight: 600;
-}
 .reader-header-divider {
   display: none;
 }
@@ -3153,9 +3126,6 @@ textarea::placeholder {
   justify-content: center;
   pointer-events: none;
   z-index: 12;
-}
-.page-bookmark {
-  background: #ed333b;
 }
 .reader-header .bookmarked {
   color: #ed333b;
@@ -3308,12 +3278,6 @@ textarea::placeholder {
   .reader-header-right {
     padding: 4px;
     gap: 1px;
-  }
-  .reader-title strong {
-    font-size: 13px;
-  }
-  .reader-title strong {
-    max-width: 190px;
   }
   .annotation-toolbar {
     padding: 8px 10px;
@@ -3481,10 +3445,6 @@ textarea::placeholder {
   .reader-header-left .icon-button {
     width: 27px;
     height: 30px;
-  }
-  .reader-title strong {
-    max-width: 125px;
-    font-size: 12px;
   }
   .prose-page {
     padding: 37px 28px 65px;
