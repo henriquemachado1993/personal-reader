@@ -85,7 +85,6 @@ export function KnowledgeView({
       <div className="page-heading knowledge-heading">
         <div>
           <h1>{title}</h1>
-          <p>Destaques, anotações e capturas das suas leituras.</p>
         </div>
         <div className="heading-actions">
           <Button

@@ -5,6 +5,7 @@ import "@/components/ui/controls.css";
 import "@/components/ui/resilience.css";
 import "@/components/ui/workspace-refinements.css";
 import "@/components/ui/app-viewport.css";
+import "@/components/ui/typography.css";
 import { InterfaceProvider } from "@/components/ui/provider";
 export const metadata: Metadata = {
   title: "Le-Books · Sua biblioteca, seu ritmo",

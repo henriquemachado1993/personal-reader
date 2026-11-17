@@ -2916,7 +2916,7 @@ textarea::placeholder {
 .books-main .page-heading > .button {
   border-radius: 24px;
   padding: 11px 19px;
-  font-size: 12px;
+  font-size: var(--type-button);
 }
 .books-main .section-heading {
   margin-bottom: 24px;
@@ -3012,7 +3012,7 @@ textarea::placeholder {
   margin-bottom: 30px;
 }
 .books-main .format-filters button {
-  font-size: 12px;
+  font-size: var(--type-button);
   padding: 8px 14px;
   border-radius: 18px;
 }

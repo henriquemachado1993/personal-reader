@@ -37,6 +37,82 @@ test.beforeEach(async ({ context }) => {
   ]);
 });
 
+test("compact reader search submits with Enter or the search icon", async ({
+  page,
+}, testInfo) => {
+  for (const width of [1440, 393]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/reader/metamorfose?page=1");
+    await page
+      .getByRole("button", { name: "Buscar no documento", exact: true })
+      .click();
+    const search = page.getByRole("search", { name: "Busca no documento" });
+    const input = search.getByLabel("Buscar texto neste documento");
+    const submit = search.getByRole("button", { name: "Buscar", exact: true });
+    await expect(input).toBeFocused();
+    await expect(submit).toBeDisabled();
+    const startingPage = await page
+      .getByRole("spinbutton", { name: "Número da página" })
+      .inputValue();
+    await input.fill("Depois da leitura");
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue(startingPage);
+    await input.press("Enter");
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue("3");
+    await input.fill("Para ler com atenção");
+    await submit.click();
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue("2");
+    expect((await search.boundingBox())!.width).toBeGreaterThan(width - 60);
+    await page.screenshot({ path: testInfo.outputPath(`search-${width}.png`) });
+    await search.getByRole("button", { name: "Fechar busca" }).click();
+    await expect(search).toHaveCount(0);
+  }
+});
+
+test("workspace action and filter buttons use the knowledge font size", async ({
+  page,
+}) => {
+  await page.goto("/knowledge");
+  const referenceSize = await page
+    .locator(".knowledge-types button")
+    .first()
+    .evaluate((button) => getComputedStyle(button).fontSize);
+  expect(referenceSize).toBe("14px");
+  for (const route of ["/library", "/collections", "/settings"]) {
+    await page.goto(route);
+    const buttons = page.locator(".button, .format-filters button");
+    await expect(buttons.first()).toBeVisible();
+    for (const button of await buttons.all()) {
+      await expect(button).toHaveCSS("font-size", referenceSize);
+      const label = button.locator(".mantine-Button-label");
+      if (await label.count())
+        await expect(label).toHaveCSS("font-size", referenceSize);
+    }
+  }
+});
+
+test("library view preference survives reloads and navigation on this device", async ({
+  page,
+}) => {
+  await page.goto("/library");
+  const grid = page.getByRole("button", { name: "Visualizar em grade" });
+  const list = page.getByRole("button", { name: "Visualizar em lista" });
+  await grid.click();
+  await page.reload();
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/collections");
+  await page.goto("/library");
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await list.click();
+  await page.reload();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+});
+
 test("search, list/grid and collection membership work", async ({ page }) => {
   await page.goto("/library");
   await expect(
@@ -589,56 +665,23 @@ test("knowledge date filters narrow saved notes and restore them when cleared", 
   await expect(page.locator(".knowledge-entry")).toHaveCount(1);
 });
 
-test("compact reader search submits with Enter or the search icon", async ({
-  page,
-}, testInfo) => {
-  for (const width of [1440, 393]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto("/reader/metamorfose?page=1");
-    await page
-      .getByRole("button", { name: "Buscar no documento", exact: true })
-      .click();
-    const search = page.getByRole("search", { name: "Busca no documento" });
-    const input = search.getByLabel("Buscar texto neste documento");
-    const submit = search.getByRole("button", { name: "Buscar", exact: true });
-    await expect(input).toBeFocused();
-    await expect(submit).toBeDisabled();
-    const startingPage = await page
-      .getByRole("spinbutton", { name: "Número da página" })
-      .inputValue();
-    await input.fill("Depois da leitura");
-    await expect(
-      page.getByRole("spinbutton", { name: "Número da página" }),
-    ).toHaveValue(startingPage);
-    await input.press("Enter");
-    await expect(
-      page.getByRole("spinbutton", { name: "Número da página" }),
-    ).toHaveValue("3");
-    await input.fill("Para ler com atenção");
-    await submit.click();
-    await expect(
-      page.getByRole("spinbutton", { name: "Número da página" }),
-    ).toHaveValue("2");
-    expect((await search.boundingBox())!.width).toBeGreaterThan(width - 60);
-    await page.screenshot({ path: testInfo.outputPath(`search-${width}.png`) });
-    await search.getByRole("button", { name: "Fechar busca" }).click();
-    await expect(search).toHaveCount(0);
-  }
-});
-
-test("library view preference survives reloads and navigation on this device", async ({
+test("supporting text stays smaller than fields without changing button typography", async ({
   page,
 }) => {
-  await page.goto("/library");
-  const grid = page.getByRole("button", { name: "Visualizar em grade" });
-  const list = page.getByRole("button", { name: "Visualizar em lista" });
-  await grid.click();
-  await page.reload();
-  await expect(grid).toHaveAttribute("aria-pressed", "true");
-  await page.goto("/collections");
-  await page.goto("/library");
-  await expect(grid).toHaveAttribute("aria-pressed", "true");
-  await list.click();
-  await page.reload();
-  await expect(list).toHaveAttribute("aria-pressed", "true");
+  for (const width of [1440, 393]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/settings");
+    await expect(page.locator(".page-heading p")).toHaveCSS(
+      "font-size",
+      "14px",
+    );
+    for (const description of await page.locator(".preference-row p").all())
+      await expect(description).toHaveCSS("font-size", "14px");
+    await expect(
+      page.getByRole("button", { name: "Exportar backup", exact: true }),
+    ).toHaveCSS("font-size", "14px");
+    await expect(
+      page.getByRole("combobox", { name: "Meta diária em minutos" }),
+    ).toHaveCSS("font-size", "16px");
+  }
 });

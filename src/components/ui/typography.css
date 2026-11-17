@@ -1,0 +1,158 @@
+:root {
+  --type-body: 1.142857rem;
+  --type-control: 1rem;
+  --type-button: 14px;
+  --type-support: 14px;
+  --type-caption: 0.928571rem;
+  --type-page-title: clamp(2.285714rem, 4vw, 3.714286rem);
+  --type-section-title: clamp(1.714286rem, 2.5vw, 2.285714rem);
+  --type-dialog-title: clamp(1.714286rem, 2.5vw, 2rem);
+}
+
+body {
+  line-height: 1.55;
+}
+
+body :is(.page-heading h1, .auth-story h1) {
+  font-size: var(--type-page-title);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+body :is(.section-heading h2, .workspace-page h2) {
+  font-size: var(--type-section-title);
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+body :is(.reader-modal-title, .auth-form-section h1) {
+  font-size: var(--type-dialog-title);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+body .reader-modal-title {
+  font-family: var(--serif);
+  font-size: var(--type-dialog-title);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+body :is(.field-label, .knowledge-filter-label, .mantine-InputWrapper-label) {
+  font-weight: 400;
+}
+
+body :is(button, .button, .mantine-Button-label) {
+  font-weight: 400;
+}
+
+body :is(.button, .knowledge-types button, .format-filters button) {
+  font-size: var(--type-button);
+}
+
+body .button .mantine-Button-label {
+  font-size: inherit;
+}
+
+body
+  :is(
+    .dialog-description,
+    .reader-modal-body > p,
+    .settings-section p,
+    .setting-description,
+    .empty-state p,
+    .auth-description,
+    .auth-form-section > p,
+    .panel-description
+  ) {
+  font-size: var(--type-body);
+  line-height: 1.65;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
+body
+  :is(
+    .field-label,
+    .knowledge-filter-label,
+    .mantine-InputWrapper-label,
+    .reader-menu .mantine-Menu-item,
+    .button,
+    .assign-collections > label
+  ) {
+  font-size: var(--type-control);
+  line-height: 1.45;
+}
+
+body
+  :is(
+    .reader-field .mantine-Input-input,
+    .reader-select .mantine-Input-input,
+    .reader-textarea .mantine-Textarea-input
+  ) {
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+
+body
+  :is(
+    .book-meta,
+    .document-count,
+    .collection-item > p,
+    .import-results,
+    .toast,
+    .error-banner
+  ) {
+  font-size: var(--type-caption);
+  line-height: 1.5;
+}
+
+body :is(.book-title, .collection-item h3, .knowledge-entry h3) {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+body
+  :is(
+    .stat-value,
+    .statistics-value,
+    .document-count,
+    .book-meta,
+    .reader-pagination,
+    .reading-history
+  ) {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+body .reader-modal-body :is(p, label, button) {
+  overflow-wrap: anywhere;
+}
+
+[data-theme="dark"]
+  :is(
+    .dialog-description,
+    .page-heading p,
+    .settings-section p,
+    .panel-description
+  ) {
+  line-height: 1.7;
+  letter-spacing: 0.005em;
+}
+
+body
+  :is(.auth-story p, .auth-form-section p, .knowledge-entry p, .panel-empty) {
+  font-size: var(--type-body);
+  line-height: 1.65;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
+body :is(.page-heading p, .preference-row p, .settings-storage p) {
+  font-size: var(--type-support);
+  line-height: 1.6;
+}
