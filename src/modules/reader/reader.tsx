@@ -1183,7 +1183,11 @@ export function Reader({ documentId }: { documentId: string }) {
                     }}
                   />
                 )}
-                {bookmarked && (
+                {(realEpub
+                  ? bookmarked
+                  : documentBookmarks.some(
+                      (bookmark) => bookmark.page === pageIndex,
+                    )) && (
                   <div className="page-bookmark" aria-hidden="true" />
                 )}
               </div>

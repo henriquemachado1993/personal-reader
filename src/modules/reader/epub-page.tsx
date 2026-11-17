@@ -57,7 +57,9 @@ export function EpubPage({
     let disposed = false;
     let book: Book | undefined;
     let tapTimer: ReturnType<typeof setTimeout> | undefined;
+    let navigationCfi: string | undefined;
     const markNavigation = () => {
+      navigationCfi = undefined;
       userNavigating.current = true;
     };
     const contentListeners: Document[] = [];
@@ -112,16 +114,20 @@ export function EpubPage({
         }) => {
           if (disposed || suppressLocation.current || !userNavigating.current)
             return;
-          const indexed = book!.locations.percentageFromCfi(loc.start.cfi);
-          const progression = loc.atEnd
-            ? 1
-            : Number.isFinite(indexed) && indexed >= 0 && indexed <= 1
-              ? indexed
-              : (loc.start.percentage ?? 0);
+          // EPUB.js rounds a displayed CFI to a nearby line; keep the saved
+          // anchor until the reader starts navigating again.
+          const cfi = navigationCfi ?? loc.start.cfi;
+          const indexed = book!.locations.percentageFromCfi(cfi);
+          const progression =
+            !navigationCfi && loc.atEnd
+              ? 1
+              : Number.isFinite(indexed) && indexed >= 0 && indexed <= 1
+                ? indexed
+                : (loc.start.percentage ?? 0);
           onLocation(
             {
               type: "EPUB",
-              cfi: loc.start.cfi,
+              cfi,
               href: loc.start.href,
               progression,
             },
@@ -152,6 +158,7 @@ export function EpubPage({
           },
           go: (cfi) => {
             markNavigation();
+            navigationCfi = cfi;
             void view.display(cfi);
           },
         };
@@ -293,6 +300,11 @@ export function EpubPage({
     };
   }, [annotations, documentId, ready]);
   return (
-    <div ref={host} className="epub-page" aria-label="Conteúdo do livro EPUB" />
+    <div
+      ref={host}
+      className="epub-page"
+      aria-label="Conteúdo do livro EPUB"
+      aria-busy={!ready}
+    />
   );
 }
