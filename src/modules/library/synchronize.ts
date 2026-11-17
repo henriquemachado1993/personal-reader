@@ -48,6 +48,7 @@ export interface SynchronizationResult {
   snapshot: LibraryState;
   record: SyncRecord;
   pendingOriginals: number;
+  deletedCollectionIds?: string[];
   retry?: boolean;
   deletedDocumentIds?: string[];
 }
@@ -76,6 +77,10 @@ export async function synchronizeLibrary(
     ? `?operationId=${encodeURIComponent(record.pending.operationId)}`
     : "";
   const response = await fetch(`/api/library${query}`, { cache: "no-store" });
+  if (response.status === 401)
+    throw new Error(
+      "Sua sessão não permite sincronizar. Exporte um backup local e entre novamente na mesma conta nos dois dispositivos.",
+    );
   if (!response.ok)
     throw new Error(
       "Sincronização indisponível. Suas alterações continuam neste navegador.",
@@ -117,6 +122,7 @@ export async function synchronizeLibrary(
       before: local,
       snapshot: recovered,
       deletedDocumentIds: remote.deletedDocumentIds,
+      deletedCollectionIds: remote.deletedCollectionIds,
       record: { revision: remote.revision, base: remote.snapshot, uploaded },
       pendingOriginals: 0,
       retry: true,
@@ -153,6 +159,10 @@ export async function synchronizeLibrary(
       operationId: pending.operationId,
     });
     if (saved.status === 409) throw new SyncRevisionError();
+    if (saved.status === 401)
+      throw new Error(
+        "Sua sessão não permite sincronizar. Exporte um backup local e entre novamente na mesma conta nos dois dispositivos.",
+      );
     if (!saved.ok)
       throw new Error(
         "Não foi possível sincronizar. A cópia local está preservada.",
@@ -180,5 +190,6 @@ export async function synchronizeLibrary(
     record: { revision: replica.revision, base: replica.snapshot, uploaded },
     pendingOriginals,
     deletedDocumentIds: remote?.deletedDocumentIds,
+    deletedCollectionIds: remote?.deletedCollectionIds,
   };
 }

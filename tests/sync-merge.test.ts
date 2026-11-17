@@ -166,11 +166,66 @@ test("reading reconciliation preserves conflicts in edited metadata", () => {
   assert.throws(() => mergeLibrary(base, local, remote), /Conflito/);
 });
 
-test('document tombstones remove stale books and dependent notes without a sync base',()=>{
- const base=initialState();base.documents=[];
- const local=initialState(),remote=initialState();remote.documents=[];
- local.bookmarks=[{id:'mark',documentId:local.documents[0].id,page:0,location:{type:'TXT',blockIndex:0,offset:0},createdAt:'2026-11-16T12:00:00.000Z'}];
- const merged=mergeLibrary(base,local,remote,[],local.documents.map(book=>book.id));
- assert.deepEqual(merged.documents,[]);assert.deepEqual(merged.bookmarks,[]);
- assert.equal(local.documents.length,3);
+test("document tombstones remove stale books and dependent notes without a sync base", () => {
+  const base = initialState();
+  base.documents = [];
+  const local = initialState(),
+    remote = initialState();
+  remote.documents = [];
+  local.bookmarks = [
+    {
+      id: "mark",
+      documentId: local.documents[0].id,
+      page: 0,
+      location: { type: "TXT", blockIndex: 0, offset: 0 },
+      createdAt: "2026-11-16T12:00:00.000Z",
+    },
+  ];
+  const merged = mergeLibrary(
+    base,
+    local,
+    remote,
+    [],
+    local.documents.map((book) => book.id),
+  );
+  assert.deepEqual(merged.documents, []);
+  assert.deepEqual(merged.bookmarks, []);
+  assert.equal(local.documents.length, 3);
+});
+
+test("two devices can independently add the same book to different collections", () => {
+  const base = initialState();
+  const local = structuredClone(base),
+    remote = structuredClone(base);
+  local.collections.push({
+    id: "local-collection",
+    name: "Local",
+    color: "#abcdef",
+  });
+  remote.collections.push({
+    id: "remote-collection",
+    name: "Remota",
+    color: "#abcdef",
+  });
+  local.documents[0].collections = ["local-collection"];
+  remote.documents[0].collections = ["remote-collection"];
+  const merged = mergeLibrary(base, local, remote);
+  assert.deepEqual(merged.documents[0].collections, [
+    "local-collection",
+    "remote-collection",
+  ]);
+  assert.equal(merged.collections.length, 2);
+});
+
+test("concurrent collection membership additions and removals merge independently", () => {
+  const base = initialState();
+  base.documents[0].collections = ["keep", "remove"];
+  const local = structuredClone(base),
+    remote = structuredClone(base);
+  local.documents[0].collections = ["keep"];
+  remote.documents[0].collections.push("added");
+  assert.deepEqual(mergeLibrary(base, local, remote).documents[0].collections, [
+    "keep",
+    "added",
+  ]);
 });

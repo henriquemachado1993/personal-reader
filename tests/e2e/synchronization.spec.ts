@@ -27,6 +27,7 @@ test.afterEach(async () => {
     for (const ownerId of temporaryOwners) {
       await db.libraryEntity.deleteMany({ where: { ownerId } });
       await db.libraryReplica.deleteMany({ where: { ownerId } });
+      await db.user.deleteMany({ where: { id: ownerId } });
     }
   } finally {
     temporaryOwners.clear();
@@ -43,6 +44,15 @@ test("remote snapshots enforce revisions, idempotency, ownership and restore acr
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const ownerId = crypto.randomUUID();
   temporaryOwners.add(ownerId);
+  const accountDb = new PrismaClient({ datasourceUrl: env.DATABASE_URL });
+  try {
+    await accountDb.user.create({
+      data: { id: ownerId, email: `${ownerId}@example.test` },
+    });
+  } finally {
+    await accountDb.$disconnect();
+  }
+
   const name = "authjs.session-token";
   const token = await encode({
     secret: env.AUTH_SECRET,
@@ -167,6 +177,15 @@ test("originals larger than the Vercel limit transfer directly with authorizatio
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const ownerId = crypto.randomUUID();
   temporaryOwners.add(ownerId);
+  const accountDb = new PrismaClient({ datasourceUrl: env.DATABASE_URL });
+  try {
+    await accountDb.user.create({
+      data: { id: ownerId, email: `${ownerId}@example.test` },
+    });
+  } finally {
+    await accountDb.$disconnect();
+  }
+
   const name = "authjs.session-token";
   const token = await encode({
     secret: env.AUTH_SECRET,

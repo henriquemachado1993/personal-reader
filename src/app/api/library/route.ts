@@ -18,6 +18,13 @@ import type { LibraryState } from "@/shared/types";
 export async function GET(request: Request) {
   const ownerId = (await auth())?.user?.id;
   if (!ownerId) return Response.json({}, { status: 401 });
+  if (
+    !(await database().user.findUnique({
+      where: { id: ownerId },
+      select: { id: true },
+    }))
+  )
+    return Response.json({ code: "ACCOUNT_NOT_FOUND" }, { status: 401 });
   const replica = await database().libraryReplica.findUnique({
     where: { ownerId },
   });
@@ -63,6 +70,13 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const ownerId = (await auth())?.user?.id;
   if (!ownerId) return Response.json({}, { status: 401 });
+  if (
+    !(await database().user.findUnique({
+      where: { id: ownerId },
+      select: { id: true },
+    }))
+  )
+    return Response.json({ code: "ACCOUNT_NOT_FOUND" }, { status: 401 });
   if (!isSameOrigin(request)) return Response.json({}, { status: 403 });
   const body = await request.text();
   if (body.length > 25_000_000) return Response.json({}, { status: 413 });

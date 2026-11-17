@@ -146,7 +146,7 @@ export const useLibrary = create<Store>((set, get) => {
                   result.before,
                   beforeCommit,
                   result.snapshot,
-                  [],
+                  result.deletedCollectionIds,
                   result.deletedDocumentIds,
                 );
                 try {
@@ -170,7 +170,7 @@ export const useLibrary = create<Store>((set, get) => {
                   beforeCommit,
                   current,
                   snapshot,
-                  [],
+                  result.deletedCollectionIds,
                   result.deletedDocumentIds,
                 );
                 const remotePositionVersion = {

@@ -194,3 +194,35 @@ test("legacy pending records preserve remote-only entries and do not count accep
   );
   assert.equal(result?.snapshot.readingSeconds, 30);
 });
+
+test("an invalid or deleted account reports a sign-in action and preserves local collections", async (t) => {
+  const storage = memoryStorage();
+  storage.snapshot.collections.push({
+    id: "local",
+    name: "Local",
+    color: "#abcdef",
+  });
+  const before = structuredClone(storage.snapshot);
+  t.mock.method(globalThis, "fetch", async () =>
+    Response.json({ code: "ACCOUNT_NOT_FOUND" }, { status: 401 }),
+  );
+  await assert.rejects(
+    synchronizeLibrary("owner", storage),
+    /backup local.*mesma conta/,
+  );
+  assert.deepEqual(storage.snapshot, before);
+});
+
+test("collection tombstones reach the final local rebase after synchronization", async (t) => {
+  const storage = memoryStorage();
+  t.mock.method(globalThis, "fetch", async () =>
+    Response.json({
+      revision: 1,
+      operationId: "prior",
+      snapshot: storage.record.base,
+      deletedCollectionIds: ["deleted"],
+    }),
+  );
+  const result = await synchronizeLibrary("owner", storage);
+  assert.deepEqual(result?.deletedCollectionIds, ["deleted"]);
+});

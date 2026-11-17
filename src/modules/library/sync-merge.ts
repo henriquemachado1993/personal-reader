@@ -87,6 +87,7 @@ export function mergeLibrary(
         location,
         readingPositionUpdatedAt,
         lastReadAt,
+        collections,
         ...rest
       } = book;
       return rest;
@@ -104,6 +105,19 @@ export function mergeLibrary(
           : mergeValue(originalPosition, localPosition, remotePosition)!;
     return {
       ...mergeValue(metadata(before), metadata(ours), metadata(theirs))!,
+      collections: [
+        ...new Set([
+          ...(before?.collections ?? []),
+          ...ours.collections,
+          ...theirs.collections,
+        ]),
+      ].filter((id) =>
+        mergeValue(
+          before?.collections.includes(id) ?? false,
+          ours.collections.includes(id),
+          theirs.collections.includes(id),
+        ),
+      ),
       ...position,
       lastReadAt: [ours.lastReadAt, theirs.lastReadAt]
         .filter((value): value is string => !!value)
