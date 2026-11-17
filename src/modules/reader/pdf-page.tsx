@@ -119,6 +119,10 @@ export const PdfPage = memo(function PdfPage({
           "--scale-factor",
           String(viewport.scale),
         );
+        textRef.current.style.setProperty(
+          "--total-scale-factor",
+          String(viewport.scale * viewport.userUnit),
+        );
         renderTask = pdfPage.render({
           canvasContext: context,
           canvas,

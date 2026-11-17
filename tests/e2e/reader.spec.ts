@@ -588,3 +588,40 @@ test("knowledge date filters narrow saved notes and restore them when cleared", 
   await page.goto("/notes");
   await expect(page.locator(".knowledge-entry")).toHaveCount(1);
 });
+
+test("compact reader search submits with Enter or the search icon", async ({
+  page,
+}, testInfo) => {
+  for (const width of [1440, 393]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/reader/metamorfose?page=1");
+    await page
+      .getByRole("button", { name: "Buscar no documento", exact: true })
+      .click();
+    const search = page.getByRole("search", { name: "Busca no documento" });
+    const input = search.getByLabel("Buscar texto neste documento");
+    const submit = search.getByRole("button", { name: "Buscar", exact: true });
+    await expect(input).toBeFocused();
+    await expect(submit).toBeDisabled();
+    const startingPage = await page
+      .getByRole("spinbutton", { name: "Número da página" })
+      .inputValue();
+    await input.fill("Depois da leitura");
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue(startingPage);
+    await input.press("Enter");
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue("3");
+    await input.fill("Para ler com atenção");
+    await submit.click();
+    await expect(
+      page.getByRole("spinbutton", { name: "Número da página" }),
+    ).toHaveValue("2");
+    expect((await search.boundingBox())!.width).toBeGreaterThan(width - 60);
+    await page.screenshot({ path: testInfo.outputPath(`search-${width}.png`) });
+    await search.getByRole("button", { name: "Fechar busca" }).click();
+    await expect(search).toHaveCount(0);
+  }
+});

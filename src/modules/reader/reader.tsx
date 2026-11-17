@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   ChevronRight,
   PanelLeft,
   PanelRight,
@@ -42,6 +44,9 @@ import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { createLatestSearch } from "./latest-search";
 import { PdfPage } from "./pdf-page";
+import { findPdfOccurrences } from "./pdf-search";
+import { findTextMatches } from "./search-matches";
+import { SearchHighlights } from "./search-highlights";
 import "./reader-refinements.css";
 import "./annotation-toolbar.css";
 import "./reader-panels.css";
@@ -153,6 +158,18 @@ export function Reader({ documentId }: { documentId: string }) {
   const [zoom, setZoom] = useState(100);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchMatches, setSearchMatches] = useState<
+    { page: number; occurrence: number; cfi?: string }[]
+  >([]);
+  const [searchIndex, setSearchIndex] = useState(-1);
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const [searchBusy, setSearchBusy] = useState(false);
+  useEffect(() => {
+    setSearchMatches([]);
+    setSearchIndex(-1);
+    setActiveSearchQuery("");
+    setSearchBusy(false);
+  }, [documentId, searching]);
   const [latestPdfSearch] = useState(createLatestSearch);
   useEffect(
     () => () => latestPdfSearch.invalidate(),
@@ -225,7 +242,7 @@ export function Reader({ documentId }: { documentId: string }) {
     next: () => void;
     prev: () => void;
     go: (cfi: string) => void;
-    search: (query: string) => Promise<number>;
+    search: (query: string) => Promise<{ cfi: string; excerpt: string }[]>;
   } | null>(null);
   useEffect(() => {
     if (!toolsOpen || focus || extraToolsOpen) return;
@@ -680,6 +697,15 @@ export function Reader({ documentId }: { documentId: string }) {
       setExporting(false);
     }
   };
+  const navigateSearch = (direction: number) => {
+    if (!searchMatches.length) return;
+    const index =
+      (searchIndex + direction + searchMatches.length) % searchMatches.length;
+    setSearchIndex(index);
+    const match = searchMatches[index];
+    if (match.cfi) epubNav.current?.go(match.cfi);
+    else go(match.page);
+  };
   if (!library.hydrated)
     return (
       <div className="reader-loading">
@@ -885,71 +911,112 @@ export function Reader({ documentId }: { documentId: string }) {
         </div>
       )}
       {searching && (
-        <div className="reader-search">
-          <Search size={16} />
+        <form
+          className="reader-search"
+          role="search"
+          aria-label="Busca no documento"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const term = query.trim();
+            if (!term || searchBusy) return;
+            if (term === activeSearchQuery && searchMatches.length) {
+              navigateSearch(1);
+              return;
+            }
+            if (realPdf && !pdf) {
+              library.notify(
+                "O PDF ainda está sendo preparado. Tente novamente.",
+              );
+              return;
+            }
+            setSearchBusy(true);
+            const result = await latestPdfSearch.run<
+              { page: number; occurrence: number; cfi?: string }[]
+            >(async () => {
+              if (realPdf && pdf) return findPdfOccurrences(pdf, term);
+              if (realEpub) {
+                const matches = (await epubNav.current?.search(term)) ?? [];
+                return matches.map((match, occurrence) => ({
+                  page: 0,
+                  occurrence,
+                  cfi: match.cfi,
+                }));
+              }
+              return (book.content ?? []).flatMap((text, page) =>
+                findTextMatches(text.split(/\n\s*\n/).join(""), term).map(
+                  (_, occurrence) => ({ page, occurrence }),
+                ),
+              );
+            });
+            if (result.status === "obsolete") return;
+            setSearchBusy(false);
+            if (result.status === "error") {
+              library.notify(
+                "Não foi possível pesquisar o documento. Tente novamente.",
+              );
+              return;
+            }
+            setSearchMatches(result.value);
+            setActiveSearchQuery(term);
+            setSearchIndex(result.value.length ? 0 : -1);
+            const first = result.value[0];
+            if (first) {
+              if (first.cfi) epubNav.current?.go(first.cfi);
+              else go(first.page);
+            }
+          }}
+        >
+          <IconButton
+            type="submit"
+            label="Buscar"
+            disabled={!query.trim() || searchBusy}
+          >
+            <Search size={18} />
+          </IconButton>
           <TextField
             autoFocus
             value={query}
             onChange={(e) => {
               latestPdfSearch.invalidate();
               setQuery(e.target.value);
+              setSearchMatches([]);
+              setSearchIndex(-1);
+              setActiveSearchQuery("");
+              setSearchBusy(false);
             }}
             aria-label="Buscar texto neste documento"
-            placeholder="O que você quer encontrar?"
+            placeholder="Buscar no documento"
+            enterKeyHint="search"
           />
-          <Button
-            className="button secondary"
-            onClick={async () => {
-              if (!query.trim()) return;
-              if (realPdf) {
-                const search = pdfSearch.current;
-                if (!search) {
-                  library.notify(
-                    "O PDF ainda está sendo preparado. Tente novamente.",
-                  );
-                  return;
-                }
-                const result = await latestPdfSearch.run(() =>
-                  search(query, (currentPage + 1) % book.pages),
-                );
-                if (result.status === "obsolete") return;
-                if (result.status === "error") {
-                  library.notify(
-                    "Não foi possível pesquisar o PDF. Tente novamente.",
-                  );
-                  return;
-                }
-                if (result.value >= 0) go(result.value);
-                else library.notify("Não encontramos esse texto no PDF.");
-              } else if (realEpub) {
-                try {
-                  const count = await epubNav.current?.search(query);
-                  library.notify(
-                    count
-                      ? `${count} ocorrências no livro. Exibindo a primeira.`
-                      : "Texto não encontrado no livro.",
-                  );
-                } catch {
-                  library.notify(
-                    "Não foi possível pesquisar o livro. Tente novamente.",
-                  );
-                }
-              } else {
-                const match =
-                  book.content?.findIndex((p) =>
-                    p.toLowerCase().includes(query.toLowerCase()),
-                  ) ?? -1;
-                if (match >= 0) go(match);
-                else library.notify("Não encontramos esse texto no documento.");
-              }
-            }}
+          <output
+            className="reader-search-count"
+            aria-label="Ocorrências encontradas"
+            aria-live="polite"
           >
-            Buscar
-          </Button>
+            {searchBusy
+              ? "…"
+              : activeSearchQuery
+                ? `${searchIndex + 1}/${searchMatches.length}`
+                : ""}
+          </output>
+          <IconButton
+            label="Ocorrência anterior"
+            disabled={!searchMatches.length || searchBusy}
+            onClick={() => navigateSearch(-1)}
+          >
+            <ChevronUp size={18} />
+          </IconButton>
+          <IconButton
+            label="Próxima ocorrência"
+            disabled={!searchMatches.length || searchBusy}
+            onClick={() => navigateSearch(1)}
+          >
+            <ChevronDown size={18} />
+          </IconButton>
           <IconButton label="Fechar busca" onClick={() => setSearching(false)}>
             <X size={17} />
           </IconButton>
-        </div>
+        </form>
       )}
       <div className="reader-body">
         {left && (
@@ -1113,6 +1180,8 @@ export function Reader({ documentId }: { documentId: string }) {
                 ) : realEpub ? (
                   <EpubPage
                     documentId={documentId}
+                    searchQuery={searching ? activeSearchQuery : ""}
+                    activeSearchCfi={searchMatches[searchIndex]?.cfi}
                     fontSize={library.preferences.fontSize}
                     onLocation={onLocation}
                     onSelected={onEpubSelected}
@@ -1131,31 +1200,21 @@ export function Reader({ documentId }: { documentId: string }) {
                         i === 0 && paragraph.length < 100 ? (
                           <h1 key={i}>{paragraph}</h1>
                         ) : (
-                          <p key={i}>
-                            {query &&
-                            paragraph
-                              .toLowerCase()
-                              .includes(query.toLowerCase())
-                              ? paragraph
-                                  .split(
-                                    new RegExp(
-                                      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-                                      "gi",
-                                    ),
-                                  )
-                                  .map((part, j) =>
-                                    part.toLowerCase() ===
-                                    query.toLowerCase() ? (
-                                      <mark key={j}>{part}</mark>
-                                    ) : (
-                                      part
-                                    ),
-                                  )
-                              : paragraph}
-                          </p>
+                          <p key={i}>{paragraph}</p>
                         ),
                       )}
                   </article>
+                )}
+                {!realEpub && (
+                  <SearchHighlights
+                    query={searching ? activeSearchQuery : ""}
+                    active={
+                      searchMatches[searchIndex]?.page === pageIndex
+                        ? searchMatches[searchIndex].occurrence
+                        : -1
+                    }
+                    page={pageIndex}
+                  />
                 )}
                 {!realEpub && (
                   <AnnotationOverlay
@@ -1187,9 +1246,7 @@ export function Reader({ documentId }: { documentId: string }) {
                   ? bookmarked
                   : documentBookmarks.some(
                       (bookmark) => bookmark.page === pageIndex,
-                    )) && (
-                  <div className="page-bookmark" aria-hidden="true" />
-                )}
+                    )) && <div className="page-bookmark" aria-hidden="true" />}
               </div>
             ))
           )}

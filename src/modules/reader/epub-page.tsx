@@ -5,9 +5,12 @@ import { readFile } from "@/infrastructure/storage/local";
 import { useLibrary } from "@/modules/library/store";
 import type { DocumentLocation } from "@/shared/types";
 import { searchEpub } from "./epub-search";
+import { showSearchHighlights, textMatchRanges } from "./search-matches";
 
 export function EpubPage({
   documentId,
+  searchQuery = "",
+  activeSearchCfi,
   fontSize,
   onLocation,
   onSelected,
@@ -16,6 +19,8 @@ export function EpubPage({
   onTap,
 }: {
   documentId: string;
+  searchQuery?: string;
+  activeSearchCfi?: string;
   fontSize: number;
   onLocation: (location: DocumentLocation, percentage: number) => void;
   onSelected: (text: string, location: DocumentLocation) => void;
@@ -25,7 +30,7 @@ export function EpubPage({
     next: () => void;
     prev: () => void;
     go: (cfi: string) => void;
-    search: (query: string) => Promise<number>;
+    search: (query: string) => Promise<{ cfi: string; excerpt: string }[]>;
   } | null>;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -142,11 +147,7 @@ export function EpubPage({
         navigationRef.current = {
           search: async (query) => {
             const matches = await searchEpub(book!, query);
-            if (matches[0]) {
-              markNavigation();
-              await view.display(matches[0].cfi);
-            }
-            return matches.length;
+            return matches;
           },
           next: () => {
             markNavigation();
@@ -299,6 +300,42 @@ export function EpubPage({
       });
     };
   }, [annotations, documentId, ready]);
+  useEffect(() => {
+    const view = rendition.current;
+    if (!ready || !view || !searchQuery) return;
+    let clear: (() => void)[] = [];
+    const paint = () => {
+      clear.forEach((remove) => remove());
+      clear = [];
+      let active: Range | undefined;
+      try {
+        if (activeSearchCfi) active = view.getRange(activeSearchCfi);
+      } catch {}
+      // EPUB.js returns an array here despite its Contents declaration.
+      for (const contents of view.getContents() as unknown as Contents[]) {
+        const root = contents.document.body;
+        const ranges = textMatchRanges(root, searchQuery);
+        clear.push(
+          showSearchHighlights(
+            root,
+            ranges,
+            active?.startContainer.ownerDocument === contents.document
+              ? active
+              : undefined,
+            "reader-epub-search",
+          ),
+        );
+      }
+    };
+    paint();
+    view.on("rendered", paint);
+    view.on("relocated", paint);
+    return () => {
+      view.off("rendered", paint);
+      view.off("relocated", paint);
+      clear.forEach((remove) => remove());
+    };
+  }, [ready, searchQuery, activeSearchCfi]);
   return (
     <div
       ref={host}

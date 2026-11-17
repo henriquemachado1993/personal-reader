@@ -223,6 +223,31 @@
   z-index: 24;
   border: 1px solid var(--border);
   border-radius: 18px;
+  margin-inline: auto;
+  padding: 4px 8px;
+  gap: 4px;
+}
+.reader-shell > .reader-search .reader-field {
+  flex: 1;
+  min-width: 0;
+}
+.reader-shell > .reader-search .reader-field input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding-inline: 4px;
+}
+.reader-search-count {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.reader-shell > .reader-search .icon-button {
+  flex-shrink: 0;
+  width: 36px;
+  height: 44px;
 }
 @media (max-width: 760px) {
   .reader-shell {

@@ -1454,6 +1454,10 @@ textarea::placeholder {
   font-size: 12px;
 }
 .textLayer {
+  --total-scale-factor: var(--scale-factor, 1);
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
   position: absolute;
   inset: 0;
   overflow: clip;
@@ -1475,10 +1479,15 @@ textarea::placeholder {
 .textLayer > span:not(.markedContent),
 .textLayer .markedContent span:not(.markedContent) {
   z-index: 1;
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x))
+    scale(var(--min-font-size-inv));
 }
 .textLayer span.markedContent {
-  top: 0;
-  height: 0;
+  display: contents;
 }
 .textLayer ::selection {
   background: #eacb7366;

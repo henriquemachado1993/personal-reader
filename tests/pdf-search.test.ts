@@ -60,3 +60,15 @@ test("text cache is bounded and isolated by document", async () => {
   assert.equal(reads(), 130);
   assert.equal(await findPdfText(fixture(["outro"]).pdf, "texto", 0), -1);
 });
+
+test("PDF occurrence search counts repeated matches on the same page", async () => {
+  const { findPdfOccurrences } =
+    await import("../src/modules/reader/pdf-search");
+  const { pdf } = fixture(["Texto texto", "ausente", "TEXTO"]);
+  assert.deepEqual(await findPdfOccurrences(pdf, "texto"), [
+    { page: 0, occurrence: 0 },
+    { page: 0, occurrence: 1 },
+    { page: 2, occurrence: 0 },
+  ]);
+  assert.deepEqual(await findPdfOccurrences(pdf, "  "), []);
+});

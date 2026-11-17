@@ -45,3 +45,18 @@ export async function findPdfText(
   }
   return -1;
 }
+
+export async function findPdfOccurrences(pdf: PDFDocumentProxy, query: string) {
+  const { findTextMatches } = await import("./search-matches");
+  const results: { page: number; occurrence: number }[] = [];
+  for (let page = 0; page < pdf.numPages; page++) {
+    const content = await (await pdf.getPage(page + 1)).getTextContent();
+    const text = content.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join("");
+    findTextMatches(text, query).forEach((_, occurrence) =>
+      results.push({ page, occurrence }),
+    );
+  }
+  return results;
+}
