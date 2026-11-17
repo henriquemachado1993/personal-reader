@@ -24,7 +24,7 @@ O `.env` é ignorado pelo controle de versão. Nunca use variáveis `NEXT_PUBLIC
 
 ## O que funciona nesta entrega
 
-- Início, biblioteca em lista/grade, busca, filtros, ordenação e coleções.
+- Início, biblioteca em lista/grade, busca, filtros, ordenação e coleções, com criação direta ao organizar um livro.
 - Importação de PDF, EPUB, DOCX e TXT; capas extraídas de PDFs e EPUBs quando disponíveis.
 - Leitor com navegação, progresso, marcadores, seleção de texto e busca. Um clique/toque alterna a leitura focada; o pincel abre as ferramentas. O rodapé tem miniaturas clicáveis, com previews reais de PDF.
 - Caneta, marca-texto, formas, borracha e desfazer/refazer adições de marcações.
@@ -40,6 +40,8 @@ Os oito livros iniciais são amostras de demonstração. Suas capas vetoriais s�
 **Autenticação:** Supabase PostgreSQL + Prisma. O schema e a migração incluem também as entidades dos demais módulos.
 
 **Acervo e leitura:** originais privados no R2 e biblioteca no Supabase via Prisma. IndexedDB funciona como cache por conta. Sincroniza ao abrir, voltar à aba, recuperar rede, em até 750 ms após alterações locais e a cada 15 segundos. Ao ocultar ou sair da página, envia também uma atualização compacta da posição com `keepalive`.
+
+Associações a coleções são conciliadas individualmente: dispositivos podem adicionar ou remover o mesmo livro de coleções diferentes sem bloquear a sincronização. Exclusões de coleções também são respeitadas durante a confirmação local. Uma sessão de conta removida não pode mais sincronizar; a cópia local permanece disponível para exportar um backup antes de entrar novamente na mesma conta nos dispositivos.
 
 A tabela LibraryReplica mantém o envelope atômico da sincronização. LibraryEntity registra versões por entidade e tombstones de exclusão; as tabelas de documentos, coleções, progresso, notas, destaques e marcações são atualizadas na mesma transação. IDs legados têm projeção UUID determinística por conta. Operações têm UUID e recibos persistentes em LibraryEntity (`sync-operation`); uma resposta perdida pode ser reconhecida mesmo após outro dispositivo escrever. Estado local e base de sincronização são confirmados juntos no IndexedDB. Alterações feitas durante requisições são conciliadas sem descartar alterações remotas. Exclusões de livros e coleções são respeitadas mesmo por dispositivos sem base local. Página, porcentagem e localização formam uma posição indivisível, com `readingPositionUpdatedAt`; a mais recente prevalece, inclusive em retornos de página. Abrir o leitor não altera esse relógio. Alterações independentes são conciliadas; conflitos incompatíveis em metadados, notas ou preferências exigem escolha em Configurações, com backup JSON. Limites atuais: 25 MB para metadados, capas e anotações; 100 MB por original.
 
@@ -103,3 +105,9 @@ Antes de publicar esta versão, aplique `npx prisma migrate deploy` para criar `
 Os links usam `/register#TOKEN`, evitando registrar o segredo na URL enviada ao servidor. O banco guarda somente SHA-256 do token aleatório de 256 bits. O token completo aparece apenas ao gerar o convite; copie-o antes de sair da tela. O cadastro confirma e consome o convite dentro da transação que cria a conta. O envio de e-mail automático não faz parte deste fluxo.
 
 A validação automatizada de convites usa banco simulado para as regras transacionais e respostas simuladas nos testes de interface; os testes de acesso não autorizado consultam apenas a instalação existente. A migração e os cenários de aceitação concorrente/rollback devem ser validados em PostgreSQL isolado antes de publicar; nenhum cadastro ou convite real foi criado durante esses testes.
+
+## Versões e novidades
+
+A versão do aplicativo vem de `package.json`; Configurações exibe o mesmo número e oferece **Ver novidades**, que abre o histórico em um modal. O histórico fica em `src/shared/release-notes.json`, com as versões mais recentes primeiro. `0.2.0` inicia esse registro; versões anteriores não têm notas reconstruídas.
+
+Para preparar uma versão, use `npm version patch --no-git-tag-version` para correções, `minor` para funcionalidades compatíveis ou `major` para mudanças incompatíveis. O comando atualiza `package.json` e `package-lock.json`. Acrescente uma entrada no início do histórico com esse número, a data real do lançamento e as mudanças para quem usa o aplicativo. Preserve as entradas anteriores. `npm test` confere se a versão atual tem notas e se os números dos dois arquivos coincidem. A versão exibida muda quando o aplicativo atualizado é compilado e publicado; esse preparo não cria tags nem publica automaticamente.

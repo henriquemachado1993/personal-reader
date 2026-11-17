@@ -328,3 +328,31 @@ Estados selecionados do leitor seguem os mesmos tokens da navegação: fundo `--
 Título e conteúdo compartilham uma coluna central de até 1000 px. Estatísticas separa meta de hoje, tempo acumulado e histórico dos últimos sete dias. O resumo usa uma lista de definições com números tabulares; o histórico combina tabela acessível, valores explícitos e barras proporcionais, sem fabricar atividade nos dias vazios. A meta usa `progress` nativo e só fica completa ao atingir o tempo definido. O estado sem atividade explica o período e oferece acesso à biblioteca. Preservar a paleta neutra, os títulos serifados e o tema da aplicação.
 
 Estatísticas oferece janelas móveis de 7 e 30 dias, comparadas com a janela imediatamente anterior de mesma duração. A seção “Seu ritmo” mostra frequência, média diária incluindo dias sem leitura, dias que atingem a meta atual e sequência atual/recorde. A sequência pode terminar ontem enquanto o dia de hoje está em andamento; datas futuras não compõem o recorde. A explicação fica em “Como calculamos”. O resumo da biblioteca fica depois do histórico, e uma leitura real em andamento pode ser retomada pelo documento mais recentemente aberto. O histórico de 30 dias tem rolagem própria e cabeçalho fixo.
+
+## Tipografia da interface — 17/11/2026
+
+Os títulos dos modais usam Georgia em negrito (700), como os títulos das páginas Início e Coleções, com tamanho responsivo de 24–28px, entrelinha 1,25 e tracking de -0,02em. Campos, botões e textos de apoio usam a sans de sistema.
+
+A camada compartilhada `src/components/ui/typography.css` mantém Georgia nos títulos e a sans de sistema na interface. Define corpo de 16px, controles e rótulos de 14px, metadados de 13px, títulos de página responsivos de 32–52px, seções de 24–32px e títulos de diálogo de 24–28px. As medidas em rem consideram a raiz existente de 14px. Descrições usam até 65ch e entrelinha de 1,65; títulos equilibram quebras, nomes longos permitem quebra e dados usam números tabulares. Conteúdo PDF e preferências de fonte do leitor mantêm suas próprias métricas. Nenhum arquivo de fonte adicional é carregado.
+
+## Busca compacta no leitor — 17/11/2026
+
+A busca ocupa a largura original entre as margens do leitor, com campo sem borda interna, lupa para enviar e fechamento por ícone. À direita, o contador mostra a ocorrência atual e o total, com setas para anterior/próxima e navegação circular. PDF, EPUB, TXT e DOCX contam ocorrências individuais; os destaques de busca são temporários, amarelos, com a ocorrência atual em laranja e sublinhada. A navegação posiciona o resultado no campo de leitura após a renderização. Enter e a ação de pesquisa do teclado móvel enviam o formulário. A pesquisa só executa ao enviar, portanto não precisa de debounce; digitar ou fechar invalida os resultados pendentes e remove os destaques.
+
+A camada de texto do PDF aplica as métricas da versão instalada do PDF.js (`--font-height`, escala total, escala horizontal, rotação e compensação da fonte mínima). Os destaques e a seleção usam essa mesma geometria para coincidir com os glifos desenhados no canvas, inclusive em tamanhos de texto diferentes.
+
+## Versão e novidades nas Configurações — 17/11/2026
+
+O rodapé de Configurações mostra a versão declarada no pacote e a ação “Ver novidades”. O modal “O que há de novo” usa o título Georgia em negrito já definido, cabeçalho de versão em sans, indicação “Atual”, data em português e listas de novidades e correções com corpo de 16px. O histórico segue da versão mais recente para a mais antiga, com rolagem no próprio modal. O fechamento funciona por botão, Escape e controle de fechar, devolvendo o foco à ação de origem.
+
+## Indicadores de sincronização — 17/11/2026
+
+Os estados usam a família de ícones de nuvem do Lucide: CloudCheck para “Em dia”, CloudUpload para “Pendente” e “Arquivos pendentes”, CloudSync para “Em andamento”, CloudOff para “Sem conexão” e CloudAlert para falhas ou conflitos. O texto acompanha o ícone e explica o estado sem depender da cor. A indicação acompanha também a sincronização automática; a perda de conexão substitui um sucesso anterior e desabilita as ações que precisam de rede.
+
+## Convites nas Configurações — 17/11/2026
+
+A seção segue uma sequência única: e-mail e geração, compartilhamento do link, convites pendentes e histórico recolhido. O formulário e a cópia ficam em linha no desktop e empilham no celular; os itens pendentes mantêm a revogação ao lado do e-mail, permitindo quebra para nomes longos. O link temporário tem uma superfície neutra com raio de 15px, confirmação de cópia e alternativa de seleção manual. Instruções esclarecem o prazo de 48 horas, uso único, vínculo ao e-mail, substituição do convite anterior e compartilhamento manual. Erros da lista têm repetição própria e ficam separados dos erros de criação ou revogação. A tipografia usa os papéis existentes: título Georgia, corpo 16px, rótulos e ações 14px, metadados 13px. As permissões e regras de cadastro permanecem verificadas pela API.
+
+### Hierarquia de apoio — 17/11/2026
+
+Descrições de cabeçalhos, opções de Configurações e introdução de Convites usam `--type-support` (14px), separado dos botões de 14px e do corpo/campos de 16px. Metadados permanecem em 13px. Essa distinção substitui a aplicação ampla de corpo de 16px aos parágrafos de apoio, preservando a densidade da referência visual fornecida pelo usuário.
