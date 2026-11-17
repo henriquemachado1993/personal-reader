@@ -1,6 +1,6 @@
 {
   "name": "personal-reader",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
     "storage:collect": "node scripts/collect-orphaned-files.mjs",
@@ -29,7 +29,7 @@
     "epubjs": "^0.3.93",
     "idb": "^8.0.3",
     "jszip": "^3.10.1",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^0.575.0",
     "mammoth": "^1.10.0",
     "next": "^16.0.0",
     "next-auth": "^5.0.0-beta.32",

@@ -38,6 +38,7 @@ interface Store extends LibraryState {
   ownerId: string;
   ownerName: string;
   syncMessage: string;
+  synchronizing: boolean;
   lastSyncedAt: string | null;
   synchronize: () => Promise<void>;
   resolveConflict: (preferLocal: boolean) => Promise<void>;
@@ -120,12 +121,15 @@ export const useLibrary = create<Store>((set, get) => {
     ownerId: "",
     ownerName: "Leitor",
     syncMessage: "Alterações salvas neste navegador.",
+    synchronizing: false,
     lastSyncedAt: null,
     synchronize: async () => {
       if (!navigator.onLine || !get().hydrated) return;
       if (inFlight) return inFlight;
       const ownerId = get().ownerId;
       const perform = async () => {
+        if (get().ownerId !== ownerId) return;
+        set({ synchronizing: true });
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             await persistence.catch(() => {});
@@ -230,6 +234,7 @@ export const useLibrary = create<Store>((set, get) => {
         .then(() => {})
         .finally(() => {
           inFlight = undefined;
+          if (get().ownerId === ownerId) set({ synchronizing: false });
         });
       return inFlight;
     },
@@ -277,6 +282,7 @@ export const useLibrary = create<Store>((set, get) => {
         ...initialState(),
         hydrated: false,
         remotePositionVersion: {},
+        synchronizing: false,
         lastSyncedAt: null,
         ownerId: userId,
         ownerName: name ?? "Leitor",

@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.2.1",
+    "date": "2026-11-17",
+    "title": "Estados de sincronização mais claros",
+    "sections": [
+      {
+        "title": "Correções e melhorias",
+        "items": [
+          "Ícones de nuvem identificam biblioteca em dia, alterações pendentes, sincronização em andamento, falta de conexão e falhas.",
+          "A sincronização automática também mostra quando está em andamento.",
+          "Arquivos aguardando envio e conflitos têm indicações próprias; sem conexão, as ações de sincronização ficam desabilitadas."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-11-17",
     "title": "Melhorias na leitura e na organização",

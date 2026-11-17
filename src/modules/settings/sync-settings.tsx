@@ -1,17 +1,54 @@
 "use client";
-import { useState } from "react";
-import { Check, Cloud, RefreshCw, AlertCircle } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import {
+  CloudCheck,
+  CloudSync,
+  CloudUpload,
+  CloudOff,
+  CloudAlert,
+} from "lucide-react";
 import { Button } from "@/components/ui/controls";
 import { useLibrary } from "@/modules/library/store";
 import { exportLibraryBackup } from "./library-backup";
+import { syncPresentation } from "./sync-presentation";
+
+const syncIcons = {
+  synced: CloudCheck,
+  pending: CloudUpload,
+  syncing: CloudSync,
+  offline: CloudOff,
+  conflict: CloudAlert,
+  error: CloudAlert,
+};
+
+function subscribeToConnection(notify: () => void) {
+  window.addEventListener("online", notify);
+  window.addEventListener("offline", notify);
+  return () => {
+    window.removeEventListener("online", notify);
+    window.removeEventListener("offline", notify);
+  };
+}
 
 export function SyncSettings() {
-  const { syncMessage, lastSyncedAt, synchronize } = useLibrary();
+  const { syncMessage, lastSyncedAt, synchronize, synchronizing } =
+    useLibrary();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const conflict = /Conflito/.test(syncMessage);
-  const complete = syncMessage === "Biblioteca sincronizada.";
-  const Icon = conflict ? AlertCircle : complete ? Check : Cloud;
+  const online = useSyncExternalStore(
+    subscribeToConnection,
+    () => navigator.onLine,
+    () => true,
+  );
+  const active = busy || synchronizing;
+  const presentation = syncPresentation({
+    message: syncMessage,
+    busy: active,
+    online,
+    error,
+  });
+  const Icon = syncIcons[presentation.state];
   const resolve = async (preferLocal: boolean) => {
     setBusy(true);
     setError("");
@@ -34,19 +71,17 @@ export function SyncSettings() {
       <div className="preferences-section-heading">
         <h2 id="sync-settings-title">Sincronização</h2>
         <span className="sync-state">
-          <Icon size={16} />
-          {busy
-            ? "Em andamento"
-            : conflict
-              ? "Revisar alterações"
-              : complete
-                ? "Em dia"
-                : "Pendente"}
+          <Icon size={16} aria-hidden="true" />
+          {presentation.label}
         </span>
       </div>
-      <div className="settings-sync-content" aria-busy={busy}>
+      <div className="settings-sync-content" aria-busy={active && online}>
         <p role="status">
-          {busy ? "Atualizando sua biblioteca…" : syncMessage}
+          {!online
+            ? "Sem conexão. Suas alterações continuam salvas neste navegador."
+            : active
+              ? "Atualizando sua biblioteca…"
+              : syncMessage}
         </p>
         {lastSyncedAt && (
           <p className="settings-sync-date">
@@ -66,14 +101,14 @@ export function SyncSettings() {
             <div className="settings-action-row">
               <Button
                 className="button secondary"
-                disabled={busy}
+                disabled={active || !online}
                 onClick={() => void resolve(true)}
               >
                 Manter deste dispositivo
               </Button>
               <Button
                 className="button secondary"
-                disabled={busy}
+                disabled={active || !online}
                 onClick={() => void resolve(false)}
               >
                 Usar versão da conta
@@ -83,7 +118,7 @@ export function SyncSettings() {
         ) : (
           <Button
             className="button secondary settings-sync-button"
-            disabled={busy}
+            disabled={active || !online}
             onClick={async () => {
               setBusy(true);
               setError("");
@@ -94,8 +129,8 @@ export function SyncSettings() {
               }
             }}
           >
-            <RefreshCw size={16} />
-            {busy ? "Sincronizando…" : "Sincronizar agora"}
+            <CloudSync size={16} aria-hidden="true" />
+            {active ? "Sincronizando…" : "Sincronizar agora"}
           </Button>
         )}
         {error && (
