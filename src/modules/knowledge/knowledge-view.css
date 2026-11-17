@@ -63,6 +63,34 @@
   min-height: 44px;
   font-weight: 400;
 }
+.knowledge-color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+}
+.knowledge-color-dot-all {
+  background: conic-gradient(
+    #ef5350,
+    #ffa726,
+    #f5cf5b,
+    #66bb6a,
+    #42a5f5,
+    #ab47bc,
+    #ef5350
+  );
+}
+.knowledge-color-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.knowledge-color-check {
+  margin-left: auto;
+  flex-shrink: 0;
+}
 .knowledge-filter-fields .mantine-DatePickerInput-input {
   background: var(--surface);
   border: 1px solid var(--border);

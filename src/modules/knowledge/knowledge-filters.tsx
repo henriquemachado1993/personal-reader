@@ -1,11 +1,35 @@
 "use client";
 import { DatePickerInput } from "@mantine/dates";
-import { CalendarDays, Highlighter, StickyNote, ScanLine } from "lucide-react";
+import { Select } from "@mantine/core";
+import {
+  CalendarDays,
+  Highlighter,
+  StickyNote,
+  ScanLine,
+  Check,
+} from "lucide-react";
 import { Button, SelectField } from "@/components/ui/controls";
 import type { ReaderDocument } from "@/shared/types";
 import "dayjs/locale/pt-br";
 
 export type KnowledgePeriod = [string | null, string | null];
+const colorOptions = [
+  { value: "all", label: "Todas as cores" },
+  { value: "#e8bb45", label: "Amarelo" },
+  { value: "#db7f88", label: "Rosa" },
+  { value: "#6a997d", label: "Verde" },
+  { value: "#7f9fc4", label: "Azul" },
+  { value: "#3e3830", label: "Grafite" },
+];
+function ColorDot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`knowledge-color-dot${color === "all" ? " knowledge-color-dot-all" : ""}`}
+      style={color === "all" ? undefined : { backgroundColor: color }}
+    />
+  );
+}
 export function KnowledgeFilters({
   forcedKind,
   type,
@@ -88,18 +112,32 @@ export function KnowledgeFilters({
         </label>
         <label className="knowledge-filter-label" htmlFor="color-filter">
           Cor
-          <SelectField
+          <Select
             id="color-filter"
+            aria-label="Cor"
+            className="reader-select knowledge-color-filter"
             value={color}
-            onChange={(e) => onColor(e.target.value)}
-          >
-            <option value="all">Todas as cores</option>
-            <option value="#e8bb45">Amarelo</option>
-            <option value="#db7f88">Rosa</option>
-            <option value="#6a997d">Verde</option>
-            <option value="#7f9fc4">Azul</option>
-            <option value="#3e3830">Grafite</option>
-          </SelectField>
+            data={colorOptions}
+            allowDeselect={false}
+            onChange={(next) => {
+              if (next !== null) onColor(next);
+            }}
+            leftSection={<ColorDot color={color} />}
+            leftSectionPointerEvents="none"
+            renderOption={({ option, checked }) => (
+              <span className="knowledge-color-option">
+                <ColorDot color={option.value} />
+                <span>{option.label}</span>
+                {checked && (
+                  <Check
+                    size={16}
+                    aria-hidden="true"
+                    className="knowledge-color-check"
+                  />
+                )}
+              </span>
+            )}
+          />
         </label>
       </div>
     </div>
