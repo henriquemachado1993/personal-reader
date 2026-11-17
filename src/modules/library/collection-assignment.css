@@ -1,0 +1,13 @@
+.collection-assignment .collection-create-toggle {
+  margin-top: 20px;
+}
+
+.collection-assignment .assign-collections > label > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.collection-assignment .assign-collections > label > svg {
+  flex-shrink: 0;
+}

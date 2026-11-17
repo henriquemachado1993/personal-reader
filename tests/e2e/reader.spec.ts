@@ -625,3 +625,20 @@ test("compact reader search submits with Enter or the search icon", async ({
     await expect(search).toHaveCount(0);
   }
 });
+
+test("library view preference survives reloads and navigation on this device", async ({
+  page,
+}) => {
+  await page.goto("/library");
+  const grid = page.getByRole("button", { name: "Visualizar em grade" });
+  const list = page.getByRole("button", { name: "Visualizar em lista" });
+  await grid.click();
+  await page.reload();
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/collections");
+  await page.goto("/library");
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await list.click();
+  await page.reload();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+});

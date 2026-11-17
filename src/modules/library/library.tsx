@@ -1,6 +1,6 @@
 "use client";
 import { Button, TextField, SelectField } from "@/components/ui/controls";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useLibrary } from "./store";
 import { CollectionActions } from "./collection-actions";
+import { CollectionAssignment } from "./collection-assignment";
 import {
   Cover,
   IconButton,
@@ -43,6 +44,22 @@ export function LibraryView({
   const [format, setFormat] = useState("all");
   const [sort, setSort] = useState(path === "/library" ? "author" : "recent");
   const [view, setView] = useState(path === "/library" ? "list" : "grid");
+  useEffect(() => {
+    try {
+      const savedView = localStorage.getItem("personal-reader:library-view");
+      if (savedView === "grid" || savedView === "list") setView(savedView);
+    } catch {
+      // Reading still works when the browser blocks device storage.
+    }
+  }, []);
+  const changeView = (nextView: "grid" | "list") => {
+    setView(nextView);
+    try {
+      localStorage.setItem("personal-reader:library-view", nextView);
+    } catch {
+      // Keep the selection usable for this visit when storage is unavailable.
+    }
+  };
   const isCollection = path.startsWith("/collections/");
   const collection = collections.find((c) => c.id === path.split("/")[2]);
   const status = path.split("/")[2];
@@ -184,7 +201,7 @@ export function LibraryView({
                 label="Visualizar em grade"
                 aria-pressed={view === "grid"}
                 className={view === "grid" ? "selected" : ""}
-                onClick={() => setView("grid")}
+                onClick={() => changeView("grid")}
               >
                 <Grid2X2 size={17} />
               </IconButton>
@@ -192,7 +209,7 @@ export function LibraryView({
                 label="Visualizar em lista"
                 aria-pressed={view === "list"}
                 className={view === "list" ? "selected" : ""}
-                onClick={() => setView("list")}
+                onClick={() => changeView("list")}
               >
                 <List size={18} />
               </IconButton>
@@ -275,7 +292,7 @@ export function LibraryView({
 }
 function BookCard({ book }: { book: ReaderDocument }) {
   const pendingRemoval = useRef(false);
-  const { updateDocument, deleteDocument, collections, notify } = useLibrary();
+  const { updateDocument, deleteDocument, notify } = useLibrary();
   const [confirm, setConfirm] = useState(false);
   const [rename, setRename] = useState(false);
   const [title, setTitle] = useState(book.title);
@@ -422,39 +439,11 @@ function BookCard({ book }: { book: ReaderDocument }) {
           </div>
         </form>
       </Modal>
-      <Modal
+      <CollectionAssignment
+        book={book}
         opened={assign}
-        title="Organizar em coleções"
         onClose={() => setAssign(false)}
-      >
-        <p className="dialog-description">
-          Um livro pode fazer parte de várias coleções.
-        </p>
-        <div className="assign-collections">
-          {collections.map((c) => (
-            <label key={c.id}>
-              <FolderClosed size={18} style={{ color: c.color }} />
-              <span>{c.name}</span>
-              <TextField
-                type="checkbox"
-                checked={book.collections.includes(c.id)}
-                onChange={(e) =>
-                  updateDocument(book.id, {
-                    collections: e.target.checked
-                      ? [...book.collections, c.id]
-                      : book.collections.filter((id) => id !== c.id),
-                  })
-                }
-              />
-            </label>
-          ))}
-        </div>
-        <div className="dialog-actions">
-          <Button className="button primary" onClick={() => setAssign(false)}>
-            Concluir
-          </Button>
-        </div>
-      </Modal>
+      />
     </article>
   );
 }
