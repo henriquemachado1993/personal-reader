@@ -6,6 +6,7 @@ import { useLibrary } from "@/modules/library/store";
 import { CacheSettings } from "./cache-settings";
 import { InvitationSettings } from "./invitation-settings";
 import { SyncSettings } from "./sync-settings";
+import { AppVersion } from "./app-version";
 import { exportLibraryBackup } from "./library-backup";
 import "./settings-view.css";
 import "./workspace-page.css";
@@ -173,9 +174,7 @@ export function SettingsView() {
             </dl>
           </details>
         </section>
-        <p className="settings-version">
-          Le-Books <span>Versão 0.1</span>
-        </p>
+        <AppVersion />
       </div>
     </div>
   );

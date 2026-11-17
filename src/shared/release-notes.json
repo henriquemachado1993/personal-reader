@@ -1,0 +1,28 @@
+[
+  {
+    "version": "0.2.0",
+    "date": "2026-11-17",
+    "title": "Melhorias na leitura e na organização",
+    "sections": [
+      {
+        "title": "Novidades",
+        "items": [
+          "Crie uma coleção ao organizar um livro, sem sair da janela.",
+          "A biblioteca lembra a visualização em grade ou lista neste dispositivo.",
+          "A busca no leitor mostra o total de ocorrências, permite navegar com as setas e destaca o texto encontrado.",
+          "Consulte a versão do aplicativo e o histórico de novidades nas Configurações."
+        ]
+      },
+      {
+        "title": "Correções e melhorias",
+        "items": [
+          "Os marcadores permanecem nas páginas corretas durante a rolagem.",
+          "O retorno aos marcadores de EPUB preserva a posição salva.",
+          "Os destaques de busca no PDF acompanham o tamanho e a posição do texto.",
+          "Alterações nas coleções feitas em dispositivos diferentes são conciliadas sem perder as associações dos livros.",
+          "Títulos, campos e botões receberam ajustes de tipografia para uma interface mais consistente."
+        ]
+      }
+    ]
+  }
+]

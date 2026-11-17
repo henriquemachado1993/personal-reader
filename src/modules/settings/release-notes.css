@@ -1,0 +1,65 @@
+.settings-refined .settings-version {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.settings-version p {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14px;
+}
+.release-note + .release-note {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.release-note-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.release-note-heading h3 {
+  font-family: var(--sans);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+.release-current {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.release-note time {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.release-note-title {
+  margin-top: 16px;
+  font-size: var(--type-body);
+  line-height: 1.6;
+}
+.release-note section {
+  margin-top: 24px;
+}
+.release-note h4 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+.release-note ul {
+  list-style: disc;
+  padding-inline-start: 20px;
+  margin: 0;
+  font-size: var(--type-body);
+  line-height: 1.65;
+}
+.release-note li + li {
+  margin-top: 10px;
+}
