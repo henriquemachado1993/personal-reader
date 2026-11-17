@@ -8,29 +8,36 @@ import Link from "next/link";
 export function LoginForm({
   firstRun,
   available,
+  inviteToken,
+  invitedEmail,
 }: {
   firstRun: boolean;
   available: boolean;
+  inviteToken?: string;
+  invitedEmail?: string;
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(invitedEmail ?? "");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [accountCreated, setAccountCreated] = useState(false);
+  const creatingAccount = (firstRun || !!inviteToken) && !accountCreated;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError("");
     try {
-      if (firstRun) {
+      if (creatingAccount) {
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, inviteToken }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
+        setAccountCreated(true);
       }
       const result = await signIn("credentials", {
         email: email.trim().toLowerCase(),
@@ -57,12 +64,16 @@ export function LoginForm({
   return (
     <form className="auth-form" onSubmit={submit}>
       <h1>
-        {firstRun ? "Sua biblioteca começa aqui" : "Entre na sua biblioteca"}
+        {creatingAccount
+          ? "Sua biblioteca começa aqui"
+          : "Entre na sua biblioteca"}
       </h1>
       <p className="auth-intro">
-        {firstRun
-          ? "Escolha o e-mail e a senha de acesso à sua biblioteca."
-          : "Entre para continuar de onde parou."}
+        {invitedEmail
+          ? "Crie sua conta para acessar sua própria biblioteca. O e-mail já está vinculado ao convite."
+          : creatingAccount
+            ? "Escolha o e-mail e a senha de acesso à sua biblioteca."
+            : "Entre para continuar de onde parou."}
       </p>
       {!available && (
         <div className="auth-error" role="alert">
@@ -70,7 +81,7 @@ export function LoginForm({
           tentar novamente.
         </div>
       )}
-      {firstRun && (
+      {creatingAccount && (
         <label className="field-label">
           Seu nome
           <TextField
@@ -90,6 +101,7 @@ export function LoginForm({
         <TextField
           className="input"
           name="email"
+          readOnly={!!invitedEmail}
           type="email"
           placeholder="voce@exemplo.com"
           autoComplete="email"
@@ -107,9 +119,11 @@ export function LoginForm({
             name="password"
             aria-labelledby="login-password-label"
             type={visible ? "text" : "password"}
-            autoComplete={firstRun ? "new-password" : "current-password"}
-            placeholder={firstRun ? "Crie uma senha" : "Sua senha"}
-            aria-describedby={firstRun ? "password-requirements" : undefined}
+            autoComplete={creatingAccount ? "new-password" : "current-password"}
+            placeholder={creatingAccount ? "Crie uma senha" : "Sua senha"}
+            aria-describedby={
+              creatingAccount ? "password-requirements" : undefined
+            }
             minLength={10}
             maxLength={128}
             value={password}
@@ -123,7 +137,7 @@ export function LoginForm({
             {visible ? <EyeOff size={17} /> : <Eye size={17} />}
           </IconButton>
         </div>
-        {firstRun && (
+        {creatingAccount && (
           <small className="auth-field-help" id="password-requirements">
             Use de 10 a 128 caracteres.
           </small>
@@ -140,15 +154,15 @@ export function LoginForm({
         disabled={busy || !available}
       >
         {busy
-          ? firstRun
+          ? creatingAccount
             ? "Criando sua conta…"
             : "Entrando…"
-          : firstRun
+          : creatingAccount
             ? "Criar conta"
             : "Entrar"}
         <ArrowRight size={17} />
       </Button>
-      {!firstRun && (
+      {!creatingAccount && (
         <p className="auth-privacy">
           <Link href="/forgot-password" className="text-link">
             Esqueci minha senha

@@ -1,9 +1,12 @@
-import { hash } from "bcryptjs";
-import { database } from "@/infrastructure/database/client";
 import { registrationSchema } from "@/modules/auth/validation";
+import { invitationTokenSchema } from "@/modules/auth/invitations";
+import {
+  registerAccount,
+  RegistrationError,
+} from "@/modules/auth/register-account";
+import { isSameOrigin } from "@/modules/auth/same-origin";
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin || origin !== new URL(request.url).origin)
+  if (!isSameOrigin(request))
     return Response.json({ error: "Solicitação inválida." }, { status: 403 });
   if (!request.headers.get("content-type")?.includes("application/json"))
     return Response.json({ error: "Formato inválido." }, { status: 415 });
@@ -11,8 +14,10 @@ export async function POST(request: Request) {
     const payload = await request.text();
     if (payload.length > 4096)
       return Response.json({ error: "Dados muito longos." }, { status: 413 });
-    const input = registrationSchema.safeParse(JSON.parse(payload));
-    if (!input.success)
+    const parsed = registrationSchema
+      .extend({ inviteToken: invitationTokenSchema.optional() })
+      .safeParse(JSON.parse(payload));
+    if (!parsed.success)
       return Response.json(
         {
           error:
@@ -20,30 +25,17 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
-    const db = database();
-    if (await db.installation.findUnique({ where: { id: "owner" } }))
-      return Response.json(
-        {
-          error:
-            "Esta biblioteca já tem uma conta. Entre com seu e-mail e senha.",
-        },
-        { status: 403 },
-      );
-    const passwordHash = await hash(input.data.password, 12);
-    await db.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: { email: input.data.email, name: input.data.name, passwordHash },
-      });
-      await tx.installation.create({ data: { id: "owner", ownerId: user.id } });
-    });
+    await registerAccount(parsed.data);
     return Response.json({ ok: true }, { status: 201 });
-  } catch {
+  } catch (error) {
     return Response.json(
       {
         error:
-          "Não foi possível criar a conta. Verifique sua conexão ou tente entrar se ela já existe.",
+          error instanceof RegistrationError
+            ? error.message
+            : "Não foi possível criar a conta. Verifique sua conexão e tente novamente.",
       },
-      { status: 503 },
+      { status: error instanceof RegistrationError ? error.status : 503 },
     );
   }
 }

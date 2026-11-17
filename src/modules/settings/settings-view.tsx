@@ -4,6 +4,7 @@ import { Sun, Moon, Monitor, Download, ChevronDown } from "lucide-react";
 import { Button, SelectField } from "@/components/ui/controls";
 import { useLibrary } from "@/modules/library/store";
 import { CacheSettings } from "./cache-settings";
+import { InvitationSettings } from "./invitation-settings";
 import { SyncSettings } from "./sync-settings";
 import { exportLibraryBackup } from "./library-backup";
 import "./settings-view.css";
@@ -112,6 +113,7 @@ export function SettingsView() {
           </div>
         </section>
         <SyncSettings />
+        <InvitationSettings />
         <section
           className="preferences-section"
           aria-labelledby="data-settings-title"

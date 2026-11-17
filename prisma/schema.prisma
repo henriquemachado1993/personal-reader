@@ -35,6 +35,7 @@ model User {
   email       String           @unique
   name        String?
   passwordHash String?
+  issuedInvites RegistrationInvite[]
   passwordChangedAt DateTime?
   documents   Document[]
   collections Collection[]
@@ -262,5 +263,20 @@ model StorageDeletion {
   key String @id
   ownerId String @db.Uuid
   notBefore DateTime
+  @@schema("reader")
+}
+
+model RegistrationInvite {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique
+  email     String
+  issuerId  String   @db.Uuid
+  issuer    User     @relation(fields: [issuerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+  @@index([issuerId, createdAt])
+  @@index([email])
   @@schema("reader")
 }

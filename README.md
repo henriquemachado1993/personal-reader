@@ -18,7 +18,7 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-Abra http://localhost:3000. O primeiro acesso permite criar a conta proprietária. Novos cadastros ficam bloqueados após essa criação. NextAuth usa e-mail/senha, JWT em cookie HttpOnly e hashes bcrypt com custo 12. As tabelas ficam no schema `reader`, separado de `public`. Não exponha o schema `reader` pela Data API do Supabase.
+Abra http://localhost:3000. O primeiro acesso permite criar a conta proprietária, que será a única administradora de convites. Depois disso, novos cadastros exigem convite válido. Em Configurações → Convites, a administradora informa um e-mail e gera um link para enviar pessoalmente. O link vale por 48 horas, permite um único cadastro para aquele e-mail e pode ser revogado. Gerar outro convite para o mesmo e-mail revoga os anteriores ainda não utilizados. Cada conta tem sua própria biblioteca; convites não compartilham livros ou permissões administrativas. NextAuth usa e-mail/senha, JWT em cookie HttpOnly e hashes bcrypt com custo 12. As tabelas ficam no schema `reader`, separado de `public`. Não exponha o schema `reader` pela Data API do Supabase.
 
 O `.env` é ignorado pelo controle de versão. Nunca use variáveis `NEXT_PUBLIC_*` para as credenciais do banco, R2 ou `AUTH_SECRET`.
 
@@ -95,3 +95,11 @@ A interface usa Mantine para campos, selects nativos, checkboxes, botões, menus
 ## Referências técnicas
 
 [Supabase com Prisma](https://supabase.com/docs/guides/database/prisma), [NextAuth / Auth.js](https://authjs.dev/getting-started/installation) e [PDF.js](https://mozilla.github.io/pdf.js/examples/).
+
+## Cadastro por convite
+
+Antes de publicar esta versão, aplique `npx prisma migrate deploy` para criar `reader.RegistrationInvite`. Nenhuma variável de ambiente nova é necessária. A conta indicada por `Installation.ownerId` administra convites; essa permissão é conferida no servidor, sem confiar em dados enviados pelo navegador.
+
+Os links usam `/register#TOKEN`, evitando registrar o segredo na URL enviada ao servidor. O banco guarda somente SHA-256 do token aleatório de 256 bits. O token completo aparece apenas ao gerar o convite; copie-o antes de sair da tela. O cadastro confirma e consome o convite dentro da transação que cria a conta. O envio de e-mail automático não faz parte deste fluxo.
+
+A validação automatizada de convites usa banco simulado para as regras transacionais e respostas simuladas nos testes de interface; os testes de acesso não autorizado consultam apenas a instalação existente. A migração e os cenários de aceitação concorrente/rollback devem ser validados em PostgreSQL isolado antes de publicar; nenhum cadastro ou convite real foi criado durante esses testes.
