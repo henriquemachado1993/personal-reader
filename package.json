@@ -1,6 +1,6 @@
 {
   "name": "personal-reader",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "scripts": {
     "storage:collect": "node scripts/collect-orphaned-files.mjs",

@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.2.2",
+    "date": "2026-11-17",
+    "title": "Convites mais simples de gerenciar",
+    "sections": [
+      {
+        "title": "Melhorias",
+        "items": [
+          "Criação e cópia de convites com instruções mais claras e layout adaptado ao celular.",
+          "Convites pendentes em destaque e histórico recolhido para os utilizados, revogados ou expirados.",
+          "O link gerado continua disponível quando uma nova tentativa falha, com opção de cópia manual se o navegador bloquear a área de transferência."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.2.1",
     "date": "2026-11-17",
     "title": "Estados de sincronização mais claros",

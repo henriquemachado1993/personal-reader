@@ -112,7 +112,12 @@ test("administrator generates and revokes an invitation while normal accounts ha
     await expect(
       page.getByLabel("Link do convite", { exact: true }),
     ).toHaveValue(`http://127.0.0.1:3000/register#${secret}`);
-    await page.getByRole("button", { name: "Revogar", exact: true }).click();
+    await page
+      .getByRole("button", {
+        name: "Revogar convite para invited@example.test",
+        exact: true,
+      })
+      .click();
     await expect(
       page.getByRole("status").filter({ hasText: "Convite revogado." }),
     ).toBeVisible();
