@@ -82,9 +82,6 @@ typography:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     fontSize: "13px"
     fontWeight: 500
-  reader-title-compact:
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "13px"
 rounded:
   thumbnail: "3px"
   field: "7px"
@@ -273,7 +270,7 @@ The three primary destinations live in one floating top capsule. Each destinatio
 
 ### Reader controls
 
-Reader header tools form left/right rounded groups with only the document title centered between them. A single click or tap on the document hides all chrome; another restores it without moving the page. Selection, scrolling, double-click word selection, and drawing must not trigger this toggle. Escape restores keyboard access, and hidden controls are inert.
+Reader header tools form left/right rounded groups with the center free of a floating document title. The book remains identified in the browser tab and the header's accessible name. A single click or tap on the document hides all chrome; another restores it without moving the page. Selection, scrolling, double-click word selection, and drawing must not trigger this toggle. Escape restores keyboard access, and hidden controls are inert.
 
 The brush button opens the annotation palette; it is closed by default. The palette floats (20px) above the desktop viewport bottom, or (14px) on mobile, and temporarily replaces the thumbnail strip. Closing it returns to text selection. All tools remain reachable on mobile by wrapping. A floating page counter uses (18px) desktop and (16px) mobile text. The bottom capsule contains clickable miniature pages: PDFs reuse the loaded PDF.js document and render visible previews lazily; text documents show their actual content at miniature scale. The tiny (2px) preview body and (2.8px) preview heading are non-reading artwork inside an aria-hidden miniature, never a scale for UI labels; each thumbnail button carries an accessible page label. EPUB uses previous/next controls and its true reading percentage. Application labels such as format, save status, sample notices, duplicate running titles, and extra page numbers stay outside the reading page; original PDF content is preserved. Selected tools use a quiet gray fill; the active brush uses black with a white nib; active bookmarks use red.
 
@@ -306,7 +303,7 @@ The machine-readable sidecar includes `extensions.implementationInventory`: an e
 - **Don't** convert workspace page and shelf headings into generic sans-serif dashboard headings.
 - **Don't** treat the palette of one book cover as a new interface accent.
 - **Don't** shrink the mobile open shelf below its two-column structure or clip filter labels to force a single row.
-- **Don't** invent decorative kicker labels or copy the reader's tiny running-title treatment into new interface hierarchy.
+- **Don't** invent decorative kicker labels or use miniature preview typography for interface labels.
 
 ## Caixa de ferramentas de anotação — 16/11/2026
 
@@ -314,9 +311,15 @@ A referência IMG_0113.PNG orienta a usabilidade: desfazer e refazer permanecem 
 
 O acabamento da caixa usa a mesma família de sistema (`--sans`) do aplicativo. Rótulos e valores usam 12 px, peso 500 e entrelinha 1,4; opções do menu usam 14 px, peso 400 e entrelinha 1,4. Valores numéricos usam algarismos tabulares. A ferramenta ativa usa o fundo neutro de seleção (`--selection`) e texto (`--text`), como a navegação do aplicativo; o anel de seleção das cores usa a cor de texto para permanecer legível em todas as amostras. A cor personalizada atualiza imediatamente a anotação selecionada. A espessura exibida considera o traço mais fino do lápis.
 
-## Painéis do leitor — polish em 16/11/2026
+Texto é inserido com um toque na página, seguido de um editor com várias linhas, tamanho ajustável, salvar e cancelar. Ctrl/⌘ + Enter salva; Escape cancela e devolve o foco. O texto pode ser reaberto por “Editar texto” ou duplo clique. A fonte acompanha a escala da página, preserva quebras e ajusta as linhas à largura da caixa; o PDF exportado usa as mesmas proporções. Imagens têm escolha de arquivo com prévia, erro explícito e inserção por toque ou arraste, sempre preservando a proporção. A preparação limita o maior lado a 1600 px e usa WebP; arquivos de até 20 MB são aceitos. Texto e imagem selecionados exibem uma caixa com alça de 44 px para redimensionamento por toque ou teclado e ações de editar/trocar e remover. Movimento e tamanho respeitam os limites da página e participam do histórico de desfazer/refazer. Gestos de edição não acionam o modo de leitura sem controles. Páginas sem objetos de texto ou imagem em edição não ganham observadores de tamanho adicionais.
 
-Anotações e páginas/marcadores usam superfícies flutuantes com raio de 24 px, borda discreta e altura ajustada ao conteúdo disponível. O cabeçalho com fechamento de 44 px fica fora da área rolável. Títulos usam a família de sistema em 19 px e peso 500; listas usam 14 px, texto auxiliar 13 px e números tabulares de 12 px. A página atual tem contraste e indicação semântica. O conteúdo respeita a largura do painel, inclusive notas sem espaços e capturas de imagem. O estado vazio das notas considera apenas notas, destaques e capturas exibidos na lista.
+## Painéis do leitor — 17/11/2026
+
+Navegação e anotações usam barras laterais de até 320 px, sem moldura arredondada e com apenas uma divisão na lateral. Apenas um painel abre por vez. A partir de 1100 px, o painel ocupa espaço ao lado da página; em telas menores, fica sobre a borda da leitura e mantém as ferramentas acessíveis. O cabeçalho compacto e as abas ficam fora da área rolável; fechar e Escape devolvem o foco ao acionador. Títulos usam Georgia em 24 px e peso 700, listas usam sans de sistema em 14 px e metadados em 13 px. Miniaturas e contador ficam na área livre ao lado do painel; abaixo de 700 px, ficam ocultos enquanto ele está aberto para evitar controles parcialmente encobertos.
+
+A navegação separa Páginas e Marcadores em abas acessíveis por teclado, lembra a aba escolhida e revela a página atual ao abrir. Cada aba tem uma única área rolável. O formulário de notas indica a página atual (ou a posição atual no EPUB), usa campo integrado à superfície e ação de salvar compacta. Alternar entre painéis preserva o rascunho. O conteúdo respeita a largura do painel, inclusive notas sem espaços e capturas de imagem. A lista inclui destaques, sublinhados, notas, capturas, traços e formas, identificados pela ferramenta.
+
+Novos destaques e sublinhados guardam o texto correspondente às coordenadas ao terminar o gesto. Marcações visuais em PDF sem trecho de texto recebem um recorte com a marcação, gerado a partir do canvas já renderizado e limitado a 480 × 240 px em WebP. Mover uma marcação atualiza seu trecho ou recorte ao soltar. Abrir a lista apenas apresenta texto e imagens salvos, com carregamento adiado das imagens; não relê o PDF nem recupera marcações antigas. A ação de origem posiciona a área marcada no campo de leitura.
 
 A cor personalizada usa uma única caixa com seletor embutido de saturação/luminosidade, faixa de tonalidade e campo HEX. A faixa tem área de toque ampliada e o arraste permanece dentro da mesma superfície. Editar o HEX sincroniza também a área visual, inclusive imediatamente após um arraste; códigos incompletos voltam à última cor válida ao sair do campo. Não há um segundo popup sobre o campo hexadecimal.
 
@@ -340,6 +343,10 @@ A camada compartilhada `src/components/ui/typography.css` mantém Georgia nos t�
 A busca ocupa a largura original entre as margens do leitor, com campo sem borda interna, lupa para enviar e fechamento por ícone. À direita, o contador mostra a ocorrência atual e o total, com setas para anterior/próxima e navegação circular. PDF, EPUB, TXT e DOCX contam ocorrências individuais; os destaques de busca são temporários, amarelos, com a ocorrência atual em laranja e sublinhada. A navegação posiciona o resultado no campo de leitura após a renderização. Enter e a ação de pesquisa do teclado móvel enviam o formulário. A pesquisa só executa ao enviar, portanto não precisa de debounce; digitar ou fechar invalida os resultados pendentes e remove os destaques.
 
 A camada de texto do PDF aplica as métricas da versão instalada do PDF.js (`--font-height`, escala total, escala horizontal, rotação e compensação da fonte mínima). Os destaques e a seleção usam essa mesma geometria para coincidir com os glifos desenhados no canvas, inclusive em tamanhos de texto diferentes.
+
+Em Conhecimento, o filtro Cor mostra uma bolinha de 12 px antes do nome em cada opção e no valor selecionado. “Todas as cores” usa uma bolinha de arco-íris; a seleção mantém o check à direita e os nomes permanecem acessíveis por teclado e leitor de tela.
+
+O cabeçalho do leitor mantém apenas os grupos de ferramentas nas laterais, com o centro livre. A cápsula com o título do livro foi removida para reduzir a sobreposição ao conteúdo; o nome permanece no título da aba e na identificação acessível do cabeçalho. A faixa vermelha dos marcadores usa sombra suave que acompanha o recorte.
 
 ## Versão e novidades nas Configurações — 17/11/2026
 
