@@ -1,32 +1,45 @@
 import { auth } from "@/auth";
+import { database } from "@/infrastructure/database/client";
 import {
-  originalExists,
+  objectMetadata,
   signedReadUrl,
   signedUploadUrl,
-  writeOriginal,
 } from "@/infrastructure/r2/client";
+import {
+  assetIdPattern,
+  fileKey,
+  uploadType,
+} from "@/infrastructure/r2/file-key";
 import { isSameOrigin } from "@/modules/auth/same-origin";
+import { entityId } from "@/modules/library/library-schemas";
 
-async function identity(params: Promise<{ id: string }>) {
+async function fileIdentity(params: Promise<{ id: string }>) {
   const ownerId = (await auth())?.user?.id;
   const { id } = await params;
-  return ownerId && /^[a-zA-Z0-9-]{1,100}$/.test(id)
-    ? `${ownerId}/originals/${id}`
-    : null;
+  if (!ownerId || !entityId.safeParse(id).success) return null;
+  if (
+    !(await database().user.findUnique({
+      where: { id: ownerId },
+      select: { id: true },
+    }))
+  )
+    return null;
+  return { id, key: fileKey(ownerId, id) };
 }
+
+const privateHeaders = { "Cache-Control": "private, no-store" };
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const key = await identity(context.params);
-  if (!key) return new Response(null, { status: 401 });
-  if (!(await originalExists(key))) return new Response(null, { status: 404 });
+  const file = await fileIdentity(context.params);
+  if (!file) return new Response(null, { status: 401 });
+  const object = await objectMetadata(file.key);
+  if (!object) return new Response(null, { status: 404 });
   return new Response(null, {
     status: 307,
-    headers: {
-      Location: await signedReadUrl(key),
-      "Cache-Control": "private, no-store",
-    },
+    headers: { ...privateHeaders, Location: await signedReadUrl(file.key) },
   });
 }
 
@@ -34,39 +47,30 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const key = await identity(context.params);
-  if (!key) return new Response(null, { status: 401 });
+  const file = await fileIdentity(context.params);
+  if (!file) return new Response(null, { status: 401 });
   if (!isSameOrigin(request)) return new Response(null, { status: 403 });
-  let size: unknown;
-  try {
-    size = (await request.json()).size;
-  } catch {
+  const body = await request.json().catch(() => null);
+  const size: unknown = body?.size;
+  const type = uploadType(file.id, body?.type);
+  if (
+    !type ||
+    typeof size !== "number" ||
+    !Number.isSafeInteger(size) ||
+    size <= 0
+  )
     return new Response(null, { status: 400 });
-  }
-  if (typeof size !== "number" || !Number.isSafeInteger(size) || size <= 0)
-    return new Response(null, { status: 400 });
-  if (size > 100 * 1024 * 1024) return new Response(null, { status: 413 });
-  // An interrupted response or a second device must not upload the original again.
-  const exists = await originalExists(key);
+  const limit = assetIdPattern.test(file.id)
+    ? 25 * 1024 * 1024
+    : 100 * 1024 * 1024;
+  if (size > limit) return new Response(null, { status: 413 });
+  const object = await objectMetadata(file.key);
+  if (object && (object.type !== type || object.size !== size))
+    return new Response(null, { status: 409 });
   return Response.json(
-    exists
+    object
       ? { exists: true }
-      : { url: await signedUploadUrl(key, "application/octet-stream", size) },
-    { headers: { "Cache-Control": "private, no-store" } },
+      : { url: await signedUploadUrl(file.key, type, size) },
+    { headers: privateHeaders },
   );
-}
-export async function PUT(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
-  const key = await identity(context.params);
-  if (!key) return new Response(null, { status: 401 });
-  if (!isSameOrigin(request)) return new Response(null, { status: 403 });
-  const length = Number(request.headers.get("content-length"));
-  if (!length || length > 100 * 1024 * 1024)
-    return new Response(null, { status: 413 });
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.length !== length) return new Response(null, { status: 400 });
-  await writeOriginal(key, bytes);
-  return new Response(null, { status: 204 });
 }

@@ -2,23 +2,33 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { initialState } from "./library-fixture";
 import {
+  emptySyncRecord,
+  sendSyncBatch,
   synchronizeLibrary,
-  SyncRevisionError,
   type SyncRecord,
 } from "../src/modules/library/synchronize";
+import {
+  intendedChanges,
+  type SyncBatch,
+} from "../src/modules/library/sync-protocol";
 
 function memoryStorage() {
   const baseline = initialState();
   let snapshot = structuredClone(baseline);
-  let record: SyncRecord = { revision: 1, base: baseline, uploaded: [] };
+  let record: SyncRecord = {
+    ...emptySyncRecord(),
+    revision: 1,
+    base: baseline,
+  };
   const files = new Map<string, Blob>();
   return {
     readState: async () => snapshot,
     readSyncRecord: async <T>() => record as T,
-    writeSyncRecord: async (next: unknown) => {
-      record = structuredClone(next) as SyncRecord;
+    writeSyncRecord: async (next: SyncRecord) => {
+      record = structuredClone(next);
     },
     readCachedFile: async (id: string) => files.get(id),
+    readUnsentAsset: async (id: string) => files.get(id),
     files,
     get snapshot() {
       return snapshot;
@@ -35,194 +45,211 @@ function memoryStorage() {
   };
 }
 
-test("a failed original never blocks metadata or marks the file as uploaded", async (t) => {
+test("when a revision matches, a pull does no writes", async (t) => {
+  const storage = memoryStorage();
+  const fetch = t.mock.method(globalThis, "fetch", async (url: string) => {
+    assert.equal(url, "/api/library/sync?since=1");
+    return Response.json({ revision: 1, changes: [] });
+  });
+  const result = await synchronizeLibrary("owner", { pull: true }, storage);
+  assert.equal(result?.retry, false);
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("a failed original never blocks a compact position commit", async (t) => {
   const storage = memoryStorage();
   storage.snapshot.documents[0].page = 2;
   storage.files.set(storage.snapshot.documents[0].id, new Blob(["original"]));
-  const methods: string[] = [];
+  const calls: string[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (url: string, options?: RequestInit) => {
+      calls.push(url);
+      if (url.includes("/files/")) return new Response(null, { status: 503 });
+      const batch = JSON.parse(options!.body as string) as SyncBatch;
+      assert.deepEqual(
+        batch.changes.map(({ kind }) => kind),
+        ["positions"],
+      );
+      assert.ok((options!.body as string).length < 400);
+      return Response.json({ revision: 2, changes: batch.changes });
+    },
+  );
+  const result = await synchronizeLibrary("owner", {}, storage);
+  assert.deepEqual(calls, [
+    "/api/library/sync",
+    "/api/library/files/fixture-0",
+  ]);
+  assert.equal(result?.snapshot.documents[0].page, 2);
+  assert.equal(result?.pendingOriginals, 1);
+  assert.deepEqual(result?.record.uploaded, []);
+  assert.ok(storage.record.pending);
+});
+
+test("a lost response retries the original operation and counts later local and remote duration once", async (t) => {
+  const storage = memoryStorage();
+  const day = "2026-11-17";
+  storage.record.base.readingSeconds = 10;
+  storage.record.base.readingDays = { [day]: 10 };
+  storage.snapshot.readingSeconds = 20;
+  storage.snapshot.readingDays = { [day]: 20 };
+  let id: string | undefined;
   t.mock.method(
     globalThis,
     "fetch",
     async (_url: string, options?: RequestInit) => {
-      const method = options?.method ?? "GET";
-      methods.push(method);
-      if (method === "GET")
+      if (options?.method !== "POST")
         return Response.json({
-          revision: 1,
-          operationId: "prior",
-          snapshot: storage.record.base,
+          revision: 3,
+          changes: [
+            { kind: "seconds", id: "account", value: 27 },
+            { kind: "days", id: day, value: 27 },
+          ],
         });
-      if (method === "POST") return new Response(null, { status: 503 });
-      const saved = JSON.parse(options!.body as string);
-      return Response.json({ ...saved, revision: 2 });
+      const batch = JSON.parse(options.body as string) as SyncBatch;
+      if (id) {
+        assert.equal(batch.operationId, id);
+        return Response.json({ revision: 3, changes: [], replayed: true });
+      }
+      id = batch.operationId;
+      assert.deepEqual(batch.time, { seconds: 10, days: { [day]: 10 } });
+      throw new TypeError("Response interrupted");
     },
   );
-  const result = await synchronizeLibrary("owner", storage);
-  assert.deepEqual(methods, ["GET", "PUT", "POST"]);
-  assert.equal(result?.snapshot.documents[0].page, 2);
-  assert.equal(result?.pendingOriginals, 1);
-  assert.deepEqual(result?.record.uploaded, []);
-  assert.equal(
-    storage.record.revision,
-    1,
-    "acknowledgment awaits the atomic local commit",
-  );
-  assert.ok(storage.record.pending);
+  await assert.rejects(synchronizeLibrary("owner", {}, storage), /interrupted/);
+  storage.snapshot.readingSeconds = 25;
+  storage.snapshot.readingDays = { [day]: 25 };
+  const recovered = await synchronizeLibrary("owner", {}, storage);
+  assert.equal(recovered?.snapshot.readingSeconds, 32);
+  assert.equal(recovered?.record.base.readingSeconds, 27);
+  assert.equal(recovered?.record.pending, undefined);
+  assert.equal(recovered?.retry, true);
 });
 
-test("revision races retain the pending operation and request a bounded retry", async (t) => {
+test("revision races rebase independent edits", async (t) => {
   const storage = memoryStorage();
   storage.snapshot.documents[0].title = "Local";
   t.mock.method(
     globalThis,
     "fetch",
     async (_url: string, options?: RequestInit) =>
-      options?.method === "PUT"
+      options?.method === "POST"
         ? new Response(null, { status: 409 })
         : Response.json({
-            revision: 1,
-            operationId: "prior",
-            snapshot: storage.record.base,
+            revision: 2,
+            changes: [
+              {
+                kind: "collections",
+                id: "remote",
+                value: { id: "remote", name: "Remota", color: "#424242" },
+              },
+            ],
           }),
   );
-  await assert.rejects(synchronizeLibrary("owner", storage), SyncRevisionError);
-  assert.ok(storage.record.pending);
-  assert.equal(storage.record.base.documents[0].title, "Documento 0");
+  const result = await synchronizeLibrary("owner", {}, storage);
+  assert.equal(result?.snapshot.documents[0].title, "Local");
+  assert.equal(result?.snapshot.collections[0].id, "remote");
+  assert.equal(result?.record.base.documents[0].title, "Documento 0");
+  assert.equal(result?.retry, true);
 });
 
-for (const anotherDeviceWrote of [false, true]) {
-  test(`accepted writes recover after a lost response${anotherDeviceWrote ? " and a later remote write" : ""} without counting reading twice`, async (t) => {
-    const storage = memoryStorage();
-    storage.record.base.readingSeconds = 10;
-    storage.snapshot.readingSeconds = 20;
-    let remote = {
-      revision: 1,
-      operationId: "prior",
-      snapshot: storage.record.base,
-      acknowledgedOperationId: "",
-    };
-    t.mock.method(
-      globalThis,
-      "fetch",
-      async (_url: string, options?: RequestInit) => {
-        if (options?.method !== "PUT") return Response.json(remote);
-        const saved = JSON.parse(options.body as string);
-        remote = {
-          ...saved,
-          revision: 2,
-          acknowledgedOperationId: saved.operationId,
-        };
-        throw new TypeError("Response interrupted");
-      },
-    );
-    await assert.rejects(synchronizeLibrary("owner", storage), /interrupted/);
-    storage.snapshot.readingSeconds = 25;
-    if (anotherDeviceWrote)
-      remote = {
-        ...remote,
-        revision: 3,
-        operationId: "other-device",
-        snapshot: { ...remote.snapshot, readingSeconds: 27 },
-      };
-    const recovered = await synchronizeLibrary("owner", storage);
-    assert.equal(
-      recovered?.snapshot.readingSeconds,
-      anotherDeviceWrote ? 32 : 25,
-    );
-    assert.equal(
-      recovered?.record.base.readingSeconds,
-      anotherDeviceWrote ? 27 : 20,
-    );
-    assert.equal(recovered?.record.pending, undefined);
-    assert.equal(recovered?.retry, true);
-    assert.equal(
-      storage.snapshot.readingSeconds,
-      25,
-      "the protocol leaves persistence to the atomic local commit",
-    );
-  });
-}
-
-test("the server's canonical snapshot is applied instead of the submitted snapshot", async (t) => {
+test("visibility flush includes time and positions while leaving metadata in the queue", async (t) => {
   const storage = memoryStorage();
-  storage.snapshot.collections.push({
-    id: "deleted",
-    name: "Apagada",
-    color: "#abcdef",
-  });
+  const day = "2026-11-17";
+  storage.snapshot.documents[0].title = "Alteração local";
+  storage.snapshot.documents[0].page = 2;
+  storage.snapshot.readingSeconds = 10;
+  storage.snapshot.readingDays = { [day]: 10 };
   t.mock.method(
     globalThis,
     "fetch",
-    async (_url: string, options?: RequestInit) =>
-      options?.method === "PUT"
-        ? Response.json({
-            revision: 2,
-            operationId: "accepted",
-            snapshot: { ...storage.snapshot, collections: [] },
-          })
-        : Response.json({
-            revision: 1,
-            operationId: "prior",
-            snapshot: storage.record.base,
-          }),
+    async (_url: string, options?: RequestInit) => {
+      assert.equal(options!.keepalive, true);
+      const batch = JSON.parse(options!.body as string) as SyncBatch;
+      assert.deepEqual(
+        batch.changes.map(({ kind }) => kind),
+        ["positions"],
+      );
+      return Response.json({
+        revision: 2,
+        changes: intendedChanges(storage.record.base, batch),
+      });
+    },
   );
-  const result = await synchronizeLibrary("owner", storage);
-  assert.deepEqual(result?.snapshot.collections, []);
-  assert.deepEqual(result?.record.base.collections, []);
+  const result = await synchronizeLibrary(
+    "owner",
+    { keepalive: true },
+    storage,
+  );
+  assert.equal(result?.record.base.documents[0].title, "Documento 0");
+  assert.equal(result?.snapshot.documents[0].title, "Alteração local");
+  assert.equal(result?.record.base.readingSeconds, 10);
 });
 
-test("legacy pending records preserve remote-only entries and do not count accepted totals again", async (t) => {
-  const storage = memoryStorage();
-  storage.snapshot.readingSeconds = 20;
-  storage.snapshot.collections.push({
-    id: "local",
-    name: "Local",
-    color: "#abcdef",
-  });
-  const accepted = structuredClone(storage.snapshot);
-  accepted.readingSeconds = 30;
-  accepted.collections.push({ id: "remote", name: "Remota", color: "#abcdef" });
-  const operationId = crypto.randomUUID();
-  storage.record.pending = { revision: 1, snapshot: accepted, operationId };
-  t.mock.method(globalThis, "fetch", async () =>
-    Response.json({ revision: 2, snapshot: accepted, operationId }),
+test("a large batch does not consume the keepalive budget", async (t) => {
+  const fetch = t.mock.method(
+    globalThis,
+    "fetch",
+    async (_url: string, options?: RequestInit) => {
+      assert.equal(options?.keepalive, false);
+      return new Response(null, { status: 200 });
+    },
   );
-  const result = await synchronizeLibrary("owner", storage);
-  assert.deepEqual(
-    result?.snapshot.collections.map((item) => item.id),
-    ["local", "remote"],
+  await sendSyncBatch(
+    {
+      operationId: crypto.randomUUID(),
+      baseRevision: 0,
+      changes: [
+        {
+          kind: "collections",
+          id: "large",
+          value: { id: "large", name: "目".repeat(21_000), color: "#222222" },
+        },
+      ],
+    },
+    true,
   );
-  assert.equal(result?.snapshot.readingSeconds, 30);
+  assert.equal(fetch.mock.callCount(), 1);
 });
 
-test("an invalid or deleted account reports a sign-in action and preserves local collections", async (t) => {
+test("an invalid account preserves the local changes", async (t) => {
   const storage = memoryStorage();
-  storage.snapshot.collections.push({
-    id: "local",
-    name: "Local",
-    color: "#abcdef",
-  });
-  const before = structuredClone(storage.snapshot);
-  t.mock.method(globalThis, "fetch", async () =>
-    Response.json({ code: "ACCOUNT_NOT_FOUND" }, { status: 401 }),
+  storage.snapshot.documents[0].title = "Preservado";
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () => new Response(null, { status: 401 }),
   );
   await assert.rejects(
-    synchronizeLibrary("owner", storage),
-    /backup local.*mesma conta/,
+    synchronizeLibrary("owner", { pull: true }, storage),
+    /mesma conta/,
   );
-  assert.deepEqual(storage.snapshot, before);
+  assert.equal(storage.snapshot.documents[0].title, "Preservado");
 });
 
-test("collection tombstones reach the final local rebase after synchronization", async (t) => {
+test("a pending image cannot delay progress for an already synchronized book", async (t) => {
   const storage = memoryStorage();
-  t.mock.method(globalThis, "fetch", async () =>
-    Response.json({
-      revision: 1,
-      operationId: "prior",
-      snapshot: storage.record.base,
-      deletedCollectionIds: ["deleted"],
-    }),
+  storage.snapshot.documents[0].page = 2;
+  const image = `asset-${crypto.randomUUID()}`;
+  storage.snapshot.documents[1].cover = image;
+  storage.files.set(image, new Blob(["image"], { type: "image/png" }));
+  const fetch = t.mock.method(
+    globalThis,
+    "fetch",
+    async (url: string, options?: RequestInit) => {
+      assert.equal(url, "/api/library/sync");
+      const batch = JSON.parse(options!.body as string) as SyncBatch;
+      assert.deepEqual(
+        batch.changes.map(({ kind }) => kind),
+        ["positions"],
+      );
+      return Response.json({ revision: 2, changes: batch.changes });
+    },
   );
-  const result = await synchronizeLibrary("owner", storage);
-  assert.deepEqual(result?.deletedCollectionIds, ["deleted"]);
+  const result = await synchronizeLibrary("owner", {}, storage);
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(result?.snapshot.documents[0].page, 2);
+  assert.equal(result?.snapshot.documents[1].cover, image);
+  assert.equal(result?.retry, true);
 });

@@ -14,6 +14,8 @@ import {
   Trash2,
   Shapes,
 } from "lucide-react";
+import { portableAssetSource } from "@/modules/library/library-assets";
+import { LibraryAssetImage } from "@/modules/library/use-library-asset";
 import { useLibrary } from "@/modules/library/store";
 import { Cover, EmptyState, IconButton, Modal } from "@/components/ui";
 import { downloadBlob } from "@/modules/reader/export";
@@ -73,12 +75,29 @@ export function KnowledgeView({
         clippings: "Capturas",
       } as Record<string, string>
     )[kind] ?? "Conhecimento";
-  const exportNotes = () => {
-    const markdown = `# Minhas leituras e ideias\n\n${visible.map((a) => `## ${state.documents.find((d) => d.id === a.documentId)?.title ?? "Documento"} — página ${a.page + 1}\n\n${a.quote ? `> ${a.quote}\n\n` : ""}${a.text}\n\n${a.image ? `![Captura](${a.image})\n\n` : ""}`).join("---\n\n")}`;
-    downloadBlob(
-      new Blob([markdown], { type: "text/markdown;charset=utf-8" }),
-      "minhas-anotacoes.md",
-    );
+  const exportNotes = async () => {
+    try {
+      const entries = await Promise.all(
+        visible.map(async (annotation) => {
+          const book = state.documents.find(
+            (document) => document.id === annotation.documentId,
+          );
+          const image =
+            annotation.image &&
+            (await portableAssetSource(annotation.image, state.ownerId));
+          return `## ${book?.title ?? "Documento"} — página ${annotation.page + 1}\n\n${annotation.quote ? `> ${annotation.quote}\n\n` : ""}${annotation.text}\n\n${image ? `![Captura](${image})\n\n` : ""}`;
+        }),
+      );
+      const markdown = `# Minhas leituras e ideias\n\n${entries.join("---\n\n")}`;
+      downloadBlob(
+        new Blob([markdown], { type: "text/markdown;charset=utf-8" }),
+        "minhas-anotacoes.md",
+      );
+    } catch {
+      state.notify(
+        "Não foi possível exportar todas as imagens. Tente novamente quando estiver online.",
+      );
+    }
   };
   return (
     <>
@@ -173,11 +192,11 @@ export function KnowledgeView({
                   )}
                   {a.text !== a.quote && <p>{a.text}</p>}
                   {a.image && (
-                    <img
+                    <LibraryAssetImage
                       className="clipping-image"
                       loading="lazy"
                       decoding="async"
-                      src={a.image}
+                      reference={a.image}
                       alt={a.text}
                     />
                   )}

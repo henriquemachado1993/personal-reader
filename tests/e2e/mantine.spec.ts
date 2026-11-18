@@ -29,7 +29,7 @@ test("Mantine menus, modal focus and theme stay consistent on desktop and mobile
     await context.addCookies([
       { name, value: token, url: "http://127.0.0.1:3000", httpOnly: true },
     ]);
-    await context.route("**/api/library", (route) =>
+    await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
       route.fulfill({ status: 503, body: "{}" }),
     );
     const page = await context.newPage();

@@ -12,22 +12,40 @@ import { initialState } from "./initial-state";
 import { sameLocation } from "@/modules/reader/location";
 import {
   synchronizeLibrary,
-  SyncRevisionError,
+  sendSyncBatch,
+  type SyncOptions,
   readLibraryForConflict,
   type SyncRecord,
 } from "./synchronize";
 import { mergeLibrary } from "./sync-merge";
 import { canonicalJson } from "./canonical-json";
+import {
+  applyDelta,
+  diffLibrary,
+  MAX_KEEPALIVE_BYTES,
+  type SyncBatch,
+} from "./sync-protocol";
 import { readingPosition, nextReadingTimestamp } from "./reading-position";
+import {
+  applyLocalEdit,
+  clearLocalEdits,
+  localResetKey,
+  finishLocalEdit,
+  recordLocalEdit,
+  recoverLocalEdits,
+} from "./local-edit-journal";
 import { addDailySeconds } from "./reading-calendar";
 import {
   readState,
+  replaceLocalLibrary,
   readSyncRecord,
   writeState,
   removeFile,
   setStorageScope,
-  writeSynchronizedState,
+  updateLibraryState,
 } from "@/infrastructure/storage/local";
+
+import { clearAppCache } from "@/modules/settings/app-cache";
 
 interface Store extends LibraryState {
   hydrated: boolean;
@@ -40,7 +58,11 @@ interface Store extends LibraryState {
   syncMessage: string;
   synchronizing: boolean;
   lastSyncedAt: string | null;
-  synchronize: () => Promise<void>;
+  revision: number;
+  synchronize: (options?: SyncOptions) => Promise<void>;
+  flush: () => void;
+  resetLocal: () => Promise<void>;
+  suspendLocalWrites: () => void;
   resolveConflict: (preferLocal: boolean) => Promise<void>;
   hydrate: (userId?: string, name?: string) => Promise<void>;
   dismissNotice: () => void;
@@ -57,9 +79,16 @@ interface Store extends LibraryState {
   setPreferences: (patch: Partial<Preferences>) => void;
   addReadingTime: (seconds: number) => void;
 }
-let persistence = Promise.resolve();
 export const useLibrary = create<Store>((set, get) => {
+  let persistence = Promise.resolve();
   let inFlight: Promise<void> | undefined;
+  const positionSends = new Set<Promise<void | boolean>>();
+  let queued: SyncOptions | undefined;
+  let persistedView = initialState();
+  let checkpoint: SyncRecord | undefined;
+  let resetting = false;
+  let lastFlushedPositions = "";
+
   const snapshotOf = (state: LibraryState): LibraryState => ({
     documents: state.documents,
     collections: state.collections,
@@ -69,52 +98,89 @@ export const useLibrary = create<Store>((set, get) => {
     readingSeconds: state.readingSeconds,
     readingDays: state.readingDays,
   });
-  const persist = () => {
-    const ownerId = get().ownerId;
+
+  const persist = (schedule = true) => {
+    if (resetting) return;
+    const state = get();
+    const { ownerId } = state;
+    const before = persistedView;
+    const next = snapshotOf(state);
+    if (canonicalJson(before) === canonicalJson(next)) return;
+    persistedView = next;
+    const change = diffLibrary(before, next);
+    const edit = {
+      ...change,
+      baseRevision: 0,
+      operationId: crypto.randomUUID(),
+    };
+    const editId = recordLocalEdit(ownerId, edit);
     set({
       syncMessage: "Alterações salvas neste navegador. Sincronização pendente.",
-      changeVersion: get().changeVersion + 1,
+      changeVersion: state.changeVersion + (schedule ? 1 : 0),
     });
-    const {
-      documents,
-      collections,
-      annotations,
-      bookmarks,
-      preferences,
-      readingSeconds,
-      readingDays,
-    } = get();
-    const snapshot = {
-      documents,
-      collections,
-      annotations,
-      bookmarks,
-      preferences,
-      readingSeconds,
-      readingDays,
-    };
     persistence = persistence
       .catch(() => {})
       .then(async () => {
-        try {
-          await writeState(
-            get().ownerId === ownerId ? snapshotOf(get()) : snapshot,
-            ownerId,
-          );
-          if (get().ownerId === ownerId) set({ storageError: "" });
-        } catch {
-          if (get().ownerId !== ownerId) return;
+        await updateLibraryState(
+          (current) => {
+            if (!current) return next;
+            try {
+              return mergeLibrary(before, next, current);
+            } catch {
+              // Two open tabs share one cache. The last local edit wins for a field edited in both.
+              return applyLocalEdit(current, edit);
+            }
+          },
+          ownerId,
+          undefined,
+          editId,
+        );
+        finishLocalEdit(ownerId, editId);
+        if (get().ownerId === ownerId) set({ storageError: "" });
+      })
+      .catch(() => {
+        if (get().ownerId === ownerId)
           set({
             storageError:
               "Não foi possível salvar neste navegador. Verifique o espaço disponível e exporte suas notas antes de fechar.",
           });
-        }
       });
   };
+
+  const applyToView = (snapshot: LibraryState) => {
+    const current = get();
+    const before = new Map(current.documents.map((book) => [book.id, book]));
+    const remotePositionVersion = { ...current.remotePositionVersion };
+    for (const book of snapshot.documents) {
+      const prior = before.get(book.id);
+      if (
+        !prior ||
+        canonicalJson(readingPosition(prior)) !==
+          canonicalJson(readingPosition(book))
+      )
+        remotePositionVersion[book.id] =
+          (remotePositionVersion[book.id] ?? 0) + 1;
+    }
+    persistedView = snapshotOf(snapshot);
+    set({
+      ...snapshot,
+      remotePositionVersion,
+      storageError: "",
+      revision: checkpoint?.revision ?? 0,
+    });
+  };
+
+  const runWithLock = async (ownerId: string, execute: () => Promise<void>) => {
+    if (navigator.locks)
+      await navigator.locks.request(`reader-sync-${ownerId}`, execute);
+    else await execute();
+  };
+
   return {
     ...initialState(),
     hydrated: false,
     changeVersion: 0,
+    revision: 0,
     remotePositionVersion: {},
     storageError: "",
     notice: "",
@@ -123,97 +189,86 @@ export const useLibrary = create<Store>((set, get) => {
     syncMessage: "Alterações salvas neste navegador.",
     synchronizing: false,
     lastSyncedAt: null,
-    synchronize: async () => {
-      if (!navigator.onLine || !get().hydrated) return;
-      if (inFlight) return inFlight;
+    synchronize: async (options = { pull: true }) => {
+      if (resetting || !navigator.onLine || !get().hydrated) return;
+      if (inFlight) {
+        queued = {
+          pull: queued?.pull || options.pull,
+          keepalive: queued
+            ? queued.keepalive && options.keepalive
+            : options.keepalive,
+          skipPositions: queued
+            ? queued.skipPositions && options.skipPositions
+            : options.skipPositions,
+          includeReadingTime:
+            queued?.includeReadingTime === true ||
+            options.includeReadingTime !== false,
+        };
+        return inFlight;
+      }
       const ownerId = get().ownerId;
-      const perform = async () => {
+      inFlight = runWithLock(ownerId, async () => {
         if (get().ownerId !== ownerId) return;
         set({ synchronizing: true });
-        for (let attempt = 0; attempt < 3; attempt++) {
+        let request = options;
+        for (let attempt = 0; attempt < 20; attempt++) {
           try {
-            await persistence.catch(() => {});
-            if (get().ownerId !== ownerId) return;
-            if (get().storageError) {
-              await writeState(snapshotOf(get()), ownerId);
-              set({ storageError: "" });
-            }
-            const result = await synchronizeLibrary(ownerId);
-            if (!result || get().ownerId !== ownerId) return;
-            persistence = persistence
-              .catch(() => {})
-              .then(async () => {
-                if (get().ownerId !== ownerId) return;
-                // Rebase both network-time and disk-time edits before updating the reader.
-                const beforeCommit = snapshotOf(get());
-                const snapshot = mergeLibrary(
-                  result.before,
-                  beforeCommit,
-                  result.snapshot,
-                  result.deletedCollectionIds,
-                  result.deletedDocumentIds,
-                );
-                try {
-                  await writeSynchronizedState(
-                    snapshot,
-                    result.record,
-                    ownerId,
-                  );
-                } catch {
-                  set({
-                    storageError:
-                      "Não foi possível salvar a sincronização neste navegador. A cópia local foi preservada.",
-                  });
-                  throw new Error(
-                    "Não foi possível salvar a sincronização neste navegador. Tente novamente.",
-                  );
-                }
-                if (get().ownerId !== ownerId) return;
-                const current = snapshotOf(get());
-                const applied = mergeLibrary(
-                  beforeCommit,
-                  current,
-                  snapshot,
-                  result.deletedCollectionIds,
-                  result.deletedDocumentIds,
-                );
-                const remotePositionVersion = {
-                  ...get().remotePositionVersion,
-                };
-                for (const book of applied.documents) {
-                  const prior = current.documents.find(
-                    (item) => item.id === book.id,
-                  );
-                  if (
-                    !prior ||
-                    canonicalJson(readingPosition(prior)) !==
-                      canonicalJson(readingPosition(book))
-                  )
-                    remotePositionVersion[book.id] =
-                      (remotePositionVersion[book.id] ?? 0) + 1;
-                }
-                set({ ...applied, remotePositionVersion, storageError: "" });
-                if (canonicalJson(applied) !== canonicalJson(snapshot))
-                  await writeState(applied, ownerId);
-              });
             await persistence;
+            if (resetting || get().ownerId !== ownerId) return;
+            if (get().storageError)
+              await writeState(snapshotOf(get()), ownerId);
+            const result = await synchronizeLibrary(ownerId, request);
+            if (!result || get().ownerId !== ownerId) return;
+            const commit = persistence.then(async () => {
+              if (get().ownerId !== ownerId) return;
+              const beforeCommit = snapshotOf(get());
+              const integrate = (
+                before: LibraryState,
+                ours: LibraryState,
+                theirs: LibraryState,
+              ) =>
+                mergeLibrary(
+                  before,
+                  ours,
+                  theirs,
+                  result.deletedCollectionIds,
+                  result.deletedDocumentIds,
+                );
+              const disk = await updateLibraryState(
+                (current) =>
+                  integrate(
+                    result.before,
+                    current ?? result.before,
+                    result.snapshot,
+                  ),
+                ownerId,
+                result.record,
+              );
+              if (get().ownerId !== ownerId) return;
+              checkpoint = result.record;
+              applyToView(integrate(beforeCommit, snapshotOf(get()), disk));
+            });
+            persistence = commit.catch(() => {});
+            await commit;
             if (get().ownerId !== ownerId) return;
-            const pendingChanges =
-              canonicalJson(snapshotOf(get())) !==
-              canonicalJson(result.record.base);
-            if ((pendingChanges || result.retry) && attempt < 2) continue;
+            const next = queued;
+            queued = undefined;
+            if ((result.retry && !request.keepalive) || next) {
+              request = next ?? { ...request, pull: false };
+              continue;
+            }
+            const unsent = diffLibrary(result.record.base, snapshotOf(get()));
             set({
-              syncMessage: pendingChanges
-                ? "Novas alterações locais aguardam sincronização."
-                : result.pendingOriginals
-                  ? "Leitura sincronizada. Há arquivos originais pendentes de envio."
+              syncMessage: result.pendingOriginals
+                ? "Há arquivos pendentes de envio. Suas alterações continuam neste navegador."
+                : unsent.changes.length || unsent.time
+                  ? "Alterações salvas neste navegador. Sincronização pendente."
                   : "Biblioteca sincronizada.",
               lastSyncedAt: new Date().toISOString(),
             });
             return;
           } catch (error) {
             if (get().ownerId !== ownerId) return;
-            if (error instanceof SyncRevisionError && attempt < 2) continue;
             set({
               syncMessage:
                 error instanceof TypeError
@@ -225,62 +280,123 @@ export const useLibrary = create<Store>((set, get) => {
             return;
           }
         }
-      };
-      inFlight = (
-        navigator.locks
-          ? navigator.locks.request(`reader-sync-${ownerId}`, perform)
-          : perform()
-      )
-        .then(() => {})
-        .finally(() => {
-          inFlight = undefined;
-          if (get().ownerId === ownerId) set({ synchronizing: false });
-        });
+      }).finally(() => {
+        inFlight = undefined;
+        if (get().ownerId !== ownerId) return;
+        set({ synchronizing: false });
+        const next = queued;
+        queued = undefined;
+        if (next) void get().synchronize(next);
+      });
       return inFlight;
     },
+    flush: () => {
+      if (resetting || !navigator.onLine || !get().hydrated) return;
+      // A queued write can outlive pagehide. Position updates are safe to send independently.
+      if (checkpoint) {
+        const positions = diffLibrary(
+          checkpoint.base,
+          snapshotOf(get()),
+        ).changes.filter((change) => change.kind === "positions");
+        const batch: SyncBatch = {
+          operationId: crypto.randomUUID(),
+          baseRevision: checkpoint.revision,
+          changes: [],
+        };
+        let bytes = new TextEncoder().encode(JSON.stringify(batch)).length;
+        for (const position of positions) {
+          if (
+            !checkpoint.base.documents.some((book) => book.id === position.id)
+          )
+            continue;
+          bytes +=
+            new TextEncoder().encode(JSON.stringify(position)).length + 1;
+          if (bytes > MAX_KEEPALIVE_BYTES || batch.changes.length >= 250) break;
+          batch.changes.push(position);
+        }
+        const positionsKey = canonicalJson(batch.changes);
+        if (batch.changes.length && positionsKey !== lastFlushedPositions) {
+          lastFlushedPositions = positionsKey;
+          const positionSend = sendSyncBatch(batch, true)
+            .then((response) => {
+              if (!response.ok && lastFlushedPositions === positionsKey)
+                lastFlushedPositions = "";
+            })
+            .catch(() => {
+              if (lastFlushedPositions === positionsKey)
+                lastFlushedPositions = "";
+            })
+            .finally(() => positionSends.delete(positionSend));
+          positionSends.add(positionSend);
+        }
+      }
+      void get().synchronize({ keepalive: true, skipPositions: true });
+    },
+    suspendLocalWrites: () => {
+      resetting = true;
+      queued = undefined;
+    },
+    resetLocal: async () => {
+      if (resetting) return;
+      if (!navigator.onLine)
+        throw new Error("Conecte-se para baixar a biblioteca da conta.");
+      const { ownerId } = get();
+      get().suspendLocalWrites();
+      try {
+        await Promise.all([inFlight, ...positionSends]);
+        await runWithLock(ownerId, async () => {
+          await persistence;
+          const remote = await readLibraryForConflict();
+          if (get().ownerId !== ownerId)
+            throw new Error("A conta mudou durante a limpeza.");
+          if ("caches" in window) await clearAppCache(window.caches);
+          clearLocalEdits(ownerId);
+          localStorage.removeItem("personal-reader:library-view");
+          await replaceLocalLibrary(ownerId, remote.base, remote);
+          const key = localResetKey(ownerId);
+          localStorage.setItem(key, crypto.randomUUID());
+          localStorage.removeItem(key);
+        });
+      } catch (error) {
+        resetting = false;
+        throw error;
+      }
+    },
     resolveConflict: async (preferLocal) => {
-      const ownerId = get().ownerId;
       await inFlight;
-      if (get().ownerId !== ownerId) return;
-      const perform = async () => {
-        await persistence.catch(() => {});
+      if (resetting) return;
+      const ownerId = get().ownerId;
+      await runWithLock(ownerId, async () => {
+        await persistence;
+        if (resetting) return;
         const remote = await readLibraryForConflict();
         if (get().ownerId !== ownerId) return;
         const record = await readSyncRecord<SyncRecord>(ownerId);
-        persistence = persistence
-          .catch(() => {})
-          .then(async () => {
-            const snapshot = preferLocal ? snapshotOf(get()) : remote.snapshot;
-            await writeSynchronizedState(
-              snapshot,
-              {
-                revision: remote.revision,
-                base: remote.snapshot,
-                uploaded: record?.uploaded ?? [],
-              },
-              ownerId,
-            );
-            if (get().ownerId === ownerId && !preferLocal) set(snapshot);
-          });
-        await persistence;
-      };
-      inFlight = (
-        navigator.locks
-          ? navigator.locks.request(`reader-sync-${ownerId}`, perform)
-          : perform()
-      )
-        .then(() => {})
-        .finally(() => {
-          inFlight = undefined;
-        });
-      await inFlight;
-      await get().synchronize();
+        const { deleted } = remote;
+        const next = { ...remote, uploaded: record?.uploaded ?? [] };
+        const disk = await updateLibraryState(
+          (current) =>
+            preferLocal
+              ? applyDelta(current ?? snapshotOf(get()), deleted, []).state
+              : remote.base,
+          ownerId,
+          next,
+        );
+        if (get().ownerId !== ownerId) return;
+        checkpoint = next;
+        applyToView(disk);
+      });
+      await get().synchronize({ pull: false });
     },
     hydrate: async (userId, name) => {
       if (!userId || (get().hydrated && get().ownerId === userId)) return;
+      persistedView = initialState();
+      checkpoint = undefined;
+      lastFlushedPositions = "";
       set({
-        ...initialState(),
+        ...persistedView,
         hydrated: false,
+        revision: 0,
         remotePositionVersion: {},
         synchronizing: false,
         lastSyncedAt: null,
@@ -289,15 +405,25 @@ export const useLibrary = create<Store>((set, get) => {
       });
       setStorageScope(userId);
       try {
-        const saved = await readState(userId);
+        await recoverLocalEdits(userId);
+        const [saved, record] = await Promise.all([
+          readState(userId),
+          readSyncRecord<SyncRecord>(userId),
+        ]);
         if (get().ownerId !== userId) return;
-        if (saved) set(saved);
-        else await writeState(initialState(), userId);
+        checkpoint = record;
+        if (saved) applyToView(saved);
+        else
+          await updateLibraryState(
+            (current) => current ?? initialState(),
+            userId,
+          );
       } catch {
-        set({
-          storageError:
-            "O armazenamento local está indisponível. Permita os dados do site para guardar suas leituras.",
-        });
+        if (get().ownerId === userId)
+          set({
+            storageError:
+              "O armazenamento local está indisponível. Permita os dados do site para guardar suas leituras.",
+          });
       }
       if (get().ownerId === userId) set({ hydrated: true });
     },
@@ -413,7 +539,7 @@ export const useLibrary = create<Store>((set, get) => {
         readingSeconds: s.readingSeconds + seconds,
         readingDays: addDailySeconds(s.readingDays, seconds),
       }));
-      persist();
+      persist(false);
     },
   };
 });

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor, Download, ChevronDown } from "lucide-react";
 import { Button, SelectField } from "@/components/ui/controls";
 import { useLibrary } from "@/modules/library/store";
+import { ResetLocalSettings } from "./reset-local-settings";
 import { CacheSettings } from "./cache-settings";
 import { InvitationSettings } from "./invitation-settings";
 import { SyncSettings } from "./sync-settings";
@@ -128,7 +129,18 @@ export function SettingsView() {
                 arquivos originais não estão incluídos.
               </p>
             </div>
-            <Button className="button secondary" onClick={exportLibraryBackup}>
+            <Button
+              className="button secondary"
+              onClick={() =>
+                void exportLibraryBackup().catch(() => {
+                  useLibrary
+                    .getState()
+                    .notify(
+                      "Não foi possível baixar todos os arquivos do backup. Tente novamente quando estiver online.",
+                    );
+                })
+              }
+            >
               <Download size={16} />
               Exportar backup
             </Button>
@@ -145,6 +157,7 @@ export function SettingsView() {
                 .catch(() => {});
             }}
           />
+          <ResetLocalSettings />
           <details className="settings-storage">
             <summary>
               Armazenamento

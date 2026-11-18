@@ -6,10 +6,10 @@ import {
   resizeAnnotationPoints,
   wrapAnnotationText,
 } from "../src/modules/reader/annotation-objects";
-import { snapshotSchema } from "../src/modules/library/snapshot-schema";
+import { annotationSchema } from "../src/modules/library/library-schemas";
 import { initialState } from "./reader-fixture";
 
-test("text size survives snapshot validation used by backup and synchronization", () => {
+test("text size survives validation for synchronization", () => {
   const snapshot = initialState();
   snapshot.annotations = [
     {
@@ -25,7 +25,7 @@ test("text size survives snapshot validation used by backup and synchronization"
       updatedAt: "2026-11-17T12:00:00.000Z",
     },
   ];
-  assert.equal(snapshotSchema.parse(snapshot).annotations[0].fontSize, 28.5);
+  assert.equal(annotationSchema.parse(snapshot.annotations[0]).fontSize, 28.5);
 });
 
 test("a tap inserts an image with its original aspect ratio within the page", () => {

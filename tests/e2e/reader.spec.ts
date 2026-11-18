@@ -11,7 +11,7 @@ import { mkdir } from "node:fs/promises";
 test.beforeEach(async ({ context }) => {
   await seedReaderLibrary(context);
   // Reader tests isolate local behavior; remote persistence has its own integration suite.
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
   const env = dotenv.parse(await readFile(".env", "utf8"));
@@ -136,6 +136,67 @@ test("search, list/grid and collection membership work", async ({ page }) => {
   await page.reload();
   await expect(page.locator(".book-card")).toHaveCount(8);
 });
+test("an opened book moves from Quero Ler to Continuar", async ({ page }) => {
+  await page.goto("/");
+  const continuing = page.getByRole("region", { name: "Continuar" });
+  const title = "Frankenstein";
+  await expect(
+    continuing.getByRole("link", { name: new RegExp(title) }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: title, exact: true }).click();
+  await expect(
+    page.getByRole("spinbutton", { name: "Número da página" }),
+  ).toHaveValue("1");
+  await page.goto("/");
+  await expect(
+    continuing.getByRole("link", { name: new RegExp(title) }),
+  ).toBeVisible();
+});
+
+test("Continuar shows its only book at a tablet viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 950, height: 900 });
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Continuar" })).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open(
+          "personal-reader-00000000-0000-4000-8000-000000000001",
+        );
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction("state", "readwrite");
+          const store = tx.objectStore("state");
+          const read = store.get("library");
+          read.onsuccess = () => {
+            const snapshot = read.result;
+            for (const book of snapshot.documents) {
+              if (book.status === "reading" && book.id !== "dom-casmurro")
+                book.status = "want";
+            }
+            store.put(snapshot, "library");
+          };
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      }),
+  );
+  await page.reload();
+  const cards = page
+    .getByRole("region", { name: "Continuar" })
+    .locator(".continue-book");
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toBeVisible();
+  await expect(cards.first()).toContainText("Dom Casmurro");
+});
+
 test("notes, bookmarks, progress and drawings survive a reload and undo/redo", async ({
   page,
 }) => {
@@ -457,7 +518,7 @@ test("touch toggles reader chrome and Escape restores keyboard access", async ({
     isMobile: true,
   });
   await seedReaderLibrary(mobile);
-  await mobile.route("**/api/library", (route) =>
+  await mobile.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
   await mobile.addCookies(await context.cookies());
@@ -578,7 +639,7 @@ test("mobile workspace controls retain touch targets without horizontal overflow
     isMobile: true,
   });
   await mobile.addCookies(await context.cookies());
-  await mobile.route("**/api/library", (route) =>
+  await mobile.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
   const page = await mobile.newPage();

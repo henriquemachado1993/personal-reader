@@ -12,7 +12,7 @@ for (const [message, state, label] of [
   ],
   ["Novas alterações locais aguardam sincronização.", "pending", "Pendente"],
   [
-    "Leitura sincronizada. Há arquivos originais pendentes de envio.",
+    "Há arquivos pendentes de envio. Suas alterações continuam neste navegador.",
     "pending",
     "Arquivos pendentes",
   ],

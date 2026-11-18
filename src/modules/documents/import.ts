@@ -1,5 +1,6 @@
 import type { DocumentFormat, ReaderDocument } from "@/shared/types";
-import { saveFile } from "@/infrastructure/storage/local";
+import { getStorageScope, saveFile } from "@/infrastructure/storage/local";
+import { saveLibraryAsset } from "@/modules/library/library-assets";
 const formats: Record<string, DocumentFormat> = {
   pdf: "PDF",
   epub: "EPUB",
@@ -39,6 +40,7 @@ export async function importDocument(file: File): Promise<ReaderDocument> {
     throw new Error(`${file.name}: o limite local é de 100 MB por arquivo.`);
   if (!file.size) throw new Error(`${file.name}: o arquivo está vazio.`);
   const id = crypto.randomUUID();
+  const ownerId = getStorageScope();
   let content: string[] | undefined;
   let cover = "",
     title = file.name.replace(/\.[^.]+$/, "").replace(/[_]/g, " "),
@@ -60,7 +62,10 @@ export async function importDocument(file: File): Promise<ReaderDocument> {
       const context = canvas.getContext("2d");
       if (context) {
         await page.render({ canvas, canvasContext: context, viewport }).promise;
-        cover = canvas.toDataURL("image/webp", 0.8);
+        const image = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/webp", 0.8),
+        );
+        if (image) cover = await saveLibraryAsset(image, ownerId);
       }
       const metadata = await pdf.getMetadata();
       const info = metadata.info as { Title?: string; Author?: string };
@@ -111,17 +116,38 @@ export async function importDocument(file: File): Promise<ReaderDocument> {
       const image = await zip
         .file(decodeURIComponent(resolved))
         ?.async("uint8array");
-      if (image && image.length < 5 * 1024 * 1024)
-        cover = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = reject;
-          reader.readAsDataURL(
-            new Blob([new Uint8Array(image)], {
-              type: item?.getAttribute("media-type") ?? "image/jpeg",
-            }),
-          );
+      if (image && image.length < 5 * 1024 * 1024) {
+        const source = new Blob([new Uint8Array(image)], {
+          type: item?.getAttribute("media-type") ?? "image/jpeg",
         });
+        const url = URL.createObjectURL(source);
+        try {
+          const picture = new Image();
+          picture.src = url;
+          await picture.decode();
+          const scale = Math.min(
+            1,
+            480 / Math.max(picture.naturalWidth, picture.naturalHeight),
+          );
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(picture.naturalWidth * scale));
+          canvas.height = Math.max(
+            1,
+            Math.round(picture.naturalHeight * scale),
+          );
+          canvas
+            .getContext("2d")
+            ?.drawImage(picture, 0, 0, canvas.width, canvas.height);
+          const thumbnail = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, "image/webp", 0.8),
+          );
+          if (thumbnail) cover = await saveLibraryAsset(thumbnail, ownerId);
+        } catch {
+          // An unreadable thumbnail should not prevent opening a valid EPUB.
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
     }
   }
   if (format === "TXT") content = paginateText(await file.text());
@@ -149,8 +175,13 @@ export async function importDocument(file: File): Promise<ReaderDocument> {
     collections: [],
     size: file.size,
     addedAt: new Date().toISOString(),
-    content,
+    contentAsset: content
+      ? await saveLibraryAsset(
+          new Blob([JSON.stringify(content)], { type: "application/json" }),
+          ownerId,
+        )
+      : undefined,
   };
-  await saveFile(id, file);
+  await saveFile(id, file, ownerId);
   return result;
 }

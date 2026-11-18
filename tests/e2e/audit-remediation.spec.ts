@@ -17,7 +17,7 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([
     { name, value: token, url: "http://127.0.0.1:3000", httpOnly: true },
   ]);
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
 });
@@ -31,7 +31,7 @@ test("320px navigation remains inside the physical viewport and opens by touch",
     isMobile: true,
   });
   await mobile.addCookies(await context.cookies());
-  await mobile.route("**/api/library", (route) =>
+  await mobile.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
   const page = await mobile.newPage();

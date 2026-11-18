@@ -19,7 +19,7 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([
     { name, value, url: "http://127.0.0.1:3000", httpOnly: true },
   ]);
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
 });
@@ -119,7 +119,10 @@ for (const format of ["text", "pdf"] as const) {
       for (const focused of [false, true]) {
         if (focused) await pageInput.focus();
         await expect(pageInput).toHaveCSS("border-top-width", "0px");
-        await expect(pageInput).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+        await expect(pageInput).toHaveCSS(
+          "background-color",
+          "rgba(0, 0, 0, 0)",
+        );
         await expect(pageInput).toHaveCSS("box-shadow", "none");
         await expect(pageInput).toHaveCSS("outline-style", "none");
       }

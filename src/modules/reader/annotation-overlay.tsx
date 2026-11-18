@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useLibraryAsset } from "@/modules/library/use-library-asset";
 import type { Annotation, AnnotationKind, Point } from "@/shared/types";
 import { annotationBounds } from "./annotation-context";
 import {
@@ -183,8 +184,8 @@ export function AnnotationOverlay({
     }
     if (kind === "image")
       return (
-        <image
-          href={annotation?.image}
+        <AnnotationImage
+          reference={annotation?.image}
           {...geometry}
           style={{
             pointerEvents:
@@ -566,4 +567,12 @@ export function AnnotationOverlay({
       <g opacity={opacity}>{draw(tool, draft, color)}</g>
     </svg>
   );
+}
+
+function AnnotationImage({
+  reference,
+  ...props
+}: React.SVGProps<SVGImageElement> & { reference?: string }) {
+  const href = useLibraryAsset(reference);
+  return <image {...props} href={href} />;
 }

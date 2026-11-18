@@ -48,24 +48,32 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     await api.writeSyncRecord({ revision: 2 });
     api.setStorageScope("first");
     const restored = await api.readState();
-    await api.writeSynchronizedState(
-      { documents: [{ title: "atomic" }] },
-      { revision: 3 },
+    await api.updateLibraryState(
+      () => ({ documents: [{ title: "atomic" }] }),
       "first",
+      { revision: 3 },
     );
     const atomicState = await api.readState("first");
     const atomicRecord = await api.readSyncRecord("first");
     let cloneFailed = false;
     try {
-      await api.writeSynchronizedState(
-        { documents: [{ title: "must not commit" }] },
-        { invalid: () => {} },
+      await api.updateLibraryState(
+        () => ({ documents: [{ title: "must not commit" }] }),
         "first",
+        { invalid: () => {} },
       );
     } catch {
       cloneFailed = true;
     }
     const afterFailure = await api.readState("first");
+    let applications = 0;
+    const edit = () => {
+      applications++;
+      return { documents: [{ title: "journal" }] };
+    };
+    const id = `${Date.now()}-1-edit`;
+    await api.updateLibraryState(edit, "first", undefined, id);
+    await api.updateLibraryState(edit, "first", undefined, id);
     const scopedWrite = api.writeState(
       { documents: [{ title: "scoped" }] },
       "first",
@@ -81,6 +89,7 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
       empty: second === undefined,
       file: await file.text(),
       atomicTitle: atomicState.documents[0].title,
+      applications,
       atomicRevision: atomicRecord.revision,
       cloneFailed,
       afterFailure: afterFailure.documents[0].title,
@@ -95,6 +104,7 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     empty: true,
     file: "original",
     atomicTitle: "atomic",
+    applications: 1,
     atomicRevision: 3,
     cloneFailed: true,
     afterFailure: "atomic",

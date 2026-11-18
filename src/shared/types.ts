@@ -30,6 +30,7 @@ export interface ReaderDocument {
   size: number;
   demo?: boolean;
   content?: string[];
+  contentAsset?: string;
   filename?: string;
 }
 export interface Collection {

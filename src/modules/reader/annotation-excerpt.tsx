@@ -1,3 +1,4 @@
+import { LibraryAssetImage } from "@/modules/library/use-library-asset";
 import type { Annotation } from "@/shared/types";
 import { annotationLabels } from "./annotation-context";
 
@@ -11,13 +12,13 @@ export function AnnotationExcerpt({ annotation }: { annotation: Annotation }) {
   return (
     <div className="annotation-excerpt">
       {annotation.image && (
-        <img
+        <LibraryAssetImage
           className={
             !["image", "clipping"].includes(annotation.kind)
               ? "annotation-region-preview"
               : undefined
           }
-          src={annotation.image}
+          reference={annotation.image}
           alt={
             annotation.text ||
             `${annotationLabels[annotation.kind]} da página ${annotation.page + 1}`

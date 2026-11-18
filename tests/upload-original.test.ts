@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { uploadOriginal } from "../src/modules/library/upload-original";
 
-test("large originals go directly to storage; the API receives only their size", async (t) => {
+test("large originals go directly to storage; the API receives only their metadata", async (t) => {
   const original = new Blob([new Uint8Array(6 * 1024 * 1024)]);
   const calls: { url: string; options?: RequestInit }[] = [];
   t.mock.method(
@@ -20,6 +20,7 @@ test("large originals go directly to storage; the API receives only their size",
   assert.equal(calls[0].options?.method, "POST");
   assert.deepEqual(JSON.parse(calls[0].options?.body as string), {
     size: original.size,
+    type: "application/octet-stream",
   });
   assert.equal(calls[1].url, "https://storage.test/signed");
   assert.equal(calls[1].options?.body, original);
@@ -48,7 +49,7 @@ for (const status of [200, 412, 403, 500]) {
     );
     const upload = uploadOriginal("book", new Blob(["original"]));
     if (status === 200 || status === 412) await upload;
-    else await assert.rejects(upload, /sincronização tentará novamente/);
+    else await assert.rejects(upload, /Não foi possível/);
   });
 }
 
@@ -60,7 +61,7 @@ test("failed authorization never sends bytes", async (t) => {
   );
   await assert.rejects(
     uploadOriginal("book", new Blob(["original"])),
-    /sincronização tentará novamente/,
+    /Não foi possível/,
   );
   assert.equal(fetch.mock.callCount(), 1);
 });

@@ -1,3 +1,4 @@
+import { portableAssetSource } from "@/modules/library/library-assets";
 import { readFile } from "@/infrastructure/storage/local";
 import type { Annotation, ReaderDocument } from "@/shared/types";
 import { renderUnicodeNote } from "./unicode-note";
@@ -47,7 +48,7 @@ export async function exportPdf(
       p1 &&
       p2
     ) {
-      let source = annotation.image;
+      const source = await portableAssetSource(annotation.image);
       if (
         !source.startsWith("data:image/png") &&
         !source.startsWith("data:image/jpeg")

@@ -184,9 +184,6 @@ for (const width of [1440, 393]) {
     await page.getByRole("button", { name: "Mostrar anotações" }).click();
     await expect(highlights.locator("blockquote")).toHaveText("NOVO");
     await expect(underlines.locator("blockquote")).toHaveText("depois");
-    await expect(rectangles.getByRole("img")).toHaveAttribute(
-      "src",
-      /^data:image\/webp/,
-    );
+    await expect(rectangles.getByRole("img")).toHaveAttribute("src", /^blob:/);
   });
 }

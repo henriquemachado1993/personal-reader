@@ -4,6 +4,7 @@ import {
   signedReadUrl,
   signedUploadUrl,
 } from "../src/infrastructure/r2/client";
+import { fileKey } from "../src/infrastructure/r2/file-key";
 
 test("signed transfers scope the object to its owner, expire and prevent overwrites", async (t) => {
   for (const [key, value] of Object.entries({
@@ -19,9 +20,10 @@ test("signed transfers scope the object to its owner, expire and prevent overwri
       else process.env[key] = previous;
     });
   }
+  const objectKey = fileKey("owner", "book");
   const upload = new URL(
     await signedUploadUrl(
-      "owner/originals/book",
+      objectKey,
       "application/octet-stream",
       6 * 1024 * 1024,
     ),
@@ -37,11 +39,18 @@ test("signed transfers scope the object to its owner, expire and prevent overwri
     .split(";");
   assert.ok(signedHeaders.includes("content-length"));
   assert.ok(signedHeaders.includes("if-none-match"));
-  const download = new URL(await signedReadUrl("owner/originals/book"));
+  const download = new URL(await signedReadUrl(objectKey));
   assert.equal(download.pathname, upload.pathname);
   assert.equal(download.searchParams.get("X-Amz-Expires"), "300");
   assert.notEqual(
     download.searchParams.get("X-Amz-Signature"),
     upload.searchParams.get("X-Amz-Signature"),
   );
+  process.env.R2_BUCKET_NAME = "reader-test";
+  const isolatedDownload = new URL(await signedReadUrl(objectKey));
+  assert.equal(
+    isolatedDownload.hostname,
+    "reader-test.account.r2.cloudflarestorage.com",
+  );
+  assert.equal(isolatedDownload.pathname, download.pathname);
 });

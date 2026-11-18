@@ -2,15 +2,18 @@
 
 Biblioteca pessoal em Next.js, com direção visual baseada nas referências do Apple Books fornecidas em `docs/design/images-reference/`. A especificação está em [docs/PRODUCT.md](docs/PRODUCT.md).
 
+
+A [documentação de arquitetura](docs/ARQUITETURA.md) descreve os componentes e os fluxos de leitura, armazenamento e sincronização entre aparelhos.
+
 ## Executar
 
-Requer Node.js 20.9 ou superior e um PostgreSQL do Supabase acessível.
+Requer Node.js 22 ou superior e um PostgreSQL acessível.
 
 ```sh
 npm ci
 ```
 
-Copie `.env.example` para `.env` e configure as URLs do Supabase e `AUTH_SECRET`. As senhas na URL precisam de percent-encoding se contiverem caracteres reservados. Use a URL do transaction pooler para `DATABASE_URL` e a do session pooler para `DIRECT_URL`. Copie o host exato mostrado em Connect no seu projeto Supabase.
+Copie `.env.example` para `.env` e configure as URLs do Postgres e `AUTH_SECRET`. Use um banco vazio para a versão incremental. Configure o bucket privado em `R2_BUCKET_NAME`. As senhas na URL precisam de percent-encoding se contiverem caracteres reservados. Use a URL do transaction pooler para `DATABASE_URL` e a do session pooler para `DIRECT_URL`. Copie o host exato mostrado em Connect no seu projeto Supabase.
 
 ```sh
 npm run db:generate
@@ -39,21 +42,17 @@ Os oito livros iniciais são amostras de demonstração. Suas capas vetoriais s�
 
 **Autenticação:** Supabase PostgreSQL + Prisma. O schema e a migração incluem também as entidades dos demais módulos.
 
-**Acervo e leitura:** originais privados no R2 e biblioteca no Supabase via Prisma. IndexedDB funciona como cache por conta. Sincroniza ao abrir, voltar à aba, recuperar rede, em até 750 ms após alterações locais e a cada 15 segundos. Ao ocultar ou sair da página, envia também uma atualização compacta da posição com `keepalive`.
+**Sincronização:** `LibraryEntity` é a fonte de dados da biblioteca, com um registro por documento, posição, coleção, anotação, marcador e preferência. `GET /api/library/sync?since=<revisão>` lê a revisão e retorna apenas as entidades alteradas desde esse ponto. `POST /api/library/sync` confirma alterações, revisão e recibo na mesma transação. O progresso atualiza somente a posição do livro. O navegador envia ações agrupadas, tenta enviar a posição e o tempo ao sair e recupera alterações ao abrir, voltar à aba ou reconectar. Exclusões ficam registradas. Alterações incompatíveis podem ser resolvidas em Configurações com backup JSON.
 
-Associações a coleções são conciliadas individualmente: dispositivos podem adicionar ou remover o mesmo livro de coleções diferentes sem bloquear a sincronização. Exclusões de coleções também são respeitadas durante a confirmação local. Uma sessão de conta removida não pode mais sincronizar; a cópia local permanece disponível para exportar um backup antes de entrar novamente na mesma conta nos dispositivos.
+**Realtime:** configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. No Supabase hospedado, gere uma chave com `supabase gen signing-key --algorithm ES256`, importe a JWK nas JWT Signing Keys do projeto e ative a chave. Defina a JWK privada completa em `SUPABASE_REALTIME_SIGNING_JWK` no servidor. Mantenha o schema `reader` fora da Data API. Ative o Realtime antes de aplicar a migração, que cria a política de recebimento no canal privado da conta. A sessão Auth.js emite um token de curta duração para esse canal. Cada evento informa somente a revisão confirmada. A conferência por revisão continua disponível se a conexão ao Realtime cair.
 
-A tabela LibraryReplica mantém o envelope atômico da sincronização. LibraryEntity registra versões por entidade e tombstones de exclusão; as tabelas de documentos, coleções, progresso, notas, destaques e marcações são atualizadas na mesma transação. IDs legados têm projeção UUID determinística por conta. Operações têm UUID e recibos persistentes em LibraryEntity (`sync-operation`); uma resposta perdida pode ser reconhecida mesmo após outro dispositivo escrever. Estado local e base de sincronização são confirmados juntos no IndexedDB. Alterações feitas durante requisições são conciliadas sem descartar alterações remotas. Exclusões de livros e coleções são respeitadas mesmo por dispositivos sem base local. Página, porcentagem e localização formam uma posição indivisível, com `readingPositionUpdatedAt`; a mais recente prevalece, inclusive em retornos de página. Abrir o leitor não altera esse relógio. Alterações independentes são conciliadas; conflitos incompatíveis em metadados, notas ou preferências exigem escolha em Configurações, com backup JSON. Limites atuais: 25 MB para metadados, capas e anotações; 100 MB por original.
+**Arquivos:** originais, capas, capturas, imagens anexadas e o texto paginado de TXT/DOCX ficam em um bucket privado do R2. `POST /api/library/files/:id` autoriza upload direto com URL assinada. O GET autentica e redireciona para download. O bucket é definido por `R2_BUCKET_NAME`. Cada objeto tem uma chave imutável com o ID da conta. Configure CORS com [docs/storage-cors.json](docs/storage-cors.json). As exclusões entram em retenção de sete dias. `npm run storage:collect` simula a coleta e `npm run storage:collect -- --apply` remove arquivos cujo prazo venceu e que continuam sem referência. O cache offline fica no IndexedDB por conta.
 
-Para projetar bibliotecas anteriores, execute `npm run db:project` (já executado neste ambiente). Exclusões entram numa fila com sete dias de retenção. `npm run storage:collect` apenas simula a coleta; `npm run storage:collect -- --apply` remove candidatos vencidos após conferir novamente as referências com o mesmo lock usado na sincronização. Agende esse comando no servidor conforme sua política de retenção; nenhuma tarefa automática foi instalada na máquina. Bibliotecas ausentes ou malformadas protegem o original contra exclusão.
-
-**Transferência de originais na Vercel:** upload e download usam URLs assinadas do R2, válidas por cinco minutos, para evitar o limite de 4,5 MB das funções. `POST /api/library/files/:id` autoriza o upload com base na sessão e recebe apenas `{ size }`; o navegador envia os bytes diretamente ao R2. `GET` autentica a conta e redireciona para o download privado. Originais existentes são reutilizados, sem sobrescrita. O `PUT` antigo permanece para compatibilidade com clientes anteriores e continua sujeito ao limite da plataforma.
-
-Para usar transferências pelo navegador, configure CORS nas configurações do bucket R2 com [docs/storage-cors.json](docs/storage-cors.json). Preserve regras existentes necessárias a outros serviços. Ajuste os domínios caso use outra URL ou previews; evite liberar qualquer origem. São necessários `GET`, `PUT`, `HEAD` e os cabeçalhos `Content-Type` e `If-None-Match`. Credenciais com acesso somente a objetos podem não ter permissão para consultar/alterar CORS; nesse caso, use o painel Cloudflare com acesso administrativo. Após publicar, sincronize no dispositivo com o original e abra o livro em outro navegador para confirmar upload, download e CORS reais.
-
-Bibliotecas cujo envelope excede 4 MB enviam o snapshot diretamente ao R2 por URL assinada (`POST /api/library/snapshots/:operationId`) e submetem apenas a referência à API. O servidor confere a conta, valida o conteúdo e aplica o mesmo controle de revisão. Respostas de biblioteca usam streaming. O limite de metadados permanece 25 MB. Transferências temporárias são removidas ao concluir a requisição; uploads abandonados podem ser coletados após sete dias com `npm run storage:collect -- --apply`. A coleta usa apenas o prefixo reservado `sync-snapshots/` e preserva originais. Uma falha de upload de original deixa o arquivo pendente, sem bloquear o progresso e os metadados.
+**Teste isolado:** inicie o Supabase local em uma pasta independente com a CLI e Docker. Use o endereço local mostrado em `supabase status` e a mesma conexão direta em `DATABASE_URL` e `DIRECT_URL`. Configure o segredo JWT local em `SUPABASE_REALTIME_LOCAL_JWT_SECRET`. Aplique `npx prisma migrate deploy` e inicie o app. Para os testes Playwright de sincronização, defina `TEST_DATABASE_URL` com a conexão do banco descartável. Habilite `TEST_REALTIME=1` para testar a entrega ao vivo. Para testar arquivos, habilite `TEST_R2=1` e configure `R2_BUCKET_NAME` para um bucket de teste. Mantenha as mesmas variáveis do servidor no processo dos testes.
 
 **Offline:** o service worker de produção guarda páginas visitadas e recursos. Documentos abertos ficam no IndexedDB. Visite a página online após a instalação do worker antes de depender da recarga offline. Primeiro login, download de original ausente e troca de progresso entre dispositivos exigem rede. Leitura offline permanece local e é reenviada ao reconectar; encerrar o processo à força não garante o envio imediato ao outro dispositivo. O cache de navegação é apagado ao voltar ao login online.
+
+Em **Configurações → Dados da biblioteca**, **Limpar dados locais** baixa a cópia da conta e substitui o estado deste navegador. A ação descarta alterações ainda pendentes e remove arquivos offline, que serão baixados conforme necessário.
 
 **Editor:** texto, imagens PNG/JPEG, cor, espessura, opacidade, sublinhado, lápis fino, arraste de objetos e ferramenta para mover a página. Após selecionar um objeto, “Aplicar ao objeto selecionado” atualiza suas propriedades. DOCX é convertido para texto. A busca EPUB percorre todos os capítulos; o conhecimento filtra por intervalo de datas; estatísticas mostram o total acumulado, a meta de hoje e os últimos sete dias. Tempos anteriores à implementação do registro diário permanecem somente no total acumulado.
 
@@ -100,7 +99,7 @@ A interface usa Mantine para campos, selects nativos, checkboxes, botões, menus
 
 ## Cadastro por convite
 
-Antes de publicar esta versão, aplique `npx prisma migrate deploy` para criar `reader.RegistrationInvite`. Nenhuma variável de ambiente nova é necessária. A conta indicada por `Installation.ownerId` administra convites; essa permissão é conferida no servidor, sem confiar em dados enviados pelo navegador.
+Aplique `npx prisma migrate deploy` no banco vazio para instalar as tabelas da biblioteca e de cadastro por convite. A conta indicada por `Installation.ownerId` administra convites; essa permissão é conferida no servidor, sem confiar em dados enviados pelo navegador.
 
 Os links usam `/register#TOKEN`, evitando registrar o segredo na URL enviada ao servidor. O banco guarda somente SHA-256 do token aleatório de 256 bits. O token completo aparece apenas ao gerar o convite; copie-o antes de sair da tela. O cadastro confirma e consome o convite dentro da transação que cria a conta. O envio de e-mail automático não faz parte deste fluxo.
 

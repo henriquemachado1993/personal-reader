@@ -16,7 +16,7 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([
     { name: "authjs.session-token", value, url: "http://127.0.0.1:3000" },
   ]);
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
 });
@@ -134,4 +134,73 @@ test("cache cleanup failure is recoverable", async ({ page }) => {
   await expect(
     page.getByRole("status").filter({ hasText: "Cache limpo." }),
   ).toBeVisible();
+});
+
+test("reset keeps local data if the account is unavailable and replaces it with the remote library on retry", async ({
+  page,
+  context,
+}) => {
+  const route = /\/api\/library\/sync(?:\?.*)?$/;
+  await context.unroute(route);
+  let available = false;
+  let writes = 0;
+  await context.route(route, async (request) => {
+    if (request.request().method() === "POST") writes++;
+    await request.fulfill(
+      available
+        ? { json: { revision: 4, changes: [], reset: true } }
+        : { status: 503, body: "{}" },
+    );
+  });
+
+  await page.goto("/settings");
+  const readLocal = (seed: boolean) =>
+    page.evaluate(async (seed) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const open = indexedDB.open(
+          "personal-reader-00000000-0000-4000-8000-000000000001",
+        );
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      const tx = db.transaction(["state", "files"], "readwrite");
+      const files = tx.objectStore("files");
+      if (seed) files.put(new Blob(["offline"]), "offline-file");
+      const result = {
+        library: tx.objectStore("state").get("library"),
+        files: files.count(),
+      };
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+      return {
+        books: result.library.result.documents.length,
+        files: result.files.result,
+      };
+    }, seed);
+
+  expect(await readLocal(true)).toEqual({ books: 8, files: 1 });
+  await page
+    .getByRole("button", { name: "Limpar dados locais", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Limpar dados locais?" });
+  const confirm = dialog.getByRole("button", {
+    name: "Limpar e ressincronizar",
+  });
+  await confirm.click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Sincronização indisponível",
+  );
+  expect(await readLocal(false)).toEqual({ books: 8, files: 1 });
+
+  available = true;
+  await confirm.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByText("Biblioteca sincronizada.", { exact: true }),
+  ).toBeVisible();
+  expect(await readLocal(false)).toEqual({ books: 0, files: 0 });
+  expect(writes).toBe(0);
 });

@@ -46,6 +46,10 @@ import { useLibrary } from "@/modules/library/store";
 import { IconButton, EmptyState } from "@/components/ui";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { AnnotationExcerpt } from "./annotation-excerpt";
+import {
+  readDocumentContent,
+  stageImageAsset,
+} from "@/modules/library/library-assets";
 import { captureAnnotationPreview } from "./annotation-preview";
 import { AnnotationTextEditor } from "./annotation-text-editor";
 import { annotationTextLines, fitImagePoints } from "./annotation-objects";
@@ -141,7 +145,51 @@ export function Reader({ documentId }: { documentId: string }) {
       remotePositionVersion: store.remotePositionVersion[documentId] ?? 0,
     })),
   );
-  const book = library.documents.find((d) => d.id === documentId);
+  const cachedBook = library.documents.find((d) => d.id === documentId);
+  const contentAsset = cachedBook?.contentAsset;
+  const [documentText, setDocumentText] = useState<{
+    id: string;
+    pages: string[];
+  }>();
+  const [contentError, setContentError] = useState("");
+  const book =
+    cachedBook && contentAsset && documentText?.id === contentAsset
+      ? { ...cachedBook, content: documentText.pages }
+      : cachedBook;
+  useEffect(() => {
+    if (!contentAsset) return;
+    let active = true;
+    const load = () => {
+      setContentError("");
+      void readDocumentContent(contentAsset)
+        .then((pages) => {
+          if (active) setDocumentText({ id: contentAsset, pages });
+        })
+        .catch((error: Error) => {
+          if (active) setContentError(error.message);
+        });
+    };
+    load();
+    window.addEventListener("online", load);
+    return () => {
+      active = false;
+      window.removeEventListener("online", load);
+    };
+  }, [contentAsset]);
+  useEffect(
+    () => () => {
+      if (useLibrary.getState().hydrated) useLibrary.getState().flush();
+    },
+    [documentId],
+  );
+  const keepImage = (source?: string) =>
+    source
+      ? stageImageAsset(source, () =>
+          useLibrary
+            .getState()
+            .notify("Não foi possível guardar a imagem neste navegador."),
+        )
+      : undefined;
   useEffect(() => {
     document.title = `${book?.title ?? "Leitor"} · Le-Books`;
   }, [book?.title]);
@@ -514,6 +562,7 @@ export function Reader({ documentId }: { documentId: string }) {
     realEpub,
     library.hydrated,
     library.remotePositionVersion,
+    documentText?.id,
   ]);
   const onPages = useCallback(
     (pages: number) => {
@@ -683,17 +732,18 @@ export function Reader({ documentId }: { documentId: string }) {
       quote,
       color,
       points,
-      image:
+      image: keepImage(
         image ||
-        (!quote && !text && realPdf && canvas.current
-          ? captureAnnotationPreview(canvas.current, {
-              points,
-              kind,
-              color,
-              thickness,
-              opacity,
-            })
-          : undefined),
+          (!quote && !text && realPdf && canvas.current
+            ? captureAnnotationPreview(canvas.current, {
+                points,
+                kind,
+                color,
+                thickness,
+                opacity,
+              })
+            : undefined),
+      ),
       thickness,
       opacity,
       fontSize,
@@ -853,7 +903,7 @@ export function Reader({ documentId }: { documentId: string }) {
         ? {
             image: quote
               ? undefined
-              : captureAnnotationPreview(canvas.current, annotation),
+              : keepImage(captureAnnotationPreview(canvas.current, annotation)),
           }
         : {}),
     });
@@ -928,6 +978,12 @@ export function Reader({ documentId }: { documentId: string }) {
       <div className="reader-loading">
         <BookOpen size={36} strokeWidth={1.3} />
         <p>Abrindo sua leitura…</p>
+      </div>
+    );
+  if (book && contentAsset && documentText?.id !== contentAsset)
+    return (
+      <div className="reader-loading" role="status">
+        {contentError || "Carregando o texto do documento…"}
       </div>
     );
   if (!book)
@@ -1825,7 +1881,7 @@ export function Reader({ documentId }: { documentId: string }) {
                     );
                     editAnnotation({
                       ...object,
-                      image: image.source,
+                      image: keepImage(image.source),
                       points,
                       updatedAt: new Date().toISOString(),
                     });

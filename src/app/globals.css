@@ -2014,7 +2014,7 @@ textarea::placeholder {
   .continue-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .continue-book:last-child {
+  .continue-book:nth-child(3) {
     display: none;
   }
   .book-grid {
@@ -3157,7 +3157,7 @@ textarea::placeholder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
   }
-  .books-main .continue-book:last-child {
+  .books-main .continue-book:nth-child(3) {
     display: none;
   }
   .books-main .book-grid {

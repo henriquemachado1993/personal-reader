@@ -1,82 +1,65 @@
-import { test, expect } from "@playwright/test";
-import { PrismaClient } from "@prisma/client";
-import { encode } from "next-auth/jwt";
-import { readFile } from "node:fs/promises";
-import dotenv from "dotenv";
-import { initialState } from "../library-fixture";
-test("normalized rows and entity tombstones commit atomically with versions", async ({
-  request,
+import { test, expect, testBook } from "./library-sync-fixture";
+import { initialState } from "../../src/modules/library/initial-state";
+
+test.skip(
+  !process.env.TEST_DATABASE_URL,
+  "Requer um banco de teste descartável",
+);
+
+test("deleting a book tombstones its position, notes, and bookmarks in the same revision", async ({
+  createAccount,
+  libraryDb,
 }) => {
-  const env = dotenv.parse(await readFile(".env", "utf8")),
-    db = new PrismaClient({ datasourceUrl: env.DATABASE_URL }),
-    ownerId = crypto.randomUUID();
-  try {
-    await db.user.create({
-      data: { id: ownerId, email: `${ownerId}@example.test` },
-    });
-    const token = await encode({
-      secret: env.AUTH_SECRET,
-      salt: "authjs.session-token",
-      token: { id: ownerId, sub: ownerId },
-    });
-    const headers = {
-      Cookie: `authjs.session-token=${token}`,
-      Origin: new URL(
-        process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
-      ).origin,
-    };
-    const snapshot = initialState();
-    snapshot.documents = Array.from({ length: 8 }, (_, index) => ({
-      ...snapshot.documents[index % snapshot.documents.length],
-      id: `projection-fixture-${index}`,
-    }));
-    const save = async (revision: number) =>
-      request.put("/api/library", {
-        headers,
-        data: { snapshot, revision, operationId: crypto.randomUUID() },
-      });
-    expect((await save(0)).status()).toBe(200);
-    expect(await db.document.count({ where: { ownerId } })).toBe(8);
-    snapshot.documents[0].title = "Título atualizado";
-    const removed = snapshot.documents.pop()!;
-    expect((await save(1)).status()).toBe(200);
-    expect(await db.document.count({ where: { ownerId } })).toBe(7);
-    const version = await db.libraryEntity.findUniqueOrThrow({
-      where: {
-        ownerId_kind_entityId: {
-          ownerId,
-          kind: "documents",
-          entityId: snapshot.documents[0].id,
-        },
+  const account = await createAccount();
+  const book = { ...testBook("PDF"), demo: true };
+  const location = { type: "PDF" as const, pageIndex: 0 };
+  await account.seed({
+    ...initialState(),
+    documents: [book],
+    annotations: [
+      {
+        id: "note",
+        documentId: book.id,
+        kind: "note",
+        page: 0,
+        location,
+        text: "Nota",
+        color: "#112233",
+        createdAt: book.addedAt,
+        updatedAt: book.addedAt,
       },
-    });
-    expect(version.version).toBe(2);
-    const untouched = await db.libraryEntity.findUniqueOrThrow({
-      where: {
-        ownerId_kind_entityId: {
-          ownerId,
-          kind: "documents",
-          entityId: snapshot.documents[1].id,
-        },
+    ],
+    bookmarks: [
+      {
+        id: "bookmark",
+        documentId: book.id,
+        page: 0,
+        location,
+        createdAt: book.addedAt,
       },
-    });
-    expect(untouched.version).toBe(1);
-    const tombstone = await db.libraryEntity.findUniqueOrThrow({
-      where: {
-        ownerId_kind_entityId: {
-          ownerId,
-          kind: "documents",
-          entityId: removed.id,
-        },
-      },
-    });
-    expect(tombstone.deleted).toBe(true);
-    expect(await db.storageDeletion.count({ where: { ownerId } })).toBe(1);
-  } finally {
-    await db.libraryEntity.deleteMany({ where: { ownerId } });
-    await db.libraryReplica.deleteMany({ where: { ownerId } });
-    await db.storageDeletion.deleteMany({ where: { ownerId } });
-    await db.user.deleteMany({ where: { id: ownerId } });
-    await db.$disconnect();
-  }
+    ],
+  });
+  const deleted = await account.write({
+    operationId: crypto.randomUUID(),
+    baseRevision: 1,
+    changes: [{ kind: "documents", id: book.id, value: null }],
+  });
+  expect(deleted.status(), await deleted.text()).toBe(200);
+  const rows = await libraryDb.libraryEntity.findMany({
+    where: { ownerId: account.id },
+    orderBy: { kind: "asc" },
+  });
+  expect(
+    rows.map(({ kind, deleted, revision, payload }) => [
+      kind,
+      deleted,
+      revision,
+      payload,
+    ]),
+  ).toEqual([
+    ["annotations", true, 2, null],
+    ["bookmarks", true, 2, null],
+    ["documents", true, 2, null],
+    ["positions", true, 2, null],
+  ]);
 });

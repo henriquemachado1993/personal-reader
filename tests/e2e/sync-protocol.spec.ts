@@ -1,229 +1,173 @@
-import { test, expect } from "@playwright/test";
-import { PrismaClient } from "@prisma/client";
-import { encode } from "next-auth/jwt";
-import { readFile } from "node:fs/promises";
-import dotenv from "dotenv";
-import { initialState } from "../library-fixture";
+import { test, expect, testBook } from "./library-sync-fixture";
+import { initialState } from "../../src/modules/library/initial-state";
+import { diffLibrary } from "../../src/modules/library/sync-protocol";
 
-test.setTimeout(90000);
+test.skip(
+  !process.env.TEST_DATABASE_URL,
+  "Requer um banco de teste descartável",
+);
 
-test("progress writes are private, ordered, idempotent and cannot restore deleted books", async ({
+test("positions, receipts, aggregate time, deletion and account isolation are atomic", async ({
+  createAccount,
   request,
-  baseURL,
+  libraryDb,
 }) => {
-  const env = dotenv.parse(await readFile(".env", "utf8"));
-  const db = new PrismaClient({ datasourceUrl: env.DATABASE_URL });
-  const ownerId = crypto.randomUUID(),
-    otherId = crypto.randomUUID(),
-    origin = new URL(baseURL!).origin;
-  const cookie = async (id: string) =>
-    `authjs.session-token=${await encode({ secret: env.AUTH_SECRET, salt: "authjs.session-token", token: { id, sub: id } })}`;
-  const headers = { Cookie: await cookie(ownerId), Origin: origin };
-  const other = { Cookie: await cookie(otherId), Origin: origin };
-  try {
-    await db.user.create({
-      data: { id: ownerId, email: `${ownerId}@example.test` },
-    });
-    const snapshot = initialState();
-    const operationId = crypto.randomUUID();
-    const saved = await request.put("/api/library", {
-      headers,
-      data: { revision: 0, operationId, snapshot },
-    });
-    expect(saved.status()).toBe(200);
-    const position = {
-      id: snapshot.documents[0].id,
-      page: 2,
-      progress: 100,
-      location: { type: "TXT", blockIndex: 2, offset: 0 },
-      readingPositionUpdatedAt: "2026-11-16T12:00:00.000Z",
-    };
-    const send = (positions: unknown[], customHeaders = headers) =>
-      request.post("/api/library/progress", {
-        headers: customHeaders,
-        data: { positions },
-      });
-    expect(
-      (
-        await request.post("/api/library/progress", {
-          data: { positions: [position] },
-        })
-      ).status(),
-    ).toBe(401);
-    expect(
-      (
-        await send([position], { ...headers, Origin: "https://evil.test" })
-      ).status(),
-    ).toBe(403);
-    expect((await send([{ ...position, progress: 200 }])).status()).toBe(400);
-    expect((await send([position], other)).status()).toBe(204);
-    const get = async () =>
-      (await request.get("/api/library", { headers })).json();
-    expect((await get()).snapshot.documents[0].page).toBe(1);
-    expect((await send([position])).status()).toBe(204);
-    const progressed = await get();
-    expect(progressed.snapshot.documents[0].page).toBe(2);
-    expect(progressed.revision).toBe(2);
-    expect((await send([position])).status()).toBe(204);
-    expect((await get()).revision).toBe(2);
-    expect(
-      (
-        await send([
-          {
-            ...position,
-            page: 0,
-            progress: 33,
-            readingPositionUpdatedAt: "2026-11-16T11:59:00.000Z",
-          },
-        ])
-      ).status(),
-    ).toBe(204);
-    expect((await get()).snapshot.documents[0].page).toBe(2);
-    expect(
-      (
-        await send([
-          {
-            ...position,
-            page: 0,
-            progress: 33,
-            location: { type: "TXT", blockIndex: 0, offset: 0 },
-            readingPositionUpdatedAt: "2026-11-16T12:01:00.000Z",
-          },
-        ])
-      ).status(),
-    ).toBe(204);
-    const backwards = await get();
-    expect(backwards.snapshot.documents[0].page).toBe(0);
-    const receipt = await (
-      await request.get(`/api/library?operationId=${operationId}`, { headers })
-    ).json();
-    expect(receipt.acknowledgedOperationId).toBe(operationId);
-    const duplicate = await request.put("/api/library", {
-      headers,
-      data: { revision: 0, operationId, snapshot },
-    });
-    expect(duplicate.status()).toBe(200);
-    expect((await duplicate.json()).revision).toBe(backwards.revision);
-    const removed = structuredClone(backwards.snapshot);
-    removed.documents.shift();
-    expect(
-      (
-        await request.put("/api/library", {
-          headers,
-          data: {
-            revision: backwards.revision,
-            operationId: crypto.randomUUID(),
-            snapshot: removed,
-          },
-        })
-      ).status(),
-    ).toBe(200);
-    const deleted = await get();
-    expect(deleted.deletedDocumentIds).toContain(position.id);
-    expect(
-      (
-        await send([
-          { ...position, readingPositionUpdatedAt: "2026-11-16T13:00:00.000Z" },
-        ])
-      ).status(),
-    ).toBe(204);
-    const legacy = await request.put("/api/library", {
-      headers,
-      data: {
-        revision: deleted.revision,
+  const account = await createAccount();
+  const other = await createAccount();
+  const book = { ...testBook("PDF"), demo: true };
+  await account.seed({ ...initialState(), documents: [book] });
+  expect(await account.read(1)).toEqual({ revision: 1, changes: [] });
+
+  const position = {
+    page: 2,
+    progress: 75,
+    location: { type: "PDF" as const, pageIndex: 2 },
+    readingPositionUpdatedAt: "2026-11-17T20:00:02.000Z",
+  };
+  const batch = {
+    operationId: crypto.randomUUID(),
+    baseRevision: 1,
+    changes: [{ kind: "positions" as const, id: book.id, value: position }],
+    time: { seconds: 10, days: { "2026-11-17": 10 } },
+  };
+  expect((await account.write(batch)).status()).toBe(200);
+  expect(await (await account.write(batch)).json()).toMatchObject({
+    revision: 2,
+    replayed: true,
+  });
+  expect(
+    (await account.read(1)).changes.map(({ kind }) => kind).sort(),
+  ).toEqual(["days", "positions", "seconds"]);
+  expect((await account.state()).readingSeconds).toBe(10);
+  expect((await other.read()).changes).toEqual([]);
+  expect((await request.get("/api/library/sync")).status()).toBe(401);
+  expect(
+    (
+      await request.post("/api/library/sync", {
+        headers: { ...account.headers, Origin: "https://example.test" },
+        data: batch,
+      })
+    ).status(),
+  ).toBe(403);
+
+  const stalePage = {
+    ...position,
+    page: 1,
+    readingPositionUpdatedAt: "2026-11-17T20:00:01.000Z",
+  };
+  expect(
+    (
+      await account.write({
+        ...batch,
         operationId: crypto.randomUUID(),
-        snapshot,
-      },
-    });
-    expect(legacy.status()).toBe(200);
-    expect(
-      (await legacy.json()).snapshot.documents.some(
-        (book: { id: string }) => book.id === position.id,
-      ),
-    ).toBe(false);
-  } finally {
-    await db.libraryEntity.deleteMany({ where: { ownerId } });
-    await db.libraryReplica.deleteMany({ where: { ownerId } });
-    await db.user.deleteMany({ where: { id: ownerId } });
-    await db.$disconnect();
-  }
+        time: undefined,
+        changes: [{ kind: "positions", id: book.id, value: stalePage }],
+      })
+    ).status(),
+  ).toBe(200);
+  expect((await account.state()).documents[0].page).toBe(2);
+
+  const backward = {
+    ...position,
+    page: 0,
+    location: { type: "PDF" as const, pageIndex: 0 },
+    readingPositionUpdatedAt: "2026-11-17T20:00:03.000Z",
+  };
+  expect(
+    (
+      await account.write({
+        ...batch,
+        operationId: crypto.randomUUID(),
+        time: undefined,
+        changes: [{ kind: "positions", id: book.id, value: backward }],
+      })
+    ).status(),
+  ).toBe(200);
+  expect((await account.state()).documents[0].page).toBe(0);
+  expect(
+    (
+      await account.write({
+        baseRevision: 1,
+        operationId: crypto.randomUUID(),
+        changes: [{ kind: "documents", id: book.id, value: null }],
+      })
+    ).status(),
+  ).toBe(409);
+  expect(
+    (
+      await account.write({
+        baseRevision: 3,
+        operationId: crypto.randomUUID(),
+        changes: [{ kind: "documents", id: book.id, value: null }],
+      })
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await account.write({
+        ...batch,
+        operationId: crypto.randomUUID(),
+        time: undefined,
+      })
+    ).status(),
+  ).toBe(200);
+  expect((await account.state()).documents).toEqual([]);
+  expect(
+    await libraryDb.storageDeletion.count({ where: { ownerId: account.id } }),
+  ).toBe(1);
 });
 
-test("large snapshots transfer through R2 and replay safely after temporary object cleanup", async ({
+test("signed transfers store originals and images outside Postgres and isolate other accounts", async ({
+  createAccount,
   request,
-  baseURL,
+  libraryDb,
 }) => {
-  const env = dotenv.parse(await readFile(".env", "utf8"));
-  const db = new PrismaClient({ datasourceUrl: env.DATABASE_URL });
-  const ownerId = crypto.randomUUID(),
-    operationId = crypto.randomUUID(),
-    origin = new URL(baseURL!).origin;
-  const token = await encode({
-    secret: env.AUTH_SECRET,
-    salt: "authjs.session-token",
-    token: { id: ownerId, sub: ownerId },
+  test.skip(!process.env.TEST_R2, "Requer um bucket de teste no R2");
+  const account = await createAccount();
+  const other = await createAccount();
+  const cover = `asset-${crypto.randomUUID()}` as const;
+  const book = { ...testBook("PDF"), cover };
+  const coverBytes = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRocAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const original = Buffer.alloc(6 * 1024 * 1024, 42);
+  const snapshot = { ...initialState(), documents: [book] };
+  const changes = diffLibrary(initialState(), snapshot).changes;
+  expect(
+    (
+      await account.write({
+        baseRevision: 0,
+        operationId: crypto.randomUUID(),
+        changes,
+      })
+    ).status(),
+  ).toBe(422);
+  await account.upload(cover, coverBytes, "image/png");
+  await account.upload(book.id, original, "application/octet-stream");
+  await account.seed(snapshot);
+  const rows = await libraryDb.libraryEntity.findMany({
+    where: { ownerId: account.id },
   });
-  const headers = { Cookie: `authjs.session-token=${token}`, Origin: origin };
-  try {
-    await db.user.create({
-      data: { id: ownerId, email: `${ownerId}@example.test` },
+  expect(JSON.stringify(rows)).toContain(cover);
+  expect(JSON.stringify(rows)).not.toContain(coverBytes.toString("base64"));
+  for (const [id, bytes] of [
+    [cover, coverBytes],
+    [book.id, original],
+  ] as const) {
+    const authorized = await request.get(`/api/library/files/${id}`, {
+      headers: account.headers,
+      maxRedirects: 0,
     });
-    const snapshot = initialState();
-    snapshot.documents[0].cover = "x".repeat(5_000_000);
-    const original = Buffer.from(JSON.stringify(snapshot));
-    const authorized = await request.post(
-      `/api/library/snapshots/${operationId}`,
-      { headers, data: { size: original.length } },
-    );
-    expect(authorized.status()).toBe(200);
-    const { url } = await authorized.json();
+    expect(authorized.status()).toBe(307);
+    const download = await request.get(authorized.headers().location);
+    expect(await download.body()).toEqual(bytes);
     expect(
       (
-        await request.put(url, {
-          headers: {
-            "Content-Type": "application/octet-stream",
-            "If-None-Match": "*",
-          },
-          data: original,
-        })
-      ).ok(),
-    ).toBe(true);
-    const envelope = { revision: 0, operationId, snapshotId: operationId };
-    const saved = await request.put("/api/library", {
-      headers,
-      data: envelope,
-    });
-    expect(saved.status()).toBe(200);
-    expect((await saved.json()).snapshot.documents[0].cover.length).toBe(
-      5_000_000,
-    );
-    const downloaded = await request.get("/api/library", { headers });
-    expect(downloaded.headers()["cache-control"]).toBe("private, no-store");
-    expect((await downloaded.json()).snapshot.documents[0].cover.length).toBe(
-      5_000_000,
-    );
-    expect(
-      (await request.put("/api/library", { headers, data: envelope })).status(),
-    ).toBe(200);
-    expect(
-      (
-        await request.post(`/api/library/snapshots/${crypto.randomUUID()}`, {
-          headers,
-          data: { size: 26_000_000 },
+        await request.get(`/api/library/files/${id}`, {
+          headers: other.headers,
         })
       ).status(),
-    ).toBe(400);
-    expect(
-      (
-        await request.post(`/api/library/snapshots/${crypto.randomUUID()}`, {
-          data: { size: 1 },
-        })
-      ).status(),
-    ).toBe(401);
-  } finally {
-    await db.libraryEntity.deleteMany({ where: { ownerId } });
-    await db.libraryReplica.deleteMany({ where: { ownerId } });
-    await db.user.deleteMany({ where: { id: ownerId } });
-    await db.$disconnect();
+    ).toBe(404);
   }
 });

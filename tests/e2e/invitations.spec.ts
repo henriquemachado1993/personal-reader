@@ -72,7 +72,7 @@ test("administrator generates and revokes an invitation while normal accounts ha
     },
   ]);
   await context.route(
-    (url) => url.pathname === "/api/library",
+    (url) => url.pathname === "/api/library/sync",
     (route) => route.fulfill({ status: 503, json: {} }),
   );
   let invites: any[] = [];

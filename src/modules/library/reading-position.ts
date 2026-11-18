@@ -1,4 +1,4 @@
-import type { ReaderDocument, LibraryState } from "@/shared/types";
+import type { ReaderDocument } from "@/shared/types";
 import { canonicalJson } from "./canonical-json";
 
 export type ReadingPosition = Pick<
@@ -33,31 +33,4 @@ export function nextReadingTimestamp(previous?: string): string {
   return new Date(
     Math.max(Date.now(), (previous ? Date.parse(previous) : 0) + 1),
   ).toISOString();
-}
-
-export function preserveLatestPositions(
-  previous: LibraryState | null,
-  incoming: LibraryState,
-): LibraryState {
-  if (!previous) return incoming;
-  const existing = new Map(previous.documents.map((book) => [book.id, book]));
-  return {
-    ...incoming,
-    documents: incoming.documents.map((book) => {
-      const prior = existing.get(book.id);
-      if (
-        !prior?.readingPositionUpdatedAt ||
-        newerReadingPosition(prior, book) !== prior
-      )
-        return book;
-      return {
-        ...book,
-        ...readingPosition(prior),
-        lastReadAt: [book.lastReadAt, prior.lastReadAt]
-          .filter((value): value is string => !!value)
-          .sort()
-          .at(-1),
-      };
-    }),
-  };
 }

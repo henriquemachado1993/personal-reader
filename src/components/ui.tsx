@@ -4,6 +4,7 @@ import { Dropdown } from "./ui/dropdown";
 import { useReducedMotion } from "@mantine/hooks";
 import { modalTransition } from "./ui/modal-motion";
 import { X, BookOpen, MoreHorizontal } from "lucide-react";
+import { LibraryAssetImage } from "@/modules/library/use-library-asset";
 import type { ReaderDocument } from "@/shared/types";
 export function IconButton({
   label,
@@ -41,8 +42,8 @@ export function Cover({
       style={{ backgroundColor: book.color }}
     >
       {book.cover ? (
-        <img
-          src={book.cover}
+        <LibraryAssetImage
+          reference={book.cover}
           alt={`Capa de ${book.title}`}
           draggable={false}
           loading="lazy"

@@ -53,7 +53,7 @@ export function SyncSettings() {
     setBusy(true);
     setError("");
     try {
-      exportLibraryBackup();
+      await exportLibraryBackup();
       await useLibrary.getState().resolveConflict(preferLocal);
     } catch {
       setError(

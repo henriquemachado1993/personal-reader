@@ -198,7 +198,7 @@ for (const width of [1440, 393]) {
       .toBeGreaterThan(before.width);
     const after = (await image.boundingBox())!;
     expect(after.width / after.height).toBeCloseTo(3, 1);
-    let source = await image.getAttribute("href");
+    const source = await image.getAttribute("href");
     const dimensions = await page.evaluate(async (source) => {
       const image = new Image();
       image.src = source!;
@@ -255,7 +255,14 @@ for (const width of [1440, 393]) {
       0.5,
       1,
     );
-    source = await image.getAttribute("href");
+    await expect(image).toHaveAttribute("href", /^blob:/);
+    const replacementBytes = await image.evaluate(async (element) =>
+      Array.from(
+        new Uint8Array(
+          await (await fetch(element.getAttribute("href")!)).arrayBuffer(),
+        ),
+      ),
+    );
     await page
       .getByRole("button", { name: "Remover objeto selecionado" })
       .click();
@@ -263,9 +270,12 @@ for (const width of [1440, 393]) {
     await page.getByRole("button", { name: "Desfazer anotação" }).click();
     await expect(image).toHaveCount(1);
     await page.reload();
-    await expect(page.locator(".annotation-overlay image")).toHaveAttribute(
-      "href",
-      source!,
-    );
+    const restored = page.locator(".annotation-overlay image");
+    await expect(restored).toHaveAttribute("href", /^blob:/);
+    const restoredBytes = await restored.evaluate(async (element) => {
+      const response = await fetch(element.getAttribute("href")!);
+      return Array.from(new Uint8Array(await response.arrayBuffer()));
+    });
+    expect(restoredBytes).toEqual(replacementBytes);
   });
 }

@@ -25,7 +25,7 @@ test.beforeEach(async ({ context }) => {
     },
   });
   await context.addCookies([{ name, value, url: "http://127.0.0.1:3000" }]);
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
 });

@@ -4,9 +4,14 @@ import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
 import { seedReaderLibrary } from "./seed-library";
 import { initialState } from "../reader-fixture";
+import { initialState as emptyState } from "../../src/modules/library/initial-state";
+import {
+  diffLibrary,
+  type SyncBatch,
+} from "../../src/modules/library/sync-protocol";
 test.use({ serviceWorkers: "block" });
 test.beforeEach(async ({ context }) => {
-  await seedReaderLibrary(context);
+  await seedReaderLibrary(context, initialState(), 1);
   const env = dotenv.parse(await readFile(".env", "utf8"));
   const value = await encode({
     secret: env.AUTH_SECRET,
@@ -24,25 +29,33 @@ for (const width of [1440, 393]) {
     context,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
-    let remote = {
-      revision: 1,
-      operationId: "prior",
-      snapshot: initialState(),
-    };
+    let revision = 1;
+    let changes = diffLibrary(emptyState(), initialState()).changes;
+    const bootstrap = changes;
     let failed = false;
     let held: Promise<void> | undefined;
     let release: (() => void) | undefined;
-    await context.route("**/api/library", async (route) => {
+    await context.route(/\/api\/library\/sync(?:\?.*)?$/, async (route) => {
       if (held) await held;
       if (failed) {
         await route.fulfill({ status: 503, body: "{}" });
         return;
       }
-      if (route.request().method() === "PUT") {
-        const saved = route.request().postDataJSON();
-        remote = { ...saved, revision: remote.revision + 1 };
+      if (route.request().method() === "POST") {
+        const saved = route.request().postDataJSON() as SyncBatch;
+        changes = saved.changes;
+        await route.fulfill({ json: { revision: ++revision, changes } });
+        return;
       }
-      await route.fulfill({ json: remote });
+      const since = Number(
+        new URL(route.request().url()).searchParams.get("since"),
+      );
+      await route.fulfill({
+        json: {
+          revision,
+          changes: since === revision ? [] : since === 0 ? bootstrap : changes,
+        },
+      });
     });
     try {
       await page.goto("/settings");
@@ -80,7 +93,14 @@ for (const width of [1440, 393]) {
       failed = false;
       await context.setOffline(true);
       await page.getByRole("button", { name: "Claro", exact: true }).click();
-      remote.snapshot.preferences.theme = "system";
+      changes = [
+        {
+          kind: "preferences",
+          id: "account",
+          value: { ...initialState().preferences, theme: "system" },
+        },
+      ];
+      revision++;
       await context.setOffline(false);
       await expect(badge).toHaveText("Revisar alterações");
       await expect(badge.locator(".lucide-cloud-alert")).toBeVisible();

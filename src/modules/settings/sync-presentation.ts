@@ -21,7 +21,7 @@ export function syncPresentation({
     return { state: "synced", label: "Em dia" };
   if (
     message ===
-    "Leitura sincronizada. Há arquivos originais pendentes de envio."
+    "Há arquivos pendentes de envio. Suas alterações continuam neste navegador."
   )
     return { state: "pending", label: "Arquivos pendentes" };
   if (

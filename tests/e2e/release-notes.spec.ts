@@ -16,7 +16,7 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([
     { name: "authjs.session-token", value, url: "http://127.0.0.1:3000" },
   ]);
-  await context.route("**/api/library", (route) =>
+  await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
 });
@@ -52,10 +52,10 @@ for (const width of [1440, 393]) {
         0,
       ),
     );
-      await expect(current).toContainText(releaseNotes[0].sections[0].items[0]);
+    await expect(current).toContainText(releaseNotes[0].sections[0].items[0]);
     await page.screenshot({
       path: testInfo.outputPath(`release-notes-${width}.png`),
-        animations: "disabled",
+      animations: "disabled",
     });
     expect(
       await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth),

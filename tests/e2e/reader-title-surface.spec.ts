@@ -41,7 +41,7 @@ for (const viewport of [
     await context.addCookies([
       { name: "authjs.session-token", value, url: "http://127.0.0.1:3000" },
     ]);
-    await context.route("**/api/library", (route) =>
+    await context.route(/\/api\/library\/sync(?:\?.*)?$/, (route) =>
       route.fulfill({ status: 503, body: "{}" }),
     );
     await page.goto(`/reader/${book.id}`);
