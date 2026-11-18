@@ -1,5 +1,7 @@
 # Exclusão de coleções entre dispositivos
 
+> Registro histórico anterior à sincronização incremental. Para o funcionamento atual, consulte a [arquitetura do Le-Books](../ARQUITETURA.md).
+
 Relato: “Filosofia & ideias”, coleção da versão inicial com ID `filosofia`, foi excluída em um dispositivo e continuou visível em outro. Não foi confirmado se ambos haviam concluído a sincronização; a conta real não foi consultada ou alterada.
 
 Foi reproduzida uma falha compatível: sem uma base local de sincronização, uma coleção antiga ausente do snapshot remoto era interpretada como inclusão local. A projeção já registrava exclusões em `LibraryEntity`, mas esses registros não eram usados pelo protocolo de sincronização. Um cliente antigo também podia reenviar o mesmo ID e reativá-lo.

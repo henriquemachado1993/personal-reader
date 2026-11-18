@@ -225,39 +225,16 @@ O modelo deve ser agnóstico ao formato do documento. PDF, EPUB, DOCX e
 TXT compartilham as entidades de domínio, mas possuem estratégias
 diferentes para representar localização e progresso.
 
-### Entidades principais
+### Persistência atual
 
-  Entidade             Finalidade
-  -------------------- ----------------------------------------------
-  `Document`           Título, autor, tipo, descrição e status
-  `DocumentFile`       Arquivo original, versão, tamanho e chave R2
-  `DocumentMetadata`   ISBN, editora, idioma e capa
-  `ReadingProgress`    Localização, percentual e última leitura
-  `ReadingSession`     Início, fim e duração
-  `Bookmark`           Localização e descrição
-  `Highlight`          Texto, cor e localização
-  `Annotation`         Tipo, geometria e dados da anotação
-  `Note`               Conteúdo textual e relacionamentos
-  `Clipping`           Imagem capturada de um trecho
-  `Collection`         Agrupamento de documentos
-  `Tag`                Organização transversal
-  `DocumentTag`        Associação entre documento e tag
+| Tabela | Finalidade |
+| --- | --- |
+| `LibraryEntity` | Documentos, posições, coleções, anotações, marcadores, preferências e totais de leitura. Cada registro é identificado por conta, tipo e ID. As exclusões mantêm um registro para sincronização. |
+| `LibraryRevision` | Revisão atual da biblioteca de cada conta. |
+| `SyncOperation` | Recibo por conta e ID de operação para reenvios idempotentes. |
+| `StorageDeletion` | Fila para coleta de arquivos que perderam a referência no R2. |
 
-### Relações
-
-``` mermaid
-erDiagram
-    DOCUMENT ||--o{ DOCUMENT_FILE : contains
-    DOCUMENT ||--o| READING_PROGRESS : tracks
-    DOCUMENT ||--o{ READING_SESSION : has
-    DOCUMENT ||--o{ BOOKMARK : has
-    DOCUMENT ||--o{ HIGHLIGHT : contains
-    DOCUMENT ||--o{ ANNOTATION : contains
-    DOCUMENT ||--o{ NOTE : references
-    DOCUMENT ||--o{ CLIPPING : captures
-    DOCUMENT }o--o{ COLLECTION : belongs
-    DOCUMENT }o--o{ TAG : classified
-```
+A migração incremental foi criada para um banco vazio. `LibraryReplica` e as antigas tabelas de projeção, como `Document`, `ReadingProgress` e `Collection`, saíram do schema. Os dados da biblioteca passaram a ser lidos e gravados diretamente em `LibraryEntity`. Consulte o [modelo atual e os diagramas](ARQUITETURA.md#modelo-de-dados-e-acesso).
 
 ### Contrato de localização
 
@@ -428,76 +405,23 @@ A exportação nunca deve destruir ou alterar o original.
 
 ## 6. Cloudflare R2 e sincronização
 
-### Estrutura de armazenamento
+### Armazenamento
 
-``` text
-personal-reader/
-├── documents/
-│   └── {documentId}/
-│       ├── original.pdf
-│       └── original.epub
-├── covers/
-│   └── {documentId}.webp
-├── clippings/
-│   └── {documentId}/
-│       └── {clippingId}.webp
-├── exports/
-│   └── {documentId}/
-│       └── {versionId}.pdf
-└── thumbnails/
-    └── {documentId}/
-```
-
-### Fluxo de upload
-
-``` mermaid
-flowchart TD
-    A[Selecionar arquivo] --> B[Validar formato e tamanho]
-    B --> C[Solicitar URL assinada]
-    C --> D[Upload direto para R2]
-    D --> E[Confirmar upload]
-    E --> F[Registrar Document no PostgreSQL]
-    F --> G[Processar metadados]
-    G --> H[Gerar capa e thumbnail]
-    H --> I[Disponibilizar na biblioteca]
-```
-
-### Estratégia de armazenamento
-
-  Conteúdo                  Armazenamento
-  ------------------------- ---------------
-  PDF original              R2
-  EPUB original             R2
-  Screenshots de trechos    R2
-  Capas e thumbnails        R2
-  Traços da caneta          PostgreSQL
-  Highlights                PostgreSQL
-  Comentários               PostgreSQL
-  Progresso de leitura      PostgreSQL
-  Configurações do leitor   PostgreSQL
-  Alterações pendentes      IndexedDB
-
-### Upload
-
-O upload deve ser feito diretamente do navegador para o R2 por meio de
-URLs pré-assinadas, evitando trafegar arquivos grandes pela API da
-aplicação.
+O bucket privado definido por `R2_BUCKET_NAME` guarda originais em
+`<conta>/originals/<id>` e capas, capturas, imagens e texto paginado em
+`<conta>/assets/<id>`. O navegador transfere os arquivos diretamente
+com URLs assinadas pela API. O PostgreSQL guarda referências, metadados
+e dados estruturados, como posição de leitura e anotações de texto.
 
 ### Offline e sincronização
 
-Implementar:
-
--   IndexedDB para progresso e anotações pendentes.
--   Cache de documentos recentemente abertos.
--   Cache de capas e thumbnails.
--   Fila de sincronização.
--   Identificadores UUID para operações.
--   Versionamento de atualização por entidade.
--   Idempotência nas operações de sincronização.
-
-Não sincronizar PDFs completos automaticamente para todos os
-dispositivos. O usuário poderá definir quais documentos deseja manter
-disponíveis offline.
+O IndexedDB guarda a biblioteca, as alterações pendentes e os arquivos
+em cache por conta. Ao voltar à rede, o navegador envia as mudanças e
+busca os registros alterados desde a última revisão conhecida. O
+Realtime Broadcast avisa os aparelhos conectados sobre revisões novas
+em um canal privado por conta. Posição de leitura e operações pendentes
+são conciliadas por relógio de posição e recibo de operação. Os arquivos
+são baixados sob demanda. Consulte o [fluxo entre aparelhos](ARQUITETURA.md#sincronização-entre-aparelhos).
 
 ------------------------------------------------------------------------
 
@@ -732,7 +656,6 @@ Não implementar agora:
 
 -   IA e chat com documentos.
 -   OCR avançado.
--   Sincronização em tempo real entre múltiplos dispositivos.
 -   Edição do conteúdo interno de DOCX.
 -   Edição estrutural do conteúdo original de PDFs.
 

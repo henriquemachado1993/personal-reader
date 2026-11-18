@@ -33,15 +33,13 @@
 - Não substituir alterações de outro dispositivo silenciosamente. Arquivos originais permanecem imutáveis.
 - Não registrar credenciais. `.env` é privado.
 - Estado e critérios de conclusão estão em `TASKS.md`.
-- Implementação remota: `LibraryReplica` (JSONB, revisão por conta e UUID da última operação); originais em `<ownerId>/originals/<documentId>` no R2 privado.
-- Migração `202611150002_library_replica` aplicada no Supabase em 15/11/2026; acesso ao bucket e upload/download verificados.
-- Sincronização a cada 15 segundos, ao foco e ao recuperar conexão; IndexedDB armazena baseline, operação pendente e originais já enviados.
-- Conflitos no mesmo documento exigem escolha em Configurações, com backup automático. Não substituir o baseline por uma lista vazia durante bootstrap: as amostras têm IDs estáveis.
+- Persistência remota incremental em `LibraryEntity`, com `LibraryRevision` e recibos em `SyncOperation`. Originais e demais arquivos ficam no R2 privado.
+- Ações locais disparam sincronização. O Realtime Broadcast avisa sobre novas revisões por conta. Foco e reconexão recuperam mudanças pendentes. Consulte `docs/ARQUITETURA.md`.
+- Conflitos incompatíveis exigem escolha em Configurações, com backup.
 - Offline usa service worker apenas em produção; testar com build/start. Recursos privados nunca passam por cache de API.
 - Arquivos órfãos permanecem retidos. Recuperação administrativa disponível em `scripts/reset-password.mjs`.
-- Provedor de e-mail escolhido: Mailtrap. Fluxos `/forgot-password` e `/reset-password`; link usa fragmento para evitar vazamento nos logs/referrers. Configurar MAILTRAP_API_TOKEN e MAILTRAP_FROM_EMAIL; sandbox opcional. Não há credenciais Mailtrap no ambiente atual.
-- Migração `202611150003_password_recovery` aplicada; tokens armazenados apenas como SHA-256, consumidos em transação; passwordChangedAt revoga JWTs anteriores.
-- Migração `202611150004_entities` aplicada: LibraryEntity registra versões e exclusões; projeções relacionais são atômicas com a réplica. `npm run db:project` executado para sete bibliotecas existentes (incluindo sessões de QA).
+- Provedor de e-mail escolhido: Mailtrap. Fluxos `/forgot-password` e `/reset-password`; link usa fragmento para evitar vazamento nos logs/referrers. Configurar MAILTRAP_API_TOKEN e MAILTRAP_FROM_EMAIL; sandbox opcional.
+- Tokens de recuperação são armazenados como SHA-256 e consumidos em transação. `passwordChangedAt` revoga JWTs anteriores.
 - Comparações de entidades usam JSON canônico: JSONB pode reordenar chaves e não deve gerar falsas atualizações de versão.
 - `storage:collect` simula por padrão. `--apply` exclui candidatos com sete dias, sem referência, sob advisory lock compartilhado com sincronização. A revisão automática rejeitou a execução destrutiva sem confirmação; nenhuma exclusão foi feita. Simulação: zero candidatos.
 - Um único e-mail de recuperação foi autorizado pelo usuário e aceito pelo Mailtrap. AUTH_URL local configurado como http://localhost:3000. Não repetir sem nova autorização.

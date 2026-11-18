@@ -1,5 +1,7 @@
 # Auditoria de performance — 16/11/2026
 
+> Registro histórico anterior à sincronização incremental. Para o funcionamento atual, consulte a [arquitetura do Le-Books](../ARQUITETURA.md).
+
 ## Escopo e limites
 
 Inspeção do código atual, dos artefatos locais de produção e reprodução isolada de foco de inputs no Chrome via Playwright. Nenhum código de execução foi alterado. O objetivo é reduzir custo preservando interface, resultados, persistência, funcionamento offline e sincronização. Bugs ficam separados para decisão posterior.

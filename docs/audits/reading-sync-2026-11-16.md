@@ -1,5 +1,7 @@
 # Retomada de leitura entre dispositivos
 
+> Registro histórico anterior à sincronização incremental. Para o funcionamento atual, consulte a [arquitetura do Le-Books](../ARQUITETURA.md).
+
 A investigação reproduziu um leitor mostrando a página 1 depois de já ter recebido e persistido a página 3. A restauração só ocorria na montagem; EPUB também guardava a localização inicial em uma referência sem acompanhar a sincronização. Sair da aba não solicitava envio e uma falha no original interrompia os metadados.
 
 ## Comportamento corrigido
