@@ -81,7 +81,24 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     api.setStorageScope("second");
     await scopedWrite;
     const firstScoped = await api.readState("first");
+    const originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, key) {
+      if (key === "unwritable")
+        throw new DOMException("Cache unavailable", "QuotaExceededError");
+      return originalPut.call(this, value, key);
+    };
+    window.fetch = async () =>
+      new Response("downloaded", {
+        headers: { "Content-Type": "application/pdf" },
+      });
+    const uncached = await api.readFile("unwritable");
+    const cached = await api.readFile("downloaded");
+    const downloaded = await api.readCachedFile("downloaded");
+    IDBObjectStore.prototype.put = originalPut;
     return {
+      downloadedText: await downloaded.text(),
+      uncachedText: await uncached.text(),
+      downloadedType: cached.type,
       firstOpens,
       opens,
       title: first.documents[0].title,
@@ -97,6 +114,9 @@ test("IndexedDB reuses connections, isolates accounts and keeps snapshot copies"
     };
   });
   expect(result).toEqual({
+    downloadedText: "downloaded",
+    uncachedText: "downloaded",
+    downloadedType: "application/pdf",
     firstOpens: 1,
     opens: 2,
     title: "snapshot",

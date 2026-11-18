@@ -39,8 +39,16 @@ export async function readState(
 export async function writeState(state: LibraryState, ownerId?: string) {
   return (await db(ownerId)).put("state", structuredClone(state), "library");
 }
-export async function saveFile(id: string, file: Blob, ownerId?: string) {
-  return (await db(ownerId)).put("files", file, id);
+type CachedFile = Blob | { bytes: ArrayBuffer; type: string };
+
+function cachedBlob(file: CachedFile | undefined) {
+  if (!file || file instanceof Blob) return file;
+  return new Blob([file.bytes], { type: file.type });
+}
+
+export async function saveFile(id: string, file: Blob, ownerId = scope) {
+  const cached = { bytes: await file.arrayBuffer(), type: file.type };
+  return (await db(ownerId)).put("files", cached, id);
 }
 export async function readFile(
   id: string,
@@ -48,13 +56,18 @@ export async function readFile(
 ): Promise<Blob | undefined> {
   const database = await db(ownerId);
   const cached = await database.get("files", id);
-  if (cached) return cached;
+  if (cached) return cachedBlob(cached);
   if (ownerId !== scope) return undefined;
   const response = await fetch(`/api/library/files/${encodeURIComponent(id)}`);
   if (!response.ok) return undefined;
-  const file = await response.blob();
-  await database.put("files", file, id);
-  return file;
+  // WebKit can reject Blob storage. ArrayBuffer entries also work in its cache.
+  const file = {
+    bytes: await response.arrayBuffer(),
+    type: response.headers.get("Content-Type") ?? "",
+  };
+  // A failed offline cache write must not prevent reading the downloaded file.
+  await database.put("files", file, id).catch(() => {});
+  return cachedBlob(file);
 }
 export async function removeFile(id: string) {
   return (await db()).delete("files", id);
@@ -72,7 +85,7 @@ export async function readCachedFile(
   id: string,
   ownerId?: string,
 ): Promise<Blob | undefined> {
-  return (await db(ownerId)).get("files", id);
+  return cachedBlob(await (await db(ownerId)).get("files", id));
 }
 
 const editKey = (id: string) => `local-edit:${id}`;

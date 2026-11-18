@@ -47,6 +47,7 @@ export const PdfPage = memo(function PdfPage({
     return () => observer.disconnect();
   }, []);
   const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(false);
   useEffect(() => {
     if (!pdf) return;
     searchRef.current = (query, start) => findPdfText(pdf, query, start);
@@ -90,7 +91,16 @@ export const PdfPage = memo(function PdfPage({
     if (pdf) onDocumentReady?.(pdf);
   }, [pdf, onDocumentReady]);
   useEffect(() => {
-    if (!pdf || !visible) return;
+    if (!pdf || !visible) {
+      rendered.current = null;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      textRef.current?.replaceChildren();
+      return;
+    }
     if (
       rendered.current?.pdf === pdf &&
       rendered.current.page === page &&
@@ -101,6 +111,7 @@ export const PdfPage = memo(function PdfPage({
     let renderTask: { cancel: () => void; promise: Promise<void> } | undefined;
     let textLayer: { cancel: () => void } | undefined;
     setLoading(true);
+    setPageError(false);
     (async () => {
       try {
         const pdfPage = await pdf.getPage(Math.min(page + 1, pdf.numPages));
@@ -109,11 +120,16 @@ export const PdfPage = memo(function PdfPage({
         setAspect(base.height / base.width);
         const viewport = pdfPage.getViewport({ scale: width / base.width });
         const canvas = canvasRef.current;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(
+          window.devicePixelRatio || 1,
+          2,
+          4096 / Math.max(viewport.width, viewport.height),
+          Math.sqrt(4_194_304 / (viewport.width * viewport.height)),
+        );
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
         const context = canvas.getContext("2d");
-        if (!context) return;
+        if (!context) throw new Error("Canvas indisponível.");
         textRef.current.innerHTML = "";
         textRef.current.style.setProperty(
           "--scale-factor",
@@ -131,14 +147,22 @@ export const PdfPage = memo(function PdfPage({
         });
         await renderTask.promise;
         if (cancelled) return;
-        const { TextLayer } = await import("pdfjs-dist");
-        const layer = new TextLayer({
-          textContentSource: await pdfPage.getTextContent(),
-          container: textRef.current,
-          viewport,
-        });
-        textLayer = layer;
-        await layer.render();
+        const textContainer = textRef.current;
+        try {
+          const { TextLayer } = await import("pdfjs-dist");
+          const textContentSource = await pdfPage.getTextContent();
+          if (cancelled) return;
+          const layer = new TextLayer({
+            textContentSource,
+            container: textContainer,
+            viewport,
+          });
+          textLayer = layer;
+          await layer.render();
+        } catch {
+          // The canvas is already readable if the selectable text layer fails.
+          if (!cancelled) textContainer.replaceChildren();
+        }
         if (!cancelled) {
           rendered.current = { pdf, page, width };
           setLoading(false);
@@ -150,8 +174,10 @@ export const PdfPage = memo(function PdfPage({
             error instanceof Error &&
             error.name === "RenderingCancelledException"
           )
-        )
-          onError("Não foi possível renderizar esta página do PDF.");
+        ) {
+          setPageError(true);
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -159,12 +185,12 @@ export const PdfPage = memo(function PdfPage({
       renderTask?.cancel();
       textLayer?.cancel();
     };
-  }, [pdf, page, width, onError, visible]);
+  }, [pdf, page, width, visible]);
   // Selecting another page only changes which canvas the editor uses, not its pixels.
   useEffect(() => {
-    if (!loading) onCanvas?.(canvasRef.current);
+    if (visible && !loading && !pageError) onCanvas?.(canvasRef.current);
     return () => onCanvas?.(null);
-  }, [loading, onCanvas]);
+  }, [loading, onCanvas, pageError, visible]);
   return (
     <div
       ref={hostRef}
@@ -174,7 +200,13 @@ export const PdfPage = memo(function PdfPage({
     >
       <canvas ref={canvasRef} aria-label={`Página ${page + 1} do PDF`} />
       <div ref={textRef} className="textLayer" />
-      {loading && <div className="pdf-loading">Preparando a página…</div>}
+      {pageError ? (
+        <div className="pdf-loading" role="status">
+          Não foi possível renderizar a página {page + 1}.
+        </div>
+      ) : (
+        loading && <div className="pdf-loading">Preparando a página…</div>
+      )}
     </div>
   );
 });

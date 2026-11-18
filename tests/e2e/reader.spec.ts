@@ -260,6 +260,47 @@ test("notes, bookmarks, progress and drawings survive a reload and undo/redo", a
     page.getByRole("spinbutton", { name: "Número da página" }),
   ).toHaveValue("2");
 });
+test("a PDF canvas failure stays on its page and other pages render", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      ...args: Parameters<typeof getContext>
+    ) {
+      if (this.getAttribute("aria-label") === "Página 1 do PDF")
+        throw new Error("Canvas indisponível no teste");
+      return getContext.apply(this, args);
+    } as typeof getContext;
+  });
+  const pdf = await PDFDocument.create();
+  pdf.addPage();
+  pdf.addPage().drawText("Página seguinte disponível");
+  await page.goto("/library");
+  await page
+    .getByRole("button", { name: "Importar arquivos", exact: true })
+    .click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "pdf-local.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(await pdf.save()),
+  });
+  await page.getByRole("button", { name: "Concluir", exact: true }).click();
+  await page.getByRole("link", { name: "pdf-local", exact: true }).click();
+  await expect(
+    page.getByText("Não foi possível renderizar a página 1."),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Ir para página 2", exact: true })
+    .click();
+  const second = page.locator('[data-reader-page="1"] .pdf-page');
+  await expect(second).toHaveAttribute("aria-busy", "false");
+  await expect(second.locator(".textLayer")).toContainText(
+    "Página seguinte disponível",
+  );
+});
+
 test("imports and reads TXT, DOCX, PDF and EPUB and exports annotated PDF", async ({
   page,
 }) => {
