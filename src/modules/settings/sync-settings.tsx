@@ -129,7 +129,6 @@ export function SyncSettings() {
               }
             }}
           >
-            <CloudSync size={16} aria-hidden="true" />
             {active ? "Sincronizando…" : "Sincronizar agora"}
           </Button>
         )}
