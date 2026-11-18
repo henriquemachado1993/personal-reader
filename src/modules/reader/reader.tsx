@@ -75,6 +75,7 @@ import { downloadBlob, exportPdf } from "./export";
 import { readFile } from "@/infrastructure/storage/local";
 import { sameLocation } from "./location";
 import { useAnnotationHistory } from "./use-annotation-history";
+import { useReadingScreenWakeLock } from "./use-reading-screen-wake-lock";
 import { PageFilmstrip } from "./page-filmstrip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type {
@@ -156,6 +157,8 @@ export function Reader({ documentId }: { documentId: string }) {
     cachedBook && contentAsset && documentText?.id === contentAsset
       ? { ...cachedBook, content: documentText.pages }
       : cachedBook;
+  const waitingForText = !!contentAsset && documentText?.id !== contentAsset;
+  useReadingScreenWakeLock(library.hydrated && !!book && !waitingForText);
   useEffect(() => {
     if (!contentAsset) return;
     let active = true;
@@ -980,7 +983,7 @@ export function Reader({ documentId }: { documentId: string }) {
         <p>Abrindo sua leitura…</p>
       </div>
     );
-  if (book && contentAsset && documentText?.id !== contentAsset)
+  if (waitingForText)
     return (
       <div className="reader-loading" role="status">
         {contentError || "Carregando o texto do documento…"}
