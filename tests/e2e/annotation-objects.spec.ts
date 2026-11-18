@@ -66,7 +66,11 @@ for (const width of [1440, 393]) {
     await page
       .getByRole("button", { name: "Abrir ferramentas de anotação" })
       .click();
+    const options = page.locator(".annotation-options");
+    await expect(options).toBeHidden();
     await chooseAnnotationTool(page, "Inserir texto");
+    await expect(options).toBeVisible();
+    await expect(options).toHaveCSS("border-top-width", "1px");
     const overlay = page.locator(
       '.reader-page[aria-current="page"] .annotation-overlay',
     );

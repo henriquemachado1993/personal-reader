@@ -1847,57 +1847,57 @@ export function Reader({ documentId }: { documentId: string }) {
               </Popover>
             </div>
           </div>
-          <div className="annotation-options">
-            <input
-              ref={imageInput}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                const request = ++imageRequest.current;
-                const replacementId = imageReplacement.current;
-                setImageLoading(true);
-                setImageError("");
-                try {
-                  const image = await prepareAnnotationImage(file);
-                  if (request !== imageRequest.current) return;
-                  setPendingImage(image);
-                  const object = useLibrary
-                    .getState()
-                    .annotations.find(
-                      (annotation) => annotation.id === replacementId,
-                    );
-                  const bounds = pageHost.current?.getBoundingClientRect();
-                  if (object?.points?.length && bounds) {
-                    const box = annotationBounds(object.points)!;
-                    const points = fitImagePoints(
-                      { x: box.x, y: box.y },
-                      { x: box.x + box.width, y: 1 },
-                      image.width / image.height,
-                      bounds.width,
-                      bounds.height,
-                    );
-                    editAnnotation({
-                      ...object,
-                      image: keepImage(image.source),
-                      points,
-                      updatedAt: new Date().toISOString(),
-                    });
-                  }
-                } catch (error) {
-                  if (request === imageRequest.current)
-                    setImageError(
-                      error instanceof Error
-                        ? error.message
-                        : "Não foi possível abrir a imagem.",
-                    );
-                } finally {
-                  if (request === imageRequest.current) setImageLoading(false);
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              const request = ++imageRequest.current;
+              const replacementId = imageReplacement.current;
+              setImageLoading(true);
+              setImageError("");
+              try {
+                const image = await prepareAnnotationImage(file);
+                if (request !== imageRequest.current) return;
+                setPendingImage(image);
+                const object = useLibrary
+                  .getState()
+                  .annotations.find(
+                    (annotation) => annotation.id === replacementId,
+                  );
+                const bounds = pageHost.current?.getBoundingClientRect();
+                if (object?.points?.length && bounds) {
+                  const box = annotationBounds(object.points)!;
+                  const points = fitImagePoints(
+                    { x: box.x, y: box.y },
+                    { x: box.x + box.width, y: 1 },
+                    image.width / image.height,
+                    bounds.width,
+                    bounds.height,
+                  );
+                  editAnnotation({
+                    ...object,
+                    image: keepImage(image.source),
+                    points,
+                    updatedAt: new Date().toISOString(),
+                  });
                 }
-              }}
-            />
+              } catch (error) {
+                if (request === imageRequest.current)
+                  setImageError(
+                    error instanceof Error
+                      ? error.message
+                      : "Não foi possível abrir a imagem.",
+                  );
+              } finally {
+                if (request === imageRequest.current) setImageLoading(false);
+              }
+            }}
+          />
+          <div className="annotation-options">
             {tool === "select" && selectedAnnotation && (
               <div className="annotation-object-actions">
                 <span>
